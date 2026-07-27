@@ -2777,19 +2777,64 @@ app.post('/api/candidates/:id/reanalyze', authenticateToken, requireRole(['admin
 
 // Dashboard KPI stats
 app.get('/api/dashboard/stats', authenticateToken, (req, res) => {
-  const allCand = db.select().from(candidates).all();
-  const allJobs = db.select().from(jobs).all();
+  const allCand = db.select().from(candidates).all() as any[];
+  const allJobs = db.select().from(jobs).all() as any[];
 
   const totalCvs = allCand.length;
   const activeJobs = allJobs.filter((j: any) => j.status !== 'Paused').length;
   const excellentMatches = allCand.filter((c: any) => c.matchScore >= 80).length;
   const averageMatch = totalCvs > 0 ? Math.round(allCand.reduce((sum: number, c: any) => sum + c.matchScore, 0) / totalCvs) : 0;
 
+  // Real last-7-days CV volume + average match trend, computed from actual candidate
+  // records (createdAt/matchScore) — no illustrative/placeholder data.
+  const days: { key: string; label: string }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push({ key: d.toISOString().slice(0, 10), label: d.toLocaleDateString('en-US', { weekday: 'short' }) });
+  }
+  let runningCvs = 0, runningExcellent = 0, runningJobs = 0, lastKnownAvg = 0;
+  const cutoffForDay = (key: string) => new Date(key + 'T23:59:59').getTime();
+  const trend7d = days.map(({ key, label }) => {
+    const cutoff = cutoffForDay(key);
+    const dayCands = allCand.filter((c: any) => (c.createdAt || '').slice(0, 10) === key);
+    if (dayCands.length > 0) {
+      lastKnownAvg = Math.round(dayCands.reduce((sum: number, c: any) => sum + c.matchScore, 0) / dayCands.length);
+    }
+    runningCvs = allCand.filter((c: any) => c.createdAt && new Date(c.createdAt).getTime() <= cutoff).length;
+    runningExcellent = allCand.filter((c: any) => c.createdAt && new Date(c.createdAt).getTime() <= cutoff && c.matchScore >= 80).length;
+    runningJobs = allJobs.filter((j: any) => j.createdAt && new Date(j.createdAt).getTime() <= cutoff).length;
+    return {
+      date: key, label,
+      cvCount: dayCands.length,
+      avgMatch: lastKnownAvg,
+      cumulativeCvs: runningCvs,
+      cumulativeExcellent: runningExcellent,
+      cumulativeJobs: runningJobs
+    };
+  });
+
+  const topCandidates = [...allCand]
+    .sort((a: any, b: any) => b.matchScore - a.matchScore)
+    .slice(0, 5)
+    .map((c: any) => {
+      const job = allJobs.find((j: any) => j.id === c.jobId);
+      return { id: c.id, name: c.name, matchScore: c.matchScore, jobTitle: job?.title || '', gdprAnonymized: c.gdprAnonymized };
+    });
+
+  const jobCandidateCounts: Record<number, number> = {};
+  allCand.forEach((c: any) => {
+    jobCandidateCounts[c.jobId] = (jobCandidateCounts[c.jobId] || 0) + 1;
+  });
+
   res.json({
     totalCvs,
     activeJobs,
     excellentMatches,
-    averageMatch
+    averageMatch,
+    trend7d,
+    topCandidates,
+    jobCandidateCounts
   });
 });
 

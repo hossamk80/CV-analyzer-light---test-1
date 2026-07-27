@@ -30,6 +30,7 @@ export const en = {
   editJob: "Edit Job",
   aiStrategicSummary: "AI Strategic Summary",
   noJobsYet: "No job definitions created yet.",
+  noCandidatesYet: "No candidates screened yet.",
   
   // Role specific assistance
   assistant_admin: "Welcome, Administrator. You have full access to configure AI providers, customize system prompts, manage job openings, upload CVs, and alter candidate status rankings.",

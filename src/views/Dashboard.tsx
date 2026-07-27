@@ -21,7 +21,7 @@ import {
   Play,
   AlertTriangle
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 interface Job {
   id: number;
@@ -45,22 +45,57 @@ interface Job {
   additionalRequirements?: string;
 }
 
+interface TrendPoint {
+  date: string;
+  label: string;
+  cvCount: number;
+  avgMatch: number;
+  cumulativeCvs: number;
+  cumulativeExcellent: number;
+  cumulativeJobs: number;
+}
+
+interface TopCandidate {
+  id: number;
+  name: string;
+  matchScore: number;
+  jobTitle: string;
+  gdprAnonymized: number;
+}
+
 interface Stats {
   totalCvs: number;
   activeJobs: number;
   excellentMatches: number;
   averageMatch: number;
+  trend7d: TrendPoint[];
+  topCandidates: TopCandidate[];
+  jobCandidateCounts: Record<number, number>;
+}
+
+/** Builds an SVG polyline `points` string from a series, scaled into an 8x34 sparkline box. */
+function sparklinePoints(values: number[]): string {
+  if (values.length === 0) return '';
+  const max = Math.max(...values, 1);
+  const w = 90, h = 34;
+  return values
+    .map((v, i) => {
+      const x = values.length > 1 ? (i / (values.length - 1)) * w : w;
+      const y = h - (v / max) * h;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
 }
 
 export const Dashboard: React.FC = () => {
   const { t } = useI18n();
-  const { role, capabilities } = useRole();
+  const { role, capabilities, gdprActive } = useRole();
   const navigate = useNavigate();
 
   const canEditJobs = role ? hasPermission(role, 'manage_jobs', capabilities) : false;
   const canDeleteJobs = role ? hasPermission(role, 'delete_data', capabilities) : false;
 
-  const [stats, setStats] = useState<Stats>({ totalCvs: 0, activeJobs: 0, excellentMatches: 0, averageMatch: 0 });
+  const [stats, setStats] = useState<Stats>({ totalCvs: 0, activeJobs: 0, excellentMatches: 0, averageMatch: 0, trend7d: [], topCandidates: [], jobCandidateCounts: {} });
   const [jobsList, setJobsList] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
@@ -240,142 +275,203 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  const cvSeries = stats.trend7d.map(p => p.cumulativeCvs);
+  const jobSeries = stats.trend7d.map(p => p.cumulativeJobs);
+  const excellentSeries = stats.trend7d.map(p => p.cumulativeExcellent);
+  const matchSeries = stats.trend7d.map(p => p.avgMatch);
+  const todayCount = stats.trend7d[stats.trend7d.length - 1]?.cvCount ?? 0;
+  const strongMatches = stats.topCandidates.filter(c => c.matchScore >= 90).length;
+
+  const kpiTiles = [
+    { label: t('kpiTotalCvs'), value: String(stats.totalCvs), series: cvSeries, icon: FileText },
+    { label: t('kpiActiveJobs'), value: String(stats.activeJobs), series: jobSeries, icon: Briefcase },
+    { label: t('kpiExcellentMatches'), value: String(stats.excellentMatches), series: excellentSeries, icon: Award },
+    { label: t('kpiAverageScore'), value: `${stats.averageMatch}%`, series: matchSeries, icon: TrendingUp }
+  ];
+
   return (
-    <div className="space-y-8">
-      {/* KPI Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Total processed CVs */}
-        <div className="bg-bg-card border border-border-main p-6 rounded-2xl flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center shrink-0">
-            <FileText className="w-6 h-6 text-brand" />
+    <div className="space-y-5">
+      {/* KPI row — des-2.txt §5 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+        {kpiTiles.map(({ label, value, series, icon: Icon }) => (
+          <div key={label} className="tk-tile tk-focusable" style={{ transition: 'border-color 180ms ease' }}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+              </span>
+            </div>
+            <div className="flex items-end justify-between gap-2 mt-2">
+              <h3 style={{ fontSize: 'clamp(24px,2.6vw,32px)', fontWeight: 500, letterSpacing: '-.03em', color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>
+                {value}
+              </h3>
+              {series.length > 1 && (
+                <svg viewBox="0 0 90 34" width="90" height="34" style={{ maxWidth: '40%' }}>
+                  <polyline points={sparklinePoints(series)} fill="none" stroke="var(--tk-accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-bold text-text-muted uppercase tracking-wider">{t('kpiTotalCvs')}</p>
-            <h3 className="text-2xl font-black text-text-main mt-0.5">{stats.totalCvs}</h3>
-          </div>
-        </div>
-
-        {/* Active Jobs */}
-        <div className="bg-bg-card border border-border-main p-6 rounded-2xl flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-            <Briefcase className="w-6 h-6 text-emerald-500" />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-text-muted uppercase tracking-wider">{t('kpiActiveJobs')}</p>
-            <h3 className="text-2xl font-black text-text-main mt-0.5">{stats.activeJobs}</h3>
-          </div>
-        </div>
-
-        {/* Excellent Matches */}
-        <div className="bg-bg-card border border-border-main p-6 rounded-2xl flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-            <Award className="w-6 h-6 text-amber-500" />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-text-muted uppercase tracking-wider">{t('kpiExcellentMatches')}</p>
-            <h3 className="text-2xl font-black text-text-main mt-0.5">{stats.excellentMatches}</h3>
-          </div>
-        </div>
-
-        {/* Average Match score */}
-        <div className="bg-bg-card border border-border-main p-6 rounded-2xl flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-            <TrendingUp className="w-6 h-6 text-violet-500" />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-text-muted uppercase tracking-wider">{t('kpiAverageScore')}</p>
-            <h3 className="text-2xl font-black text-text-main mt-0.5">{stats.averageMatch}%</h3>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Role-based Guidance Assistant Panel */}
-      {role && (
-        <div className="bg-gradient-to-r from-brand/5 via-brand/10 to-brand/5 border border-brand/20 p-6 rounded-2xl flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-brand flex items-center justify-center shrink-0 shadow-lg shadow-brand/10">
-            <Compass className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-brand uppercase tracking-wider">{t('assistantTitle')}</h4>
-            <p className="text-sm text-text-main font-medium mt-1 leading-relaxed">
+      {/* AI Assistant hero panel + Top candidates — des-2.txt §5 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: 14 }}>
+        <div className="tk-hero p-5" style={{ flex: '1 1 0' }}>
+          <div
+            style={{
+              position: 'absolute', top: -60, insetInlineEnd: -60, width: 200, height: 200, borderRadius: '50%',
+              background: 'radial-gradient(circle, var(--tk-accent-mid), transparent 65%)'
+            }}
+          />
+          <div className="relative space-y-3">
+            <h4 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--tk-accent-text)' }}>
+              <Sparkles className="w-4 h-4" />
+              {t('assistantTitle')}
+            </h4>
+            <p className="text-xs leading-relaxed flex items-center gap-3" style={{ color: 'var(--tk-text)' }}>
+              <span><strong style={{ fontVariantNumeric: 'tabular-nums' }}>{todayCount}</strong> {t('kpiTotalCvs')}</span>
+              <span>·</span>
+              <span><strong style={{ fontVariantNumeric: 'tabular-nums' }}>{strongMatches}</strong> ≥90%</span>
+            </p>
+            <p className="text-sm font-medium leading-relaxed" style={{ color: 'var(--tk-text)' }}>
               {role === 'admin' ? t('assistant_admin') : role === 'manager' ? t('assistant_manager') : t('assistant_recruiter')}
             </p>
+
+            {stats.topCandidates.slice(0, 3).map(c => {
+              const displayName = c.gdprAnonymized ? `Candidate #${c.id}` : c.name;
+              return (
+                <div key={c.id} className="flex items-center gap-2.5">
+                  <span
+                    className="flex items-center justify-center shrink-0 font-bold text-xs"
+                    style={{ width: 30, height: 30, borderRadius: 10, background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' }}
+                  >
+                    {c.matchScore}
+                  </span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <p className="text-xs font-semibold truncate" style={{ color: 'var(--tk-text)' }}><Bidi>{displayName}</Bidi></p>
+                    <p className="text-[11px] truncate" style={{ color: 'var(--tk-muted)', maxWidth: '40%' }}><Bidi>{c.jobTitle}</Bidi></p>
+                  </div>
+                </div>
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={() => setSummaryModalOpen(true)}
+              className="tk-btn-primary tk-focusable"
+              style={{ width: '100%', height: 38, fontSize: 12.5 }}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {t('aiStrategicSummary')}
+            </button>
           </div>
         </div>
-      )}
+
+        <div className="tk-panel" style={{ flex: '1.6 1 0' }}>
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div>
+              <h4 className="text-[15px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('navResults')}</h4>
+              <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>ranked by match score</p>
+            </div>
+            <Link to="/results" className="text-xs font-semibold tk-focusable" style={{ color: 'var(--tk-accent-text)' }}>
+              {t('viewResults')} →
+            </Link>
+          </div>
+
+          {stats.topCandidates.length === 0 ? (
+            <p className="text-xs py-6 text-center" style={{ color: 'var(--tk-muted)' }}>{t('noCandidatesYet')}</p>
+          ) : (
+            <div className="tk-row-list">
+              {stats.topCandidates.map((c, idx) => {
+                const displayName = c.gdprAnonymized ? `Candidate #${c.id}` : c.name;
+                return (
+                  <div key={c.id} className="flex items-center gap-3 flex-wrap">
+                    <span className="text-sm font-bold" style={{ width: 20, color: 'var(--tk-dim)' }}>{String(idx + 1).padStart(2, '0')}</span>
+                    <span
+                      className="flex items-center justify-center shrink-0 rounded-full font-bold text-xs"
+                      style={{ width: 34, height: 34, background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' }}
+                    >
+                      {displayName.charAt(0).toUpperCase()}
+                    </span>
+                    <div style={{ flex: '1 1 150px', minWidth: 0 }}>
+                      <p className="text-xs font-semibold truncate" style={{ color: 'var(--tk-text)' }}><Bidi>{displayName}</Bidi></p>
+                      <p className="text-[11px] truncate" style={{ color: 'var(--tk-muted)' }}><Bidi>{c.jobTitle}</Bidi></p>
+                    </div>
+                    <div className="tk-progress-track" style={{ flex: '1 1 90px' }}>
+                      <div className="tk-progress-fill" style={{ width: `${c.matchScore}%` }} />
+                    </div>
+                    <span className="text-sm font-bold text-end" style={{ width: 48, color: 'var(--tk-accent-text)' }}>{c.matchScore}%</span>
+                    <Link to={`/candidate/${c.id}`} className="tk-btn-primary tk-focusable" style={{ height: 30, padding: '0 12px', fontSize: 11 }}>
+                      {t('viewResults') === 'View Results' ? 'Open' : t('viewResults')}
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Actions and Jobs Table Section */}
       <div className="space-y-4">
         <div className="flex justify-between items-center gap-4">
-          <h3 className="text-lg font-black text-text-main">{t('activeJobsList')}</h3>
-          
-          <div className="flex gap-2">
-            {/* AI Strategic Summary Button */}
-            <button
-              onClick={() => setSummaryModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-brand/10 hover:bg-brand-light border border-brand/20 text-brand rounded-xl font-bold text-xs transition-all cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4 text-brand animate-pulse" />
-              <span>{t('aiStrategicSummary')}</span>
-            </button>
+          <h3 className="text-[15px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('activeJobsList')}</h3>
 
-            {/* Create Job Redirect */}
-            {canEditJobs && (
-              <button
-                onClick={() => navigate('/jobs')}
-                className="flex items-center gap-1.5 px-4 py-2 bg-brand hover:bg-brand-hover text-white rounded-xl font-bold text-xs shadow-md shadow-brand/10 transition-all cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>{t('createJob')}</span>
-              </button>
-            )}
-          </div>
+          {canEditJobs && (
+            <button
+              onClick={() => navigate('/jobs')}
+              className="tk-btn-primary tk-focusable"
+              style={{ height: 36, padding: '0 16px', fontSize: 12.5 }}
+            >
+              <Plus className="w-4 h-4" />
+              <span>{t('createJob')}</span>
+            </button>
+          )}
         </div>
 
         {loading ? (
-          <div className="py-20 text-center text-text-muted">Loading dashboard...</div>
+          <div className="py-20 text-center" style={{ color: 'var(--tk-muted)' }}>Loading dashboard...</div>
         ) : jobsList.length === 0 ? (
-          <div className="bg-bg-card border border-border-main p-12 rounded-2xl text-center text-text-muted">
-            <Briefcase className="w-12 h-12 mx-auto text-text-muted/40 mb-3" />
-            <p className="text-sm font-semibold">{t('noJobsYet')}</p>
+          <div className="tk-panel text-center" style={{ padding: 48 }}>
+            <Briefcase className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tk-dim)' }} />
+            <p className="text-sm font-semibold" style={{ color: 'var(--tk-muted)' }}>{t('noJobsYet')}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
             {jobsList.map(job => {
               const checklistItems = job.checklist ? JSON.parse(job.checklist) : [];
               return (
-                <div key={job.id} className={`bg-bg-card border p-5 rounded-2xl flex flex-col justify-between hover:shadow-md transition-shadow ${job.status === 'Paused' ? 'border-amber-500/40 bg-amber-500/[0.02]' : 'border-border-main'}`}>
+                <div key={job.id} className="tk-tile flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-bold text-brand bg-brand-light px-2.5 py-1 rounded-full uppercase tracking-wider">
-                        {job.department}
-                      </span>
+                      <span className="tk-pill is-active">{job.department}</span>
                       {job.status === 'Paused' && (
-                        <span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                        <span className="tk-pill">
                           <Pause className="w-3 h-3" />
                           Paused
                         </span>
                       )}
                     </div>
-                    <h4 className="text-base font-bold text-text-main mt-3" title={job.title}>
+                    <h4 className="text-[15.5px] font-medium mt-3" style={{ color: 'var(--tk-text)', lineHeight: 1.35 }} title={job.title}>
                       <Bidi>{job.title}</Bidi>
                     </h4>
-                    <p className="text-xs text-text-muted mt-1 font-medium">{job.location} • {job.experience} years exp.</p>
+                    <p className="text-[11.5px] mt-1" style={{ color: 'var(--tk-muted)' }}>{job.location} • {job.experience} years exp.</p>
 
-                    <div className="mt-4 pt-4 border-t border-border-main/50 space-y-2">
-                      <p className="text-[11px] font-bold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                    <div className="mt-4 pt-4 space-y-2" style={{ borderTop: '1px solid var(--tk-border)' }}>
+                      <p className="text-[11px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
                         <ListTodo className="w-3.5 h-3.5" />
                         ATS Checklist Preview ({checklistItems.length})
                       </p>
-                      <ul className="text-xs text-text-main space-y-1 max-h-[85px] overflow-y-auto pr-1">
+                      <ul className="text-xs space-y-1 max-h-[85px] overflow-y-auto pr-1" style={{ color: 'var(--tk-text)' }}>
                         {checklistItems.slice(0, 3).map((item: any) => (
                           <li key={item.id} className="truncate flex items-center gap-1">
-                            <span className="w-1 h-1 rounded-full bg-brand shrink-0"></span>
+                            <span className="w-1 h-1 rounded-full shrink-0" style={{ background: 'var(--tk-accent)' }}></span>
                             <span className="truncate">{item.requirement}</span>
                           </li>
                         ))}
                         {checklistItems.length > 3 && (
-                          <li className="text-[10px] text-text-muted font-semibold italic">
+                          <li className="text-[10px] font-semibold italic" style={{ color: 'var(--tk-muted)' }}>
                             + {checklistItems.length - 3} more items...
                           </li>
                         )}
@@ -383,10 +479,11 @@ export const Dashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-5 pt-4 border-t border-border-main/50">
+                  <div className="flex items-center gap-2 mt-5 pt-4" style={{ borderTop: '1px solid var(--tk-border)' }}>
                     <button
                       onClick={() => navigate(`/results?job=${job.id}`)}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-bg-hover hover:bg-border-main rounded-xl text-xs font-bold text-text-main transition-colors cursor-pointer"
+                      className="tk-btn-neutral tk-focusable"
+                      style={{ flex: 1, height: 34, fontSize: 11.5 }}
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>{t('viewResults')}</span>
@@ -395,7 +492,8 @@ export const Dashboard: React.FC = () => {
                     {canEditJobs && (
                       <button
                         onClick={() => handleOpenEdit(job)}
-                        className="flex items-center justify-center p-2 bg-brand/10 hover:bg-brand-light text-brand rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                        className="tk-icon-btn tk-focusable"
+                        style={{ width: 34, height: 34 }}
                         title={t('editJob')}
                       >
                         <Edit3 className="w-3.5 h-3.5" />
@@ -405,11 +503,8 @@ export const Dashboard: React.FC = () => {
                     {canEditJobs && (
                       <button
                         onClick={() => handleTogglePause(job)}
-                        className={`flex items-center justify-center p-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-                          job.status === 'Paused'
-                            ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/20'
-                            : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20'
-                        }`}
+                        className="tk-icon-btn tk-focusable"
+                        style={{ width: 34, height: 34 }}
                         title={job.status === 'Paused' ? 'Activate Job Position' : 'Pause Job Position'}
                       >
                         {job.status === 'Paused' ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
@@ -419,7 +514,11 @@ export const Dashboard: React.FC = () => {
                     {canDeleteJobs && (
                       <button
                         onClick={() => handleDeleteJobClick(job)}
-                        className="flex items-center justify-center p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                        className="tk-focusable"
+                        style={{
+                          width: 34, height: 34, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.2)', color: '#ef4444', cursor: 'pointer'
+                        }}
                         title="Delete Job Position"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
