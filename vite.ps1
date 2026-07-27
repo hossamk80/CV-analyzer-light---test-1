@@ -4,14 +4,14 @@ $basedir=Split-Path $MyInvocation.MyCommand.Definition -Parent
 $exe=""
 $pathsep=":"
 $env_node_path=$env:NODE_PATH
-$new_node_path="E:\CV-analyzer-light\node_modules\.pnpm\vite@6.4.3_@types+node@22.2_39ae0627b10a49c980e38000da261da9\node_modules\vite\node_modules;E:\CV-analyzer-light\node_modules\.pnpm\vite@6.4.3_@types+node@22.2_39ae0627b10a49c980e38000da261da9\node_modules;E:\CV-analyzer-light\node_modules\.pnpm\node_modules"
+$new_node_path="E:\CV-analyzer-light - test 1\node_modules\.pnpm\vite@6.4.3_@types+node@22.2_39ae0627b10a49c980e38000da261da9\node_modules\vite\node_modules;E:\CV-analyzer-light - test 1\node_modules\.pnpm\vite@6.4.3_@types+node@22.2_39ae0627b10a49c980e38000da261da9\node_modules;E:\CV-analyzer-light - test 1\node_modules\.pnpm\node_modules"
 if ($PSVersionTable.PSVersion -lt "6.0" -or $IsWindows) {
   # Fix case when both the Windows and Linux builds of Node
   # are installed in the same directory
   $exe=".exe"
   $pathsep=";"
 } else {
-  $new_node_path="/mnt/e/CV-analyzer-light/node_modules/.pnpm/vite@6.4.3_@types+node@22.2_39ae0627b10a49c980e38000da261da9/node_modules/vite/node_modules:/mnt/e/CV-analyzer-light/node_modules/.pnpm/vite@6.4.3_@types+node@22.2_39ae0627b10a49c980e38000da261da9/node_modules:/mnt/e/CV-analyzer-light/node_modules/.pnpm/node_modules"
+  $new_node_path="/mnt/e/CV-analyzer-light - test 1/node_modules/.pnpm/vite@6.4.3_@types+node@22.2_39ae0627b10a49c980e38000da261da9/node_modules/vite/node_modules:/mnt/e/CV-analyzer-light - test 1/node_modules/.pnpm/vite@6.4.3_@types+node@22.2_39ae0627b10a49c980e38000da261da9/node_modules:/mnt/e/CV-analyzer-light - test 1/node_modules/.pnpm/node_modules"
 }
 if ([string]::IsNullOrEmpty($env_node_path)) {
   $env:NODE_PATH=$new_node_path
@@ -23,17 +23,17 @@ $ret=0
 if (Test-Path "$basedir/node$exe") {
   # Support pipeline input
   if ($MyInvocation.ExpectingInput) {
-    $input | & "$basedir/node$exe"  "$basedir/../../bin/vite.js" $args
+    $input | & "$basedir/node$exe"  "$basedir/../vite/bin/vite.js" $args
   } else {
-    & "$basedir/node$exe"  "$basedir/../../bin/vite.js" $args
+    & "$basedir/node$exe"  "$basedir/../vite/bin/vite.js" $args
   }
   $ret=$LASTEXITCODE
 } else {
   # Support pipeline input
   if ($MyInvocation.ExpectingInput) {
-    $input | & "node$exe"  "$basedir/../../bin/vite.js" $args
+    $input | & "node$exe"  "$basedir/../vite/bin/vite.js" $args
   } else {
-    & "node$exe"  "$basedir/../../bin/vite.js" $args
+    & "node$exe"  "$basedir/../vite/bin/vite.js" $args
   }
   $ret=$LASTEXITCODE
 }

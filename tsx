@@ -30,14 +30,14 @@ else
   export NODE_PATH="/mnt/e/CV-analyzer-light - test 1/node_modules/.pnpm/tsx@4.23.1/node_modules/tsx/node_modules:/mnt/e/CV-analyzer-light - test 1/node_modules/.pnpm/tsx@4.23.1/node_modules:/mnt/e/CV-analyzer-light - test 1/node_modules/.pnpm/node_modules:$NODE_PATH"
 fi
 if [ -n "$exe" ] && [ -x "$basedir/node.exe" ]; then
-  exec "$basedir/node.exe"  "$basedir_win/../../../tsx/dist/cli.mjs" "$@"
+  exec "$basedir/node.exe"  "$basedir_win/../tsx/dist/cli.mjs" "$@"
 elif [ -x "$basedir/node" ]; then
-  exec "$basedir/node"  "$basedir/../../../tsx/dist/cli.mjs" "$@"
+  exec "$basedir/node"  "$basedir/../tsx/dist/cli.mjs" "$@"
 elif command -v node >/dev/null 2>&1; then
-  exec node  "$basedir/../../../tsx/dist/cli.mjs" "$@"
+  exec node  "$basedir/../tsx/dist/cli.mjs" "$@"
 elif [ -n "$exe" ] && command -v node.exe >/dev/null 2>&1; then
-  exec node.exe  "$basedir_win/../../../tsx/dist/cli.mjs" "$@"
+  exec node.exe  "$basedir_win/../tsx/dist/cli.mjs" "$@"
 else
-  exec node  "$basedir/../../../tsx/dist/cli.mjs" "$@"
+  exec node  "$basedir/../tsx/dist/cli.mjs" "$@"
 fi
-# cmd-shim-target=E:/CV-analyzer-light - test 1/node_modules/.pnpm/vite@6.4.3_@types+node@22.2_39ae0627b10a49c980e38000da261da9/node_modules/tsx/dist/cli.mjs
+# cmd-shim-target=E:/CV-analyzer-light - test 1/node_modules/tsx/dist/cli.mjs

@@ -5,8 +5,8 @@
   @SET "NODE_PATH=E:\CV-analyzer-light - test 1\node_modules\.pnpm\tsx@4.23.1\node_modules\tsx\node_modules;E:\CV-analyzer-light - test 1\node_modules\.pnpm\tsx@4.23.1\node_modules;E:\CV-analyzer-light - test 1\node_modules\.pnpm\node_modules;%NODE_PATH%"
 )
 @IF EXIST "%~dp0\node.exe" (
-  "%~dp0\node.exe"  "%~dp0\..\..\..\tsx\dist\cli.mjs" %*
+  "%~dp0\node.exe"  "%~dp0\..\tsx\dist\cli.mjs" %*
 ) ELSE (
   @SET PATHEXT=%PATHEXT:;.JS;=;%
-  node  "%~dp0\..\..\..\tsx\dist\cli.mjs" %*
+  node  "%~dp0\..\tsx\dist\cli.mjs" %*
 )
