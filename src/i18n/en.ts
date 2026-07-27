@@ -196,5 +196,8 @@ export const en = {
 
   // Header
   search: "Search",
-  navAnalytics: "Analytics & Funnel"
+  navAnalytics: "Analytics & Funnel",
+  definePosition: "Define New Position",
+  screenedToday: "screened today",
+  atOrAbove90: "at 90%+"
 };

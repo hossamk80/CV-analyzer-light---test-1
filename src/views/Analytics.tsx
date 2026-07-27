@@ -2,19 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { apiRequest } from '../utils/api.js';
 import { useI18n } from '../i18n/I18nContext.js';
 import AccessDenied from '../components/AccessDenied.js';
-import { 
-  BarChart3, 
-  TrendingUp, 
-  Clock, 
-  Users, 
-  Award, 
-  Briefcase, 
-  Filter, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  BarChart3,
+  TrendingUp,
+  Clock,
+  Users,
+  Award,
+  CheckCircle2,
+  XCircle,
   RefreshCw,
-  PieChart,
-  Calendar
+  PieChart
 } from 'lucide-react';
 
 interface Candidate {
@@ -115,10 +112,11 @@ export const Analytics: React.FC = () => {
     };
   }, [filteredCandidates]);
 
-  // Compute Time-to-Hire (average days in system for interviewed/shortlisted candidates)
-  const timeToHireDays = useMemo(() => {
+  // Compute Time-to-Hire (average days in system for interviewed/shortlisted candidates).
+  // Returns null — rendered as "—" — when nothing has advanced yet, rather than inventing a benchmark.
+  const timeToHireDays = useMemo<string | null>(() => {
     const advancedCandidates = filteredCandidates.filter(c => c.status === 'Interviewing' || c.status === 'Shortlisted');
-    if (advancedCandidates.length === 0) return 3.5; // default benchmark
+    if (advancedCandidates.length === 0) return null;
 
     const now = new Date().getTime();
     let totalDays = 0;
@@ -131,6 +129,17 @@ export const Analytics: React.FC = () => {
 
     return (totalDays / advancedCandidates.length).toFixed(1);
   }, [filteredCandidates]);
+
+  // CVs by department — real volume from each candidate's target job (des-2.txt §9).
+  const byDepartment = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredCandidates.forEach(c => {
+      const job = jobs.find(j => j.id === c.jobId);
+      const dept = job?.department?.trim() || 'Unassigned';
+      counts[dept] = (counts[dept] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  }, [filteredCandidates, jobs]);
 
   // Compute Top Skills & Gaps
   const topSkillsAndGaps = useMemo(() => {
@@ -165,9 +174,9 @@ export const Analytics: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[300px] text-text-muted text-sm gap-2">
-        <RefreshCw className="w-5 h-5 animate-spin text-brand" />
-        <span>Computing analytics and funnel metrics...</span>
+      <div className="flex items-center justify-center min-h-[300px] text-sm gap-2" style={{ color: 'var(--tk-muted)' }}>
+        <RefreshCw className="w-5 h-5 animate-spin" style={{ color: 'var(--tk-accent)' }} />
+        <span>Computing analytics and funnel metrics…</span>
       </div>
     );
   }
@@ -176,222 +185,214 @@ export const Analytics: React.FC = () => {
     return <AccessDenied message={error} onRetry={fetchData} />;
   }
 
+  const statTiles = [
+    { label: 'Total candidates', value: String(funnelMetrics.total), delta: 'Evaluated in selected scope', icon: Users },
+    { label: 'Avg match score', value: `${scoreAnalytics.avgMatch}%`, delta: `Tech ${scoreAnalytics.avgTech}% · Exp ${scoreAnalytics.avgExp}%`, icon: Award },
+    { label: 'Shortlisted rate', value: `${funnelMetrics.shortlistedPct}%`, delta: `${funnelMetrics.shortlisted} shortlisted`, icon: TrendingUp },
+    { label: 'Est. time to shortlist', value: timeToHireDays ? `${timeToHireDays} days` : '—', delta: timeToHireDays ? 'From upload to advancement' : 'No candidates advanced yet', icon: Clock }
+  ];
+
+  // Funnel rows, widest first, each measured against the top of the funnel (des-2.txt §9).
+  const funnelRows = [
+    { label: 'CVs received', count: funnelMetrics.total },
+    { label: 'Pending review', count: funnelMetrics.pending },
+    { label: 'Shortlisted', count: funnelMetrics.shortlisted },
+    { label: 'Interviewing', count: funnelMetrics.interviewing },
+    { label: 'Rejected', count: funnelMetrics.rejected }
+  ];
+  const funnelTop = funnelMetrics.total || 1;
+  const deptMax = byDepartment.length > 0 ? Math.max(...byDepartment.map(([, v]) => v)) : 1;
+
+  const tierCards = [
+    { label: 'Full match (≥80%)', count: scoreAnalytics.fullMatchCount, hint: 'Top tier fits' },
+    { label: 'Partial (50–79%)', count: scoreAnalytics.partialMatchCount, hint: 'Moderate fits' },
+    { label: 'Low (<50%)', count: scoreAnalytics.lowMatchCount, hint: 'Unmatched' }
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Header & Job Selector */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-bg-card border border-border-main p-6 rounded-2xl">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
-            <BarChart3 className="w-6 h-6" />
-          </div>
-          <div>
-            <h2 className="text-xl font-extrabold text-text-main">
-              {language === 'ar' ? 'تقارير وتحليلات التوظيف' : 'Recruitment Reporting & Funnel Analytics'}
-            </h2>
-            <p className="text-xs text-text-muted">
-              {language === 'ar' ? 'مؤشرات الأداء، مسار التوظيف، توزيع النقاط، وأوقات الاستجابة' : 'Funnel conversion rates, match score distribution, and estimated time-to-hire.'}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Job Position:</label>
-          <select
-            value={selectedJobId}
-            onChange={(e) => setSelectedJobId(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-border-main bg-bg-main/50 text-text-main text-xs font-semibold focus:outline-none focus:border-brand min-w-[200px]"
-          >
-            <option value="all">All Jobs Combined ({jobs.length})</option>
-            {jobs.map(j => (
-              <option key={j.id} value={j.id}>{j.title}</option>
-            ))}
-          </select>
-        </div>
+    <div style={{ display: 'grid', gap: 14 }}>
+      {/* Job filter */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <label className="text-[11px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>
+          {language === 'ar' ? 'الوظيفة' : 'Job'}
+        </label>
+        <select
+          value={selectedJobId}
+          onChange={(e) => setSelectedJobId(e.target.value)}
+          className="tk-field tk-focusable"
+          style={{ width: 'auto', minWidth: 200, height: 36, cursor: 'pointer' }}
+        >
+          <option value="all">All jobs combined ({jobs.length})</option>
+          {jobs.map(j => (
+            <option key={j.id} value={j.id}>{j.title}</option>
+          ))}
+        </select>
       </div>
 
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-bg-card border border-border-main p-5 rounded-2xl space-y-2">
-          <div className="flex justify-between items-center text-text-muted">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Candidates</span>
-            <Users className="w-4 h-4 text-brand" />
+      {/* Stat tiles */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+        {statTiles.map(({ label, value, delta, icon: Icon }) => (
+          <div key={label} className="tk-tile">
+            <span className="text-[11px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </span>
+            <div className="flex items-baseline gap-2 flex-wrap mt-2">
+              <span style={{ fontSize: 'clamp(24px,2.6vw,32px)', fontWeight: 500, letterSpacing: '-.03em', color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>
+                {value}
+              </span>
+              <span className="text-[11.5px]" style={{ color: 'var(--tk-accent-text)' }}>{delta}</span>
+            </div>
           </div>
-          <p className="text-2xl font-black text-text-main">{funnelMetrics.total}</p>
-          <p className="text-[11px] text-text-muted font-medium">Evaluated across selected scope</p>
-        </div>
-
-        <div className="bg-bg-card border border-border-main p-5 rounded-2xl space-y-2">
-          <div className="flex justify-between items-center text-text-muted">
-            <span className="text-xs font-bold uppercase tracking-wider">Avg Match Score</span>
-            <Award className="w-4 h-4 text-emerald-500" />
-          </div>
-          <p className="text-2xl font-black text-emerald-500">{scoreAnalytics.avgMatch}%</p>
-          <p className="text-[11px] text-text-muted font-medium">Tech: {scoreAnalytics.avgTech}% | Exp: {scoreAnalytics.avgExp}%</p>
-        </div>
-
-        <div className="bg-bg-card border border-border-main p-5 rounded-2xl space-y-2">
-          <div className="flex justify-between items-center text-text-muted">
-            <span className="text-xs font-bold uppercase tracking-wider">Shortlisted Rate</span>
-            <TrendingUp className="w-4 h-4 text-blue-500" />
-          </div>
-          <p className="text-2xl font-black text-blue-500">{funnelMetrics.shortlistedPct}%</p>
-          <p className="text-[11px] text-text-muted font-medium">{funnelMetrics.shortlisted} candidates shortlisted</p>
-        </div>
-
-        <div className="bg-bg-card border border-border-main p-5 rounded-2xl space-y-2">
-          <div className="flex justify-between items-center text-text-muted">
-            <span className="text-xs font-bold uppercase tracking-wider">Est. Time-to-Hire</span>
-            <Clock className="w-4 h-4 text-amber-500" />
-          </div>
-          <p className="text-2xl font-black text-amber-500">{timeToHireDays} days</p>
-          <p className="text-[11px] text-text-muted font-medium">From application to interview stage</p>
-        </div>
+        ))}
       </div>
 
-      {/* Funnel Metrics Breakdown & Match Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Recruitment Funnel Stages */}
-        <div className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-5">
-          <h3 className="text-sm font-bold text-text-main uppercase tracking-wider flex items-center gap-2 border-b border-border-main/50 pb-3">
-            <PieChart className="w-4 h-4 text-brand" />
-            Recruitment Stage Funnel
+      {/* Hiring funnel + CVs by department */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: 14 }}>
+        <div className="tk-panel">
+          <h3 className="text-[15px] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
+            <PieChart className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
+            Hiring funnel
           </h3>
+          <p className="text-[11px] mb-4" style={{ color: 'var(--tk-muted)' }}>Conversion across the current candidate set</p>
 
-          <div className="space-y-4">
-            {/* Stage 1: Total Applied */}
-            <div>
-              <div className="flex justify-between text-xs font-bold mb-1">
-                <span className="text-text-main">1. Applied / Pending</span>
-                <span className="text-text-muted">{funnelMetrics.pending} ({funnelMetrics.total > 0 ? Math.round((funnelMetrics.pending / funnelMetrics.total) * 100) : 0}%)</span>
-              </div>
-              <div className="w-full bg-bg-main rounded-full h-2.5 overflow-hidden">
-                <div className="bg-text-muted h-full rounded-full transition-all duration-500" style={{ width: `${funnelMetrics.total > 0 ? (funnelMetrics.pending / funnelMetrics.total) * 100 : 0}%` }}></div>
-              </div>
-            </div>
-
-            {/* Stage 2: Shortlisted */}
-            <div>
-              <div className="flex justify-between text-xs font-bold mb-1">
-                <span className="text-blue-500">2. Shortlisted</span>
-                <span className="text-blue-500">{funnelMetrics.shortlisted} ({funnelMetrics.shortlistedPct}%)</span>
-              </div>
-              <div className="w-full bg-bg-main rounded-full h-2.5 overflow-hidden">
-                <div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: `${funnelMetrics.shortlistedPct}%` }}></div>
-              </div>
-            </div>
-
-            {/* Stage 3: Interviewing */}
-            <div>
-              <div className="flex justify-between text-xs font-bold mb-1">
-                <span className="text-purple-500">3. Interviewing Stage</span>
-                <span className="text-purple-500">{funnelMetrics.interviewing} ({funnelMetrics.interviewingPct}%)</span>
-              </div>
-              <div className="w-full bg-bg-main rounded-full h-2.5 overflow-hidden">
-                <div className="bg-purple-500 h-full rounded-full transition-all duration-500" style={{ width: `${funnelMetrics.interviewingPct}%` }}></div>
-              </div>
-            </div>
-
-            {/* Stage 4: Rejected */}
-            <div>
-              <div className="flex justify-between text-xs font-bold mb-1">
-                <span className="text-red-500">4. Rejected</span>
-                <span className="text-red-500">{funnelMetrics.rejected} ({funnelMetrics.rejectedPct}%)</span>
-              </div>
-              <div className="w-full bg-bg-main rounded-full h-2.5 overflow-hidden">
-                <div className="bg-red-500 h-full rounded-full transition-all duration-500" style={{ width: `${funnelMetrics.rejectedPct}%` }}></div>
-              </div>
-            </div>
+          <div style={{ display: 'grid', gap: 12 }}>
+            {funnelRows.map(({ label, count }, i) => {
+              const pct = Math.round((count / funnelTop) * 100);
+              return (
+                <div key={label}>
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className="text-[12.5px]" style={{ color: 'var(--tk-text)' }}>{label}</span>
+                    <span className="text-[12.5px]" style={{ color: 'var(--tk-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                      {count}
+                      <span className="inline-block text-end" style={{ width: 44, color: 'var(--tk-dim)' }}>{pct}%</span>
+                    </span>
+                  </div>
+                  <div style={{ height: 26, borderRadius: 9, background: 'var(--tk-track)', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        height: '100%',
+                        width: count > 0 ? `max(6%, ${pct}%)` : '0%',
+                        borderRadius: 9,
+                        background: `linear-gradient(90deg, color-mix(in srgb, var(--tk-accent) ${Math.max(70 - 8 * i, 20)}%, transparent), var(--tk-accent))`,
+                        boxShadow: count > 0 ? '0 0 18px color-mix(in srgb, var(--tk-accent) 22%, transparent)' : 'none'
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Score Quality Distribution */}
-        <div className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-5">
-          <h3 className="text-sm font-bold text-text-main uppercase tracking-wider flex items-center gap-2 border-b border-border-main/50 pb-3">
-            <Award className="w-4 h-4 text-emerald-500" />
-            Candidate Quality Score Tier Breakdown
+        <div className="tk-panel">
+          <h3 className="text-[15px] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
+            <BarChart3 className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
+            CVs by department
           </h3>
+          <p className="text-[11px] mb-4" style={{ color: 'var(--tk-muted)' }}>Volume screened per hiring department</p>
 
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl space-y-1">
-              <span className="text-[10px] font-bold uppercase text-green-500">Full Match (≥80%)</span>
-              <p className="text-2xl font-black text-green-500">{scoreAnalytics.fullMatchCount}</p>
-              <p className="text-[10px] text-text-muted">Top tier fits</p>
+          {byDepartment.length === 0 ? (
+            <p className="text-xs py-8 text-center" style={{ color: 'var(--tk-muted)' }}>No candidates screened yet.</p>
+          ) : (
+            <div className="flex items-end" style={{ height: 210, gap: 'clamp(8px,1.4vw,18px)' }}>
+              {byDepartment.map(([dept, count]) => (
+                <div key={dept} className="flex flex-col items-center justify-end" style={{ flex: 1, minWidth: 0, height: '100%' }}>
+                  <span className="text-[11.5px] mb-1.5" style={{ color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
+                  <div
+                    style={{
+                      width: '100%',
+                      height: Math.max(4, Math.round((count / deptMax) * 148)),
+                      borderRadius: '8px 8px 0 0',
+                      background: 'linear-gradient(180deg, var(--tk-accent), color-mix(in srgb, var(--tk-accent) 18%, transparent))',
+                      boxShadow: '0 0 18px color-mix(in srgb, var(--tk-accent) 22%, transparent)'
+                    }}
+                  />
+                  <span
+                    className="text-[10px] font-bold uppercase tracking-[.1em] mt-2 truncate w-full text-center"
+                    style={{ color: 'var(--tk-muted)' }}
+                    title={dept}
+                  >
+                    {dept}
+                  </span>
+                </div>
+              ))}
             </div>
-
-            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-1">
-              <span className="text-[10px] font-bold uppercase text-amber-500">Partial (50-79%)</span>
-              <p className="text-2xl font-black text-amber-500">{scoreAnalytics.partialMatchCount}</p>
-              <p className="text-[10px] text-text-muted">Moderate fits</p>
-            </div>
-
-            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl space-y-1">
-              <span className="text-[10px] font-bold uppercase text-red-500">Low (&lt;50%)</span>
-              <p className="text-2xl font-black text-red-500">{scoreAnalytics.lowMatchCount}</p>
-              <p className="text-[10px] text-text-muted">Unmatched</p>
-            </div>
-          </div>
-
-          {/* Sub-Score Breakdown Averages */}
-          <div className="space-y-3 pt-2">
-            <div className="flex justify-between items-center text-xs font-semibold">
-              <span className="text-text-muted">Technical Match Average:</span>
-              <span className="font-bold text-text-main">{scoreAnalytics.avgTech}%</span>
-            </div>
-            <div className="flex justify-between items-center text-xs font-semibold">
-              <span className="text-text-muted">Experience Match Average:</span>
-              <span className="font-bold text-text-main">{scoreAnalytics.avgExp}%</span>
-            </div>
-            <div className="flex justify-between items-center text-xs font-semibold">
-              <span className="text-text-muted">Cultural/Soft-Skills Average:</span>
-              <span className="font-bold text-text-main">{scoreAnalytics.avgCult}%</span>
-            </div>
-          </div>
+          )}
         </div>
-
       </div>
 
-      {/* Top Skills & Common Gaps Analysis */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        <div className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-4">
-          <h3 className="text-sm font-bold text-text-main uppercase tracking-wider flex items-center gap-2 border-b border-border-main/50 pb-3">
-            <CheckCircle2 className="w-4 h-4 text-green-500" />
-            Most Common Matched Skills
+      {/* Score tier breakdown */}
+      <div className="tk-panel">
+        <h3 className="text-[15px] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
+          <Award className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
+          Match quality distribution
+        </h3>
+        <p className="text-[11px] mb-4" style={{ color: 'var(--tk-muted)' }}>Candidates grouped by overall match score</p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+          {tierCards.map(({ label, count, hint }) => (
+            <div key={label} style={{ padding: 14, borderRadius: 13, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
+              <span className="text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>{label}</span>
+              <p style={{ fontSize: 24, fontWeight: 500, letterSpacing: '-.03em', color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>{count}</p>
+              <p className="text-[11px]" style={{ color: 'var(--tk-dim)' }}>{hint}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--tk-border)', display: 'grid', gap: 8 }}>
+          {[
+            { label: 'Technical match average', value: scoreAnalytics.avgTech },
+            { label: 'Experience match average', value: scoreAnalytics.avgExp },
+            { label: 'Cultural / soft-skills average', value: scoreAnalytics.avgCult }
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between gap-3 text-[12.5px]">
+              <span style={{ color: 'var(--tk-muted)' }}>{label}</span>
+              <span style={{ color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>{value}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Top matched skills & common gaps */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
+        <div className="tk-panel">
+          <h3 className="text-[15px] font-medium flex items-center gap-2 mb-3" style={{ color: 'var(--tk-text)' }}>
+            <CheckCircle2 className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
+            Top matched skills
           </h3>
           {topSkillsAndGaps.topSkills.length === 0 ? (
-            <p className="text-xs text-text-muted py-4 text-center">No skill data evaluated yet.</p>
+            <p className="text-xs py-4 text-center" style={{ color: 'var(--tk-muted)' }}>No skill data evaluated yet.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="tk-row-list">
               {topSkillsAndGaps.topSkills.map(([skill, cnt]) => (
-                <div key={skill} className="flex justify-between items-center p-2.5 bg-bg-main/50 rounded-xl border border-border-main/40 text-xs">
-                  <span className="font-bold text-text-main">{skill}</span>
-                  <span className="text-[10px] font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-full">{cnt} candidates</span>
+                <div key={skill} className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[12.5px]" style={{ color: 'var(--tk-text)' }}>{skill}</span>
+                  <span className="tk-pill is-active">{cnt}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        <div className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-4">
-          <h3 className="text-sm font-bold text-text-main uppercase tracking-wider flex items-center gap-2 border-b border-border-main/50 pb-3">
-            <XCircle className="w-4 h-4 text-red-500" />
-            Most Common Skill & Experience Gaps
+        <div className="tk-panel">
+          <h3 className="text-[15px] font-medium flex items-center gap-2 mb-3" style={{ color: 'var(--tk-text)' }}>
+            <XCircle className="w-4 h-4" style={{ color: 'var(--tk-muted)' }} />
+            Most common gaps
           </h3>
           {topSkillsAndGaps.topGaps.length === 0 ? (
-            <p className="text-xs text-text-muted py-4 text-center">No gap data evaluated yet.</p>
+            <p className="text-xs py-4 text-center" style={{ color: 'var(--tk-muted)' }}>No gap data evaluated yet.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="tk-row-list">
               {topSkillsAndGaps.topGaps.map(([gap, cnt]) => (
-                <div key={gap} className="flex justify-between items-center p-2.5 bg-bg-main/50 rounded-xl border border-border-main/40 text-xs">
-                  <span className="font-bold text-text-main">{gap}</span>
-                  <span className="text-[10px] font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full">{cnt} candidates</span>
+                <div key={gap} className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[12.5px]" style={{ color: 'var(--tk-soft)' }}>{gap}</span>
+                  <span className="tk-pill">{cnt}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
-
       </div>
     </div>
   );

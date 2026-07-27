@@ -196,5 +196,8 @@ export const ar = {
 
   // Header
   search: "بحث",
-  navAnalytics: "التحليلات والقمع التحويلي"
+  navAnalytics: "التحليلات والقمع التحويلي",
+  definePosition: "تعريف وظيفة جديدة",
+  screenedToday: "سيرة تم فحصها اليوم",
+  atOrAbove90: "بنسبة 90%+"
 };

@@ -17,12 +17,23 @@ interface LaserUploadZoneProps {
   files: UploadFileState[];
   onFilesSelected: (files: File[]) => void;
   onClear: () => void;
+  disabled?: boolean;
 }
 
+const STATUS_LABEL: Record<UploadFileState['status'], string> = {
+  queued: 'Queued',
+  processing: 'Parsing',
+  success: 'Parsed',
+  error: 'Failed',
+  skipped: 'Duplicate'
+};
+
+/** Drop zone + processing queue — des-2.txt §7 (left column of the Upload screen). */
 export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
   files,
   onFilesSelected,
-  onClear
+  onClear,
+  disabled = false
 }) => {
   const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -31,9 +42,10 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
+    if (disabled) return;
+    if (e.type === 'dragenter' || e.type === 'dragover') {
       setIsDragActive(true);
-    } else if (e.type === "dragleave") {
+    } else if (e.type === 'dragleave') {
       setIsDragActive(false);
     }
   };
@@ -42,23 +54,18 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
     e.preventDefault();
     e.stopPropagation();
     setIsDragActive(false);
+    if (disabled) return;
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const selected = Array.from(e.dataTransfer.files);
-      onFilesSelected(selected);
+      onFilesSelected(Array.from(e.dataTransfer.files));
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
-      const selected = Array.from(e.target.files);
-      onFilesSelected(selected);
+      onFilesSelected(Array.from(e.target.files));
     }
-  };
-
-  const onButtonClick = () => {
-    fileInputRef.current?.click();
   };
 
   const formatBytes = (bytes: number): string => {
@@ -69,29 +76,37 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const doneCount = files.filter(f => f.status === 'success' || f.status === 'skipped').length;
+
   return (
-    <div className="w-full">
-      {/* Upload Target Area */}
+    <div style={{ display: 'grid', gap: 14 }}>
+      {/* Drop zone */}
       <div
         onDragEnter={handleDrag}
         onDragOver={handleDrag}
         onDragLeave={handleDrag}
         onDrop={handleDrop}
-        onClick={onButtonClick}
-        className={`relative overflow-hidden w-full p-8 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all duration-300 min-h-[220px] bg-bg-card/50 ${
-          isDragActive 
-            ? 'border-brand bg-brand-light/10 shadow-2xl scale-[1.01]' 
-            : 'border-border-main hover:border-brand hover:bg-bg-card'
-        }`}
+        onClick={() => !disabled && fileInputRef.current?.click()}
+        className="tk-focusable text-center"
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-label={t('dragDropCVs')}
+        onKeyDown={(e) => {
+          if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            fileInputRef.current?.click();
+          }
+        }}
+        style={{
+          padding: 'clamp(24px,3vw,44px) clamp(18px,2vw,28px)',
+          borderRadius: 18,
+          border: `1.5px dashed ${isDragActive ? 'var(--tk-accent)' : 'var(--tk-accent-line)'}`,
+          background: 'var(--tk-dropzone)',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          opacity: disabled ? 0.5 : 1,
+          transition: 'border-color 180ms ease'
+        }}
       >
-        {/* Animated Laser Border Line */}
-        {isDragActive && (
-          <div className="absolute inset-0 pointer-events-none rounded-2xl">
-            <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-brand to-transparent animate-[pan_1.5s_infinite_linear]"></div>
-            <div className="absolute bottom-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-brand to-transparent animate-[pan_1.5s_infinite_linear]"></div>
-          </div>
-        )}
-
         <input
           ref={fileInputRef}
           type="file"
@@ -99,99 +114,107 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
           accept=".pdf,.docx,.png,.jpg,.jpeg"
           onChange={handleChange}
           className="hidden"
+          disabled={disabled}
         />
 
-        <UploadCloud className={`w-14 h-14 mb-4 transition-transform duration-300 ${isDragActive ? 'scale-110 text-brand' : 'text-text-muted/70'}`} />
-        
-        <p className="text-base font-semibold text-text-main mb-1 text-center">
+        <div
+          className="mx-auto flex items-center justify-center"
+          style={{
+            width: 56, height: 56, borderRadius: 17, background: 'var(--tk-accent-soft)',
+            color: 'var(--tk-accent-text)', boxShadow: '0 0 30px color-mix(in srgb, var(--tk-accent) 28%, transparent)'
+          }}
+        >
+          <UploadCloud className="w-7 h-7" />
+        </div>
+
+        <p className="font-medium mt-4" style={{ fontSize: 'clamp(17px,2vw,21px)', color: 'var(--tk-text)' }}>
           {t('dragDropCVs')}
         </p>
-        <p className="text-xs text-text-muted text-center mb-2">
+        <p className="text-xs mt-1.5" style={{ color: 'var(--tk-muted)' }}>
           {t('supportedFiles')}
         </p>
-        <span className="text-xs text-brand bg-brand-light px-3 py-1 rounded-full font-medium">
-          {t('parallelProcessNotice')}
+        <span className="tk-btn-primary mt-4" style={{ height: 38, padding: '0 18px', fontSize: 12.5, pointerEvents: 'none' }}>
+          Browse files
         </span>
+        <p className="text-[11px] mt-3" style={{ color: 'var(--tk-dim)' }}>
+          {t('parallelProcessNotice')}
+        </p>
       </div>
 
-      {/* File Processing List */}
+      {/* Processing queue */}
       {files.length > 0 && (
-        <div className="mt-6 space-y-3 bg-bg-card p-4 rounded-2xl border border-border-main glass-panel max-h-[300px] overflow-y-auto">
-          <div className="flex justify-between items-center mb-2 px-1">
-            <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider">{t('processingCvs')}</h4>
-            <button
-              onClick={onClear}
-              className="text-xs text-brand hover:underline font-medium"
-            >
-              Clear List
-            </button>
+        <div className="tk-panel">
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+            <h4 className="text-[15px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('processingCvs')}</h4>
+            <div className="flex items-center gap-3">
+              <span className="text-[11px]" style={{ color: 'var(--tk-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                {files.length} files · {doneCount} done
+              </span>
+              <button
+                type="button"
+                onClick={onClear}
+                className="tk-btn-neutral tk-focusable"
+                style={{ height: 30, padding: '0 12px', fontSize: 11 }}
+              >
+                Clear list
+              </button>
+            </div>
           </div>
 
-          {files.map(file => (
-            <div key={file.id} className="p-3 bg-bg-main/60 rounded-xl border border-border-main/50 flex flex-col gap-2">
-              <div className="flex justify-between items-center gap-4">
-                <div className="flex items-center gap-2.5 overflow-hidden">
-                  <FileText className="w-5 h-5 text-brand shrink-0" />
-                  <div className="overflow-hidden">
-                    <p className="text-sm font-semibold text-text-main truncate" title={file.name}>{file.name}</p>
-                    <p className="text-xs text-text-muted">{formatBytes(file.size)}</p>
+          <div className="tk-row-list" style={{ maxHeight: 340, overflowY: 'auto' }}>
+            {files.map(file => (
+              <div key={file.id}>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <FileText className="w-4 h-4 shrink-0" style={{ color: 'var(--tk-muted)' }} />
+                  <div style={{ flex: '1 1 140px', minWidth: 0 }}>
+                    <p
+                      className="text-[12.5px] truncate"
+                      dir="ltr"
+                      title={file.name}
+                      style={{ color: 'var(--tk-text)', fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}
+                    >
+                      {file.name}
+                    </p>
+                    <p className="text-[11px]" style={{ color: 'var(--tk-dim)', fontVariantNumeric: 'tabular-nums' }}>
+                      {formatBytes(file.size)}
+                    </p>
                   </div>
+
+                  <div className="tk-progress-track" style={{ flex: '1 1 90px', height: 4 }}>
+                    <div className="tk-progress-fill" style={{ width: `${file.progress}%` }} />
+                  </div>
+
+                  <span
+                    className={`tk-pill ${file.status === 'success' ? 'is-active' : ''}`}
+                    style={{
+                      width: 72, justifyContent: 'center',
+                      ...(file.status === 'error' ? { background: 'rgba(239,68,68,.1)', color: '#ef4444' } : {})
+                    }}
+                  >
+                    {file.status === 'processing' && <RefreshCw className="w-3 h-3 animate-spin" />}
+                    {file.status === 'success' && <CheckCircle className="w-3 h-3" />}
+                    {file.status === 'skipped' && <SkipForward className="w-3 h-3" />}
+                    {file.status === 'error' && <AlertCircle className="w-3 h-3" />}
+                    {STATUS_LABEL[file.status]}
+                  </span>
                 </div>
 
-                <div className="flex items-center shrink-0">
-                  {file.status === 'queued' && (
-                    <span className="text-xs font-medium text-text-muted">Queued</span>
-                  )}
-                  {file.status === 'processing' && (
-                    <RefreshCw className="w-4 h-4 text-brand animate-spin" />
-                  )}
-                  {file.status === 'success' && (
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                  )}
-                  {file.status === 'skipped' && (
-                    <span className="flex items-center gap-1 text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-full px-2 py-0.5">
-                      <SkipForward className="w-3 h-3" />
-                      Already Exists
-                    </span>
-                  )}
-                  {file.status === 'error' && (
-                    <span title={file.error}>
-                      <AlertCircle className="w-5 h-5 text-red-500" />
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Progress Bar */}
-              {(file.status === 'processing' || file.status === 'queued') && (
-                <div className="w-full bg-bg-hover h-1.5 rounded-full overflow-hidden">
-                  <div 
-                    className="bg-brand h-full transition-all duration-300 rounded-full" 
-                    style={{ width: `${file.progress}%` }}
-                  ></div>
-                </div>
-              )}
-
-              {/* Duplicate warning */}
-              {file.status === 'skipped' && (
-                <div className="flex items-start gap-2 bg-amber-500/8 border border-amber-500/20 rounded-lg px-3 py-2">
-                  <SkipForward className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-amber-500 font-medium leading-relaxed">
-                    This CV was already analyzed for this job position
-                    {file.existingCandidateName && (
-                      <> as <span className="font-bold">{file.existingCandidateName}</span>.</>
-                    )} To re-analyze, open the candidate profile and use the <span className="font-bold">Re-analyze</span> button.
+                {file.status === 'skipped' && (
+                  <p className="text-[11px] mt-1.5 leading-relaxed" style={{ color: 'var(--tk-dim)' }}>
+                    Already analyzed for this job
+                    {file.existingCandidateName && <> as <strong style={{ color: 'var(--tk-soft)' }}>{file.existingCandidateName}</strong></>}
+                    . Use <strong style={{ color: 'var(--tk-soft)' }}>Re-analyze</strong> on the candidate to refresh it.
                   </p>
-                </div>
-              )}
+                )}
 
-              {file.status === 'error' && file.error && (
-                <p className="text-[11px] text-red-500 font-medium leading-relaxed px-1">
-                  {file.error.includes('AI Provider not configured') ? t('noProviderConfigured') : file.error}
-                </p>
-              )}
-            </div>
-          ))}
+                {file.status === 'error' && file.error && (
+                  <p className="text-[11px] mt-1.5 leading-relaxed" style={{ color: '#ef4444' }}>
+                    {file.error.includes('AI Provider not configured') ? t('noProviderConfigured') : file.error}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -329,10 +329,10 @@ export const Dashboard: React.FC = () => {
               <Sparkles className="w-4 h-4" />
               {t('assistantTitle')}
             </h4>
-            <p className="text-xs leading-relaxed flex items-center gap-3" style={{ color: 'var(--tk-text)' }}>
-              <span><strong style={{ fontVariantNumeric: 'tabular-nums' }}>{todayCount}</strong> {t('kpiTotalCvs')}</span>
+            <p className="text-xs leading-relaxed flex items-center gap-2 flex-wrap" style={{ color: 'var(--tk-muted)' }}>
+              <span><strong style={{ color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>{todayCount}</strong> {t('screenedToday')}</span>
               <span>·</span>
-              <span><strong style={{ fontVariantNumeric: 'tabular-nums' }}>{strongMatches}</strong> ≥90%</span>
+              <span><strong style={{ color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>{strongMatches}</strong> {t('atOrAbove90')}</span>
             </p>
             <p className="text-sm font-medium leading-relaxed" style={{ color: 'var(--tk-text)' }}>
               {role === 'admin' ? t('assistant_admin') : role === 'manager' ? t('assistant_manager') : t('assistant_recruiter')}

@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext.js';
 import { apiRequest } from '../utils/api.js';
-import { 
-  Plus, 
-  Trash2, 
-  Briefcase, 
-  CheckSquare, 
-  PlusCircle 
+import {
+  Trash2,
+  Briefcase,
+  CheckSquare,
+  PlusCircle,
+  ArrowLeft
 } from 'lucide-react';
 
 interface ChecklistItem {
@@ -103,324 +103,198 @@ export const Jobs: React.FC = () => {
     }
   };
 
+  const microLabel = 'block text-[11px] font-bold uppercase tracking-[.1em] mb-1.5';
+  const microLabelStyle = { color: 'var(--tk-muted)' } as React.CSSProperties;
+
+  // Panel 1 — six basic specification fields (des-2.txt §14.1).
+  const basicFields: { label: string; value: string; set: (v: string) => void; placeholder: string; type?: string; required?: boolean }[] = [
+    { label: t('jobTitle'), value: title, set: setTitle, placeholder: 'e.g. Senior Network & Systems Engineer', required: true },
+    { label: t('department'), value: department, set: setDepartment, placeholder: 'e.g. Software', required: true },
+    { label: t('location'), value: location, set: setLocation, placeholder: 'e.g. Riyadh, KSA', required: true },
+    { label: t('experienceYears'), value: String(experience), set: (v) => setExperience(parseInt(v) || 0), placeholder: '7', type: 'number', required: true },
+    { label: t('degreeRequired'), value: degree, set: setDegree, placeholder: "e.g. BSc", required: true },
+    { label: 'التخصص الدقيق المطلوب', value: specialization, set: setSpecialization, placeholder: 'مثال: هندسة شبكات وأنظمة' }
+  ];
+
+  // Panel 2 — seven stacked requirement fields; the last two are taller text areas (des-2.txt §14.2).
+  const requirementFields: { label: string; value: string; set: (v: string) => void; placeholder: string; area?: boolean }[] = [
+    { label: 'Target Core Skills (تفصل بفاصلة)', value: skills, set: setSkills, placeholder: 'BGP, OSPF, Terraform, Linux, AWS' },
+    { label: 'المهارات الفنية المطلوبة (تفصل بفاصلة)', value: technicalSkills, set: setTechnicalSkills, placeholder: 'Cisco, Azure, Windows Server' },
+    { label: 'الشهادات المهنية المطلوبة', value: requiredCerts, set: setRequiredCerts, placeholder: 'CCNP, AWS SA, PMP' },
+    { label: 'الجنسية المطلوبة', value: nationality, set: setNationality, placeholder: 'مثال: سعودي أو إقامة قابلة للنقل' },
+    { label: 'اللغات المطلوبة', value: languages, set: setLanguages, placeholder: 'مثال: العربية والإنجليزية' },
+    { label: 'المهارات السلوكية والشخصية (تفصل بفاصلة)', value: softSkills, set: setSoftSkills, placeholder: 'حل المشكلات, العمل الجماعي, التواصل' },
+    { label: 'الوصف العام للوظيفة', value: jobDescription, set: setJobDescription, placeholder: 'أدخل وصفاً عاماً للوظيفة والبيئة الوظيفية', area: true },
+    { label: 'المسؤوليات الأساسية', value: coreResponsibilities, set: setCoreResponsibilities, placeholder: 'أدخل الواجبات والمسؤوليات اليومية', area: true },
+    { label: 'متطلبات إضافية', value: additionalRequirements, set: setAdditionalRequirements, placeholder: 'شروط إضافية مثل رخصة القيادة أو برامج محددة', area: true }
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center">
-          <Briefcase className="w-5 h-5 text-brand" />
-        </div>
-        <h2 className="text-xl font-black text-text-main">{t('createJob')}</h2>
-      </div>
+    <form onSubmit={handleSubmit} style={{ maxWidth: 900, display: 'grid', gap: 14 }}>
+      <button
+        type="button"
+        onClick={() => navigate('/')}
+        className="tk-focusable flex items-center gap-1.5 text-xs font-semibold w-fit"
+        style={{ color: 'var(--tk-accent-text)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+      >
+        <ArrowLeft className="w-4 h-4 rtl:scale-x-[-1]" />
+        {t('navDashboard')}
+      </button>
 
       {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-medium rounded-xl">
+        <div
+          className="text-xs font-medium"
+          style={{ padding: 12, borderRadius: 11, background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.2)', color: '#ef4444' }}
+        >
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left Forms - General Info */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-5">
-            <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider mb-2">Job Specifications</h3>
-            
-            {/* Title & Dept */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                  {t('jobTitle')}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Senior Frontend Developer"
-                  className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                  {t('department')}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  placeholder="e.g. Engineering"
-                  className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Location & Experience & Degree */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                  {t('location')}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g. Riyadh, KSA"
-                  className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                  {t('experienceYears')}
-                </label>
-                <input
-                  type="number"
-                  required
-                  min={0}
-                  value={experience}
-                  onChange={(e) => setExperience(parseInt(e.target.value) || 0)}
-                  className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                  {t('degreeRequired')}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={degree}
-                  onChange={(e) => setDegree(e.target.value)}
-                  placeholder="e.g. Bachelor's in CS"
-                  className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Target Skills */}
-            <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                Target Core Skills (Comma-separated)
-              </label>
+      {/* 1. Basic job specifications */}
+      <div className="tk-panel">
+        <h3 className="text-[11px] font-bold uppercase tracking-[.14em] mb-4 flex items-center gap-1.5" style={{ color: 'var(--tk-accent-text)' }}>
+          <Briefcase className="w-3.5 h-3.5" />
+          Basic job specifications
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+          {basicFields.map(({ label, value, set, placeholder, type, required }) => (
+            <div key={label}>
+              <label className={microLabel} style={microLabelStyle}>{label}</label>
               <input
-                type="text"
-                value={skills}
-                onChange={(e) => setSkills(e.target.value)}
-                placeholder="React, TypeScript, Node.js, REST APIs"
-                className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                type={type || 'text'}
+                required={required}
+                min={type === 'number' ? 0 : undefined}
+                value={value}
+                onChange={(e) => set(e.target.value)}
+                placeholder={placeholder}
+                className="tk-field tk-focusable"
+                style={{ fontVariantNumeric: type === 'number' ? 'tabular-nums' : undefined }}
               />
             </div>
-          </div>
-          
-          <div className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-5">
-            <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider mb-2">التفاصيل الفنية والمتطلبات المعمقة</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                  التخصص الدقيق المطلوب
-                </label>
+          ))}
+        </div>
+      </div>
+
+      {/* 2. Requirements & specifications */}
+      <div className="tk-panel">
+        <h3 className="text-[11px] font-bold uppercase tracking-[.14em] mb-4" style={{ color: 'var(--tk-accent-text)' }}>
+          Requirements &amp; specifications
+        </h3>
+        <div style={{ display: 'grid', gap: 14 }}>
+          {requirementFields.map(({ label, value, set, placeholder, area }) => (
+            <div key={label}>
+              <label className={microLabel} style={microLabelStyle}>{label}</label>
+              {area ? (
+                <textarea
+                  value={value}
+                  onChange={(e) => set(e.target.value)}
+                  placeholder={placeholder}
+                  rows={3}
+                  className="tk-field tk-focusable"
+                  style={{ height: 'auto', minHeight: 38, paddingBlock: 10, lineHeight: 1.7, resize: 'vertical' }}
+                />
+              ) : (
                 <input
                   type="text"
-                  value={specialization}
-                  onChange={(e) => setSpecialization(e.target.value)}
-                  placeholder="مثال: هندسة شبكات وأنظمة"
-                  className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                  value={value}
+                  onChange={(e) => set(e.target.value)}
+                  placeholder={placeholder}
+                  className="tk-field tk-focusable"
                 />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                  المهارات الفنية المطلوبة (تفصل بفاصلة)
-                </label>
-                <input
-                  type="text"
-                  value={technicalSkills}
-                  onChange={(e) => setTechnicalSkills(e.target.value)}
-                  placeholder="Cisco, Azure, Windows Server"
-                  className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
-                />
-              </div>
+              )}
             </div>
+          ))}
+        </div>
+      </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                  الجنسية المطلوبة
-                </label>
-                <input
-                  type="text"
-                  value={nationality}
-                  onChange={(e) => setNationality(e.target.value)}
-                  placeholder="مثال: سعودي أو إقامة قابلة للنقل الكفالة"
-                  className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                  اللغات المطلوبة
-                </label>
-                <input
-                  type="text"
-                  value={languages}
-                  onChange={(e) => setLanguages(e.target.value)}
-                  placeholder="مثال: العربية والإنجليزية"
-                  className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                المهارات السلوكية والشخصية (تفصل بفاصلة)
-              </label>
-              <input
-                type="text"
-                value={softSkills}
-                onChange={(e) => setSoftSkills(e.target.value)}
-                placeholder="حل المشكلات, العمل الجماعي, التواصل"
-                className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                الشهادات المهنية المطلوبة
-              </label>
-              <input
-                type="text"
-                value={requiredCerts}
-                onChange={(e) => setRequiredCerts(e.target.value)}
-                placeholder="CCNA, PMP, AZ-900"
-                className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                الوصف العام للوظيفة
-              </label>
-              <textarea
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                placeholder="أدخل وصفاً عاماً للوظيفة والبيئة الوظيفية"
-                rows={3}
-                className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm resize-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                المسؤوليات الأساسية
-              </label>
-              <textarea
-                value={coreResponsibilities}
-                onChange={(e) => setCoreResponsibilities(e.target.value)}
-                placeholder="أدخل الواجبات والمسؤوليات اليومية بالتفصيل"
-                rows={3}
-                className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm resize-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                متطلبات إضافية
-              </label>
-              <textarea
-                value={additionalRequirements}
-                onChange={(e) => setAdditionalRequirements(e.target.value)}
-                placeholder="شروط إضافية مثل رخصة القيادة أو برامج محددة"
-                rows={3}
-                className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm resize-none"
-              />
-            </div>
-          </div>
+      {/* 3. ATS evaluation criteria */}
+      <div className="tk-panel">
+        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+          <h3 className="text-[11px] font-bold uppercase tracking-[.14em] flex items-center gap-1.5" style={{ color: 'var(--tk-accent-text)' }}>
+            <CheckSquare className="w-3.5 h-3.5" />
+            {t('checklistTitle')}
+          </h3>
+          <button
+            type="button"
+            onClick={handleAddChecklistItem}
+            className="tk-btn-primary tk-focusable"
+            style={{ height: 32, padding: '0 12px', fontSize: 11.5 }}
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span>{t('addChecklistItem')}</span>
+          </button>
         </div>
 
-        {/* Right Form - ATS Checklist Builder */}
-        <div className="space-y-6">
-          <div className="bg-bg-card border border-border-main p-6 rounded-2xl flex flex-col min-h-[400px] justify-between">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
-                  <CheckSquare className="w-4 h-4" />
-                  {t('checklistTitle')}
-                </h3>
+        <div style={{ display: 'grid', gap: 10 }}>
+          {checklist.map((item, idx) => (
+            <div
+              key={item.id}
+              style={{ padding: 13, borderRadius: 13, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}
+            >
+              <div className="flex items-start gap-2">
+                <textarea
+                  required
+                  value={item.requirement}
+                  onChange={(e) => handleChecklistTextChange(item.id, e.target.value)}
+                  placeholder={t('requirementDescription')}
+                  rows={2}
+                  className="tk-field tk-focusable"
+                  style={{ flex: 1, height: 'auto', minHeight: 38, paddingBlock: 9, fontSize: 12.5, background: 'var(--tk-input)', resize: 'vertical' }}
+                />
                 <button
                   type="button"
-                  onClick={handleAddChecklistItem}
-                  className="flex items-center gap-1 text-xs text-brand hover:underline font-bold"
+                  onClick={() => handleRemoveChecklistItem(item.id)}
+                  className="tk-icon-btn tk-focusable"
+                  title={`Remove item ${idx + 1}`}
+                  aria-label={`Remove item ${idx + 1}`}
                 >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  <span>Add Item</span>
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
 
-              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-                {checklist.map((item, idx) => (
-                  <div key={item.id} className="p-3 bg-bg-main/60 border border-border-main/50 rounded-xl space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold text-text-muted uppercase">Item #{idx + 1}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveChecklistItem(item.id)}
-                        className="text-red-500 hover:text-red-600 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <textarea
-                      required
-                      value={item.requirement}
-                      onChange={(e) => handleChecklistTextChange(item.id, e.target.value)}
-                      placeholder={t('requirementDescription')}
-                      className="w-full p-2 h-14 rounded-lg border border-border-main bg-bg-card text-text-main focus:outline-none focus:border-brand text-xs resize-none"
-                    />
-
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-bold text-text-muted uppercase">{t('importanceLevel')}</span>
-                      <select
-                        value={item.importance}
-                        onChange={(e) => handleChecklistImportanceChange(item.id, e.target.value)}
-                        className="px-2 py-1 bg-bg-card rounded-md border border-border-main text-text-main text-xs focus:outline-none focus:border-brand"
-                      >
-                        <option value="Mandatory">Mandatory</option>
-                        <option value="Important">Important</option>
-                        <option value="Additional">Additional</option>
-                      </select>
-                    </div>
-                  </div>
-                ))}
+              <div className="flex items-center gap-2 mt-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>
+                  {t('importanceLevel')}
+                </span>
+                <select
+                  value={item.importance}
+                  onChange={(e) => handleChecklistImportanceChange(item.id, e.target.value)}
+                  className="tk-focusable"
+                  style={{
+                    height: 28, borderRadius: 99, paddingInline: 11, fontSize: 11, fontWeight: 600,
+                    background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)', border: 'none', cursor: 'pointer'
+                  }}
+                >
+                  <option value="Mandatory">Mandatory</option>
+                  <option value="Important">Important</option>
+                  <option value="Additional">Additional</option>
+                </select>
               </div>
             </div>
-
-            <div className="mt-6 pt-4 border-t border-border-main/50 flex gap-2">
-              <button
-                type="button"
-                onClick={() => navigate('/')}
-                className="flex-1 py-2.5 border border-border-main rounded-xl text-xs font-bold text-text-muted hover:text-text-main"
-              >
-                {t('cancel')}
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 py-2.5 bg-brand hover:bg-brand-hover text-white rounded-xl font-bold text-xs shadow-md shadow-brand/10 transition-all cursor-pointer"
-              >
-                {loading ? 'Saving...' : t('saveJob')}
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
+      </div>
 
-      </form>
-    </div>
+      {/* 4. Footer actions */}
+      <div className="flex items-center justify-end gap-2.5 flex-wrap">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="tk-btn-neutral tk-focusable"
+          style={{ height: 38, padding: '0 18px', fontSize: 12.5 }}
+        >
+          {t('cancel')}
+        </button>
+        <button
+          type="submit"
+          disabled={loading}
+          className="tk-btn-primary tk-focusable"
+          style={{ height: 38, padding: '0 18px', fontSize: 12.5, opacity: loading ? 0.5 : 1 }}
+        >
+          {loading ? 'Saving…' : t('saveJob')}
+        </button>
+      </div>
+    </form>
   );
 };
 

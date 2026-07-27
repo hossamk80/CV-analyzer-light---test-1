@@ -206,7 +206,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const getPageTitle = () => {
     const path = location.pathname;
     if (path === '/') return t('navDashboard');
-    if (path.startsWith('/jobs')) return t('navJobs');
+    if (path.startsWith('/jobs')) return t('definePosition');
     if (path.startsWith('/upload')) return t('navUpload');
     if (path.startsWith('/results')) return t('navResults');
     if (path.startsWith('/analytics')) return t('navAnalytics');
