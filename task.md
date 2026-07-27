@@ -1,0 +1,35 @@
+# Task Checklist — Smart Recruitment Suite
+
+- [x] Environment & Dependency Setup
+  - [x] Global Node/pnpm wrapper configuration
+  - [x] Upgrade drizzle-orm to release candidate (1.0.0-rc.4) for native node:sqlite support
+- [x] Database & Backend API Layer
+  - [x] Native Node.js `node:sqlite` connection driver integration
+  - [x] Express API endpoints with authentication and RBAC checks
+  - [x] Automatic schema generation and default account seeding
+  - [x] Concurrency-limited (3 files) document parse and Gemini AI analysis
+- [x] Frontend Core & Internationalization
+  - [x] Arabic-first bilingual dictionaries (EN / AR) and context mirroring (RTL / LTR)
+  - [x] RoleContext user state and ProtectedRoute guards
+  - [x] Reusable combobox MultiSelectFilter with chips and add-custom criteria
+  - [x] Custom CSS style themes (Light, Dark, Midnight Yellow) and print layouts
+- [x] Interactive Views
+  - [x] Login screen with demo credentials reminder
+  - [x] Dashboard with KPI counters, inline job editor, and AI Strategic Summary
+  - [x] Jobs definition form with ATS checklist builder
+  - [x] Upload zone with Laser drag-and-drop glowing border lines
+  - [x] Ranked Leaderboard with outreach message tags generator
+  - [x] Detailed Candidate Reports with circle gauges and SVG progress rings
+  - [x] Admin Settings panel for provider configuration and message templates
+  - [x] Prompt Manager versioning view
+- [x] Integrations & API Connections Feature
+  - [x] Database Schema Update (`schema.ts`)
+  - [x] Backend Server Database Setup & Routes (`server.ts`)
+  - [x] English & Arabic Translations (`en.ts` / `ar.ts`)
+  - [x] Sidebar Navigation & Routing (`App.tsx`)
+  - [x] Integrations & API Connections View (`IntegrationsSettings.tsx`)
+- [x] Verification & Production Bundling
+  - [x] Successful lint checking (zero compilation warnings)
+  - [x] Successful Vite SPA client build
+  - [x] Successful esbuild backend server bundling
+  - [x] Self-hosted start scripts (run.bat, start-prod.bat, ecosystem.config.cjs)
