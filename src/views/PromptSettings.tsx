@@ -12,6 +12,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import AccessDenied from '../components/AccessDenied.js';
+import ConfirmationModal from '../components/ConfirmationModal.js';
 
 interface PromptVersion {
   id: number;
@@ -36,6 +37,13 @@ export const PromptSettings: React.FC = () => {
 
   // Expand states for previewing details in table
   const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    title: string;
+    description: string;
+    danger?: boolean;
+    onConfirm: () => void;
+  } | null>(null);
 
   useEffect(() => {
     fetchPrompts();
@@ -64,24 +72,38 @@ export const PromptSettings: React.FC = () => {
     }
   };
 
-  const handleDeletePrompt = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this prompt version?')) return;
-    try {
-      await apiRequest('DELETE', `/api/prompts/${id}`);
-      fetchPrompts();
-    } catch (e: any) {
-      alert('Failed deleting prompt version: ' + e.message);
-    }
+  const handleDeletePrompt = (id: number) => {
+    setPendingConfirm({
+      title: 'Delete Prompt Version',
+      description: 'Are you sure you want to delete this prompt version?',
+      danger: true,
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        try {
+          await apiRequest('DELETE', `/api/prompts/${id}`);
+          fetchPrompts();
+        } catch (e: any) {
+          alert('Failed deleting prompt version: ' + e.message);
+        }
+      },
+    });
   };
 
-  const handleRestoreDefaults = async () => {
-    if (!confirm('Restore built-in default prompts as a new draft?')) return;
-    try {
-      await apiRequest('POST', '/api/prompts/restore-defaults');
-      fetchPrompts();
-    } catch (e: any) {
-      alert('Failed restoring default prompts: ' + e.message);
-    }
+  const handleRestoreDefaults = () => {
+    setPendingConfirm({
+      title: 'Restore Default Prompts',
+      description: 'Restore built-in default prompts as a new draft?',
+      danger: false,
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        try {
+          await apiRequest('POST', '/api/prompts/restore-defaults');
+          fetchPrompts();
+        } catch (e: any) {
+          alert('Failed restoring default prompts: ' + e.message);
+        }
+      },
+    });
   };
 
   const handleCreatePrompt = async (e: React.FormEvent) => {
@@ -292,6 +314,14 @@ export const PromptSettings: React.FC = () => {
         )}
       </div>
 
+      <ConfirmationModal
+        isOpen={!!pendingConfirm}
+        onClose={() => setPendingConfirm(null)}
+        onConfirm={() => pendingConfirm?.onConfirm()}
+        title={pendingConfirm?.title || ''}
+        description={pendingConfirm?.description || ''}
+        danger={pendingConfirm?.danger}
+      />
     </div>
   );
 };

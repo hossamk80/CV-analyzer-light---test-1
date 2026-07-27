@@ -3,6 +3,7 @@ import { useI18n } from '../i18n/I18nContext.js';
 import { useRole } from '../context/RoleContext.js';
 import { apiRequest } from '../utils/api.js';
 import { hasPermission } from '../utils/rbac.js';
+import Bidi from '../components/Bidi.js';
 import { 
   FileText, 
   Briefcase, 
@@ -357,7 +358,7 @@ export const Dashboard: React.FC = () => {
                       )}
                     </div>
                     <h4 className="text-base font-bold text-text-main mt-3" title={job.title}>
-                      {job.title}
+                      <Bidi>{job.title}</Bidi>
                     </h4>
                     <p className="text-xs text-text-muted mt-1 font-medium">{job.location} • {job.experience} years exp.</p>
 
@@ -784,7 +785,7 @@ export const Dashboard: React.FC = () => {
                   Delete Job Position?
                 </h3>
                 <p className="text-xs text-text-muted leading-relaxed">
-                  Are you sure you want to permanently delete <strong className="text-text-main font-semibold">"{deletingJob.title}"</strong> ({deletingJob.department})?
+                  Are you sure you want to permanently delete <strong className="text-text-main font-semibold">"<Bidi>{deletingJob.title}</Bidi>"</strong> ({deletingJob.department})?
                 </p>
               </div>
             </div>

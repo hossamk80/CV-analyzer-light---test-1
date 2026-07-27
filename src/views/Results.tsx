@@ -7,6 +7,8 @@ import { anonymizeCandidate } from '../utils/gdpr.js';
 import { hasPermission } from '../utils/rbac.js';
 import { resolveCandidateDetails } from '../utils/candidateExtraction.js';
 import MultiSelectFilter from '../components/MultiSelectFilter.js';
+import ConfirmationModal from '../components/ConfirmationModal.js';
+import Bidi from '../components/Bidi.js';
 import { 
   Users, 
   Award, 
@@ -76,6 +78,15 @@ export const Results: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<string>(queryJobId || '');
   const [loading, setLoading] = useState(true);
+
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    title: string;
+    description: string;
+    warningText?: string;
+    confirmWord?: string;
+    danger?: boolean;
+    onConfirm: () => void;
+  } | null>(null);
 
   // Message templates
   const [templates, setTemplates] = useState({ emailSubject: '', emailBody: '', whatsappMessage: '' });
@@ -349,15 +360,22 @@ export const Results: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this candidate?')) return;
-    try {
-      await apiRequest('DELETE', `/api/candidates/${id}`);
-      setCandidatesList(prev => prev.filter(c => c.id !== id));
-      setSelectedForBulk(prev => prev.filter(bid => bid !== id));
-    } catch (e) {
-      console.error('Failed to delete candidate:', e);
-    }
+  const handleDelete = (id: number) => {
+    setPendingConfirm({
+      title: 'Delete Candidate',
+      description: 'Are you sure you want to delete this candidate?',
+      danger: true,
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        try {
+          await apiRequest('DELETE', `/api/candidates/${id}`);
+          setCandidatesList(prev => prev.filter(c => c.id !== id));
+          setSelectedForBulk(prev => prev.filter(bid => bid !== id));
+        } catch (e) {
+          console.error('Failed to delete candidate:', e);
+        }
+      },
+    });
   };
 
   const handleDownload = (c: Candidate) => {
@@ -421,38 +439,52 @@ export const Results: React.FC = () => {
   };
 
   // Phase 4.1: Bulk Status Change (Respects change_status RBAC capability)
-  const handleBulkStatusChange = async (newStatus: string) => {
+  const handleBulkStatusChange = (newStatus: string) => {
     if (!canEditStatus || selectedForBulk.length === 0) return;
-    if (!confirm(`Are you sure you want to update status of ${selectedForBulk.length} candidate(s) to "${newStatus}"?`)) return;
-
-    try {
-      await Promise.all(
-        selectedForBulk.map(id => apiRequest('PUT', `/api/candidates/${id}`, { status: newStatus }))
-      );
-      setCandidatesList(prev =>
-        prev.map(c => (selectedForBulk.includes(c.id) ? { ...c, status: newStatus as any } : c))
-      );
-      alert(`Successfully updated status of ${selectedForBulk.length} candidate(s) to "${newStatus}".`);
-    } catch (e: any) {
-      alert('Bulk status update failed: ' + e.message);
-    }
+    setPendingConfirm({
+      title: 'Update Candidate Status',
+      description: `Are you sure you want to update status of ${selectedForBulk.length} candidate(s) to "${newStatus}"?`,
+      danger: false,
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        try {
+          await Promise.all(
+            selectedForBulk.map(id => apiRequest('PUT', `/api/candidates/${id}`, { status: newStatus }))
+          );
+          setCandidatesList(prev =>
+            prev.map(c => (selectedForBulk.includes(c.id) ? { ...c, status: newStatus as any } : c))
+          );
+          alert(`Successfully updated status of ${selectedForBulk.length} candidate(s) to "${newStatus}".`);
+        } catch (e: any) {
+          alert('Bulk status update failed: ' + e.message);
+        }
+      },
+    });
   };
 
   // Phase 4.1: Bulk Delete (Respects delete_data RBAC capability)
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (!canDelete || selectedForBulk.length === 0) return;
-    if (!confirm(`Are you sure you want to PERMANENTLY DELETE ${selectedForBulk.length} candidate(s)? This action cannot be undone.`)) return;
-
-    try {
-      await Promise.all(
-        selectedForBulk.map(id => apiRequest('DELETE', `/api/candidates/${id}`))
-      );
-      setCandidatesList(prev => prev.filter(c => !selectedForBulk.includes(c.id)));
-      setSelectedForBulk([]);
-      alert(`Successfully deleted ${selectedForBulk.length} candidate record(s).`);
-    } catch (e: any) {
-      alert('Bulk delete failed: ' + e.message);
-    }
+    setPendingConfirm({
+      title: 'Permanently Delete Candidates',
+      description: `Are you sure you want to PERMANENTLY DELETE ${selectedForBulk.length} candidate(s)? This action cannot be undone.`,
+      warningText: 'This action is irreversible.',
+      confirmWord: 'DELETE',
+      danger: true,
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        try {
+          await Promise.all(
+            selectedForBulk.map(id => apiRequest('DELETE', `/api/candidates/${id}`))
+          );
+          setCandidatesList(prev => prev.filter(c => !selectedForBulk.includes(c.id)));
+          setSelectedForBulk([]);
+          alert(`Successfully deleted ${selectedForBulk.length} candidate record(s).`);
+        } catch (e: any) {
+          alert('Bulk delete failed: ' + e.message);
+        }
+      },
+    });
   };
 
   // Phase 4.1: CSV Export
@@ -712,13 +744,13 @@ export const Results: React.FC = () => {
                   <span className="text-text-muted font-medium">Dual:</span>
                   {dualCompareLeft && (
                     <span className="bg-brand text-white px-2 py-0.5 rounded-full flex items-center gap-1 font-semibold">
-                      L: {dualCompareLeft.name}
+                      L: <Bidi>{dualCompareLeft.name}</Bidi>
                       <button onClick={() => setDualCompareLeft(null)}><X className="w-3 h-3" /></button>
                     </span>
                   )}
                   {dualCompareRight && (
                     <span className="bg-brand text-white px-2 py-0.5 rounded-full flex items-center gap-1 font-semibold">
-                      R: {dualCompareRight.name}
+                      R: <Bidi>{dualCompareRight.name}</Bidi>
                       <button onClick={() => setDualCompareRight(null)}><X className="w-3 h-3" /></button>
                     </span>
                   )}
@@ -850,7 +882,7 @@ export const Results: React.FC = () => {
                           <td className="p-4 font-bold text-text-muted text-center">{index + 1}</td>
                           
                           <td className="p-4">
-                            <div className="font-semibold text-text-main">{c.name}</div>
+                            <div className="font-semibold text-text-main"><Bidi>{c.name}</Bidi></div>
                             <div className="text-[10px] text-text-muted font-medium mt-0.5">{c.originalFilename}</div>
                           </td>
 
@@ -1017,14 +1049,14 @@ export const Results: React.FC = () => {
                     {/* Columns dynamically populated */}
                     {dualCompareLeft && dualCompareRight && !selectedForBulk.length ? (
                       <>
-                        <th className="p-4 text-brand font-black w-[40%] bg-brand/5 border-x border-border-main">{dualCompareLeft.name}</th>
-                        <th className="p-4 text-emerald-500 font-black w-[40%] bg-emerald-500/5">{dualCompareRight.name}</th>
+                        <th className="p-4 text-brand font-black w-[40%] bg-brand/5 border-x border-border-main"><Bidi>{dualCompareLeft.name}</Bidi></th>
+                        <th className="p-4 text-emerald-500 font-black w-[40%] bg-emerald-500/5"><Bidi>{dualCompareRight.name}</Bidi></th>
                       </>
                     ) : (
                       selectedForBulk.map(bid => {
                         const cand = processedCandidates.find(c => c.id === bid);
                         return cand ? (
-                          <th key={bid} className="p-4 text-brand font-black border-x border-border-main">{cand.name}</th>
+                          <th key={bid} className="p-4 text-brand font-black border-x border-border-main"><Bidi>{cand.name}</Bidi></th>
                         ) : null;
                       })
                     )}
@@ -1141,6 +1173,17 @@ export const Results: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={!!pendingConfirm}
+        onClose={() => setPendingConfirm(null)}
+        onConfirm={() => pendingConfirm?.onConfirm()}
+        title={pendingConfirm?.title || ''}
+        description={pendingConfirm?.description || ''}
+        warningText={pendingConfirm?.warningText}
+        confirmWord={pendingConfirm?.confirmWord}
+        danger={pendingConfirm?.danger}
+      />
     </div>
   );
 };

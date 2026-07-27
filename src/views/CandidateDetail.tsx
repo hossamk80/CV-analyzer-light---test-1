@@ -5,6 +5,7 @@ import { useRole } from '../context/RoleContext.js';
 import { apiRequest } from '../utils/api.js';
 import { anonymizeCandidate } from '../utils/gdpr.js';
 import { resolveCandidateDetails } from '../utils/candidateExtraction.js';
+import Bidi from '../components/Bidi.js';
 import { 
   ArrowLeft, 
   Printer, 
@@ -281,7 +282,7 @@ export const CandidateDetail: React.FC = () => {
               <User className="w-8 h-8" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-text-main">{activeCand.name}</h2>
+              <h2 className="text-xl font-black text-text-main"><Bidi>{activeCand.name}</Bidi></h2>
               <p className="text-[10px] text-text-muted mt-0.5 font-medium">{activeCand.originalFilename}</p>
             </div>
           </div>
@@ -767,7 +768,7 @@ export const CandidateDetail: React.FC = () => {
                       <div className="grid grid-cols-2 gap-2 text-[11px]">
                         <div>
                           <span className="text-text-muted block font-medium">Candidate</span>
-                          <span className="font-bold">{candidate?.name}</span>
+                          <span className="font-bold"><Bidi>{candidate?.name}</Bidi></span>
                         </div>
                         <div>
                           <span className="text-text-muted block font-medium">Position</span>

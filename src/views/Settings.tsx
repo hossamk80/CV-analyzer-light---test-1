@@ -23,6 +23,7 @@ import { getSavedTheme, getSavedPrimaryColor, applyTheme, applyPrimaryColor, The
 import AccessDenied from '../components/AccessDenied.js';
 import AuditLogsView from './Settings/AuditLogsView.js';
 import RbacSettingsView from './Settings/RbacSettingsView.js';
+import ConfirmationModal from '../components/ConfirmationModal.js';
 
 interface Provider {
   id: number;
@@ -55,6 +56,15 @@ export const Settings: React.FC = () => {
   const [auditLogRetentionDays, setAuditLogRetentionDays] = useState(90);
   const [auditPurgeRunning, setAuditPurgeRunning] = useState(false);
   const [auditPurgeResult, setAuditPurgeResult] = useState<string | null>(null);
+
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    title: string;
+    description: string;
+    warningText?: string;
+    confirmWord?: string;
+    danger?: boolean;
+    onConfirm: () => void;
+  } | null>(null);
 
   // Providers List
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -142,46 +152,71 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const handleRunGdprPurge = async () => {
-    if (!confirm(`Are you sure you want to run the GDPR retention purge now? All candidate PII & files older than ${gdprRetentionDays} days will be anonymized.`)) return;
-    setPurgeRunning(true);
-    try {
-      const res = await apiRequest('POST', '/api/gdpr/purge');
-      alert(res.message);
-    } catch (e: any) {
-      alert('GDPR purge failed: ' + e.message);
-    } finally {
-      setPurgeRunning(false);
-    }
+  const handleRunGdprPurge = () => {
+    setPendingConfirm({
+      title: 'Run GDPR Retention Purge',
+      description: `Are you sure you want to run the GDPR retention purge now? All candidate PII & files older than ${gdprRetentionDays} days will be anonymized.`,
+      warningText: 'This action is irreversible.',
+      confirmWord: 'PURGE',
+      danger: true,
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        setPurgeRunning(true);
+        try {
+          const res = await apiRequest('POST', '/api/gdpr/purge');
+          alert(res.message);
+        } catch (e: any) {
+          alert('GDPR purge failed: ' + e.message);
+        } finally {
+          setPurgeRunning(false);
+        }
+      },
+    });
   };
 
-  const handleRunAuditPurge = async () => {
+  const handleRunAuditPurge = () => {
     if (auditLogRetentionDays < 90) {
       alert('Audit log retention period cannot be set below the 90-day minimum floor.');
       return;
     }
-    if (!confirm(`Are you sure you want to run the audit log retention purge now? All audit entries older than ${auditLogRetentionDays} days will be permanently removed.`)) return;
-    setAuditPurgeRunning(true);
-    setAuditPurgeResult(null);
-    try {
-      const res = await apiRequest('POST', '/api/audit-logs/purge', { retentionDays: auditLogRetentionDays });
-      setAuditPurgeResult(res.message || `Audit purge completed: deleted ${res.purgedCount} record(s).`);
-      alert(res.message);
-    } catch (e: any) {
-      alert('Audit log purge failed: ' + e.message);
-    } finally {
-      setAuditPurgeRunning(false);
-    }
+    setPendingConfirm({
+      title: 'Run Audit Log Retention Purge',
+      description: `Are you sure you want to run the audit log retention purge now? All audit entries older than ${auditLogRetentionDays} days will be permanently removed.`,
+      warningText: 'This action is irreversible.',
+      confirmWord: 'PURGE',
+      danger: true,
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        setAuditPurgeRunning(true);
+        setAuditPurgeResult(null);
+        try {
+          const res = await apiRequest('POST', '/api/audit-logs/purge', { retentionDays: auditLogRetentionDays });
+          setAuditPurgeResult(res.message || `Audit purge completed: deleted ${res.purgedCount} record(s).`);
+          alert(res.message);
+        } catch (e: any) {
+          alert('Audit log purge failed: ' + e.message);
+        } finally {
+          setAuditPurgeRunning(false);
+        }
+      },
+    });
   };
 
-  const handleResetTokenUsage = async () => {
-    if (!confirm('Are you sure you want to reset the cumulative token counter to zero?')) return;
-    try {
-      await apiRequest('POST', '/api/token-usage/reset');
-      setTokensUsed(0);
-    } catch (e) {
-      console.error('Failed resetting token counter:', e);
-    }
+  const handleResetTokenUsage = () => {
+    setPendingConfirm({
+      title: 'Reset Token Counter',
+      description: 'Are you sure you want to reset the cumulative token counter to zero?',
+      danger: false,
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        try {
+          await apiRequest('POST', '/api/token-usage/reset');
+          setTokensUsed(0);
+        } catch (e) {
+          console.error('Failed resetting token counter:', e);
+        }
+      },
+    });
   };
 
   const handleAddProvider = async (e: React.FormEvent) => {
@@ -245,14 +280,21 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const handleDeleteProvider = async (id: number) => {
-    if (!confirm('Delete this AI provider configuration?')) return;
-    try {
-      await apiRequest('DELETE', `/api/ai-providers/${id}`);
-      fetchSettingsData();
-    } catch (e: any) {
-      alert('Failed to delete: ' + e.message);
-    }
+  const handleDeleteProvider = (id: number) => {
+    setPendingConfirm({
+      title: 'Delete AI Provider',
+      description: 'Delete this AI provider configuration?',
+      danger: true,
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        try {
+          await apiRequest('DELETE', `/api/ai-providers/${id}`);
+          fetchSettingsData();
+        } catch (e: any) {
+          alert('Failed to delete: ' + e.message);
+        }
+      },
+    });
   };
 
   const handleTestConnection = async (p: Provider) => {
@@ -845,6 +887,17 @@ export const Settings: React.FC = () => {
       </form>
     </div>
   )}
+
+  <ConfirmationModal
+    isOpen={!!pendingConfirm}
+    onClose={() => setPendingConfirm(null)}
+    onConfirm={() => pendingConfirm?.onConfirm()}
+    title={pendingConfirm?.title || ''}
+    description={pendingConfirm?.description || ''}
+    warningText={pendingConfirm?.warningText}
+    confirmWord={pendingConfirm?.confirmWord}
+    danger={pendingConfirm?.danger}
+  />
 </div>
   );
 };
