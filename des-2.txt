@@ -1,0 +1,533 @@
+# Talenta — AI CV Screening Suite · Complete Implementation Prompt
+
+> Hand this document to an AI coding agent as the full specification. It defines the visual system, theme engine, layout shell, all ten screens, every component, all states, behaviors, responsive rules, RTL/i18n and accessibility requirements. Nothing outside this document should be invented; nothing inside it should be skipped.
+
+---
+
+## 0. Stack assumptions
+
+- Single-page app, client-side routing between screens (no full page reloads).
+- All styling is **token-driven inline styles or utility-free CSS custom properties**. No hard-coded colors in components.
+- Icons are **inline SVG only** (24×24 viewBox, `fill="none"`, `stroke="currentColor"`, `stroke-width` 1.8–2.2, round caps/joins). Never load an icon-font or a runtime icon library that mutates the DOM.
+- Charts are hand-built inline SVG (`viewBox` + `width:100%`). No chart library required.
+- Fonts: **Inter** (Latin UI) + **Noto Sans Arabic** (Arabic). Weights 400/500/600 only.
+
+---
+
+## 1. Product context
+
+Talenta ingests candidate CVs, parses them with an LLM, scores them against a job's ATS checklist, and ranks candidates. Users: recruiters, hiring managers, agency consultants, plus an admin who configures AI providers, prompts, roles and integrations. Bilingual Arabic/English, GDPR-sensitive (PII masking is a first-class feature).
+
+**Ten screens.** Eight in the nav rail, two are drill-downs:
+
+| # | Screen | Reached from |
+|---|---|---|
+| 0 | Dashboard | rail |
+| 1 | Jobs | rail |
+| 2 | Upload CVs | rail |
+| 3 | Leaderboard | rail |
+| 4 | Analytics | rail |
+| 5 | Settings (3 tabs) | rail |
+| 6 | Prompts Manager | rail |
+| 7 | Integrations & API | rail |
+| 8 | Candidate AI Report | "Open" on a candidate row |
+| 9 | Define New Position | "New job" buttons |
+
+Per-screen header strings (kicker · title):
+
+```
+0  Talenta · AI screening   | Recruitment Overview
+1  Talenta · Pipeline       | Job Positions
+2  Talenta · Intake         | Upload & Screen CVs
+3  Talenta · Ranking        | Candidate Leaderboard
+4  Talenta · Insights       | Funnel Analytics
+5  Talenta · Configuration  | Settings
+6  Talenta · AI prompts     | Prompts Manager
+7  Talenta · Connections    | Integrations & API
+8  Talenta · Candidate file | Candidate AI Report
+9  Talenta · Pipeline       | Define New Position
+```
+
+---
+
+## 2. Design language
+
+**Character:** quiet, premium, technical. Contrast comes from tonal steps, not saturation. The accent appears as lines, hairlines, glows, small tinted fills and data marks — **never as a large flood**, the single exception being a selected control (theme pill, swatch).
+
+**Type scale**
+- page title `clamp(21px, 2.4vw, 30px)`, weight 500, `letter-spacing: -.02em`
+- panel title 17px / sub-panel title 15–16px, weight 500
+- card title 13.5–15.5px
+- body 12.5–13px, line-height 1.6–1.75
+- micro label 10–11px, weight 600, uppercase, `letter-spacing: .14em` (kicker `.22em`)
+- big numbers `clamp(24px, 2.6vw, 32px)`, weight 500, `letter-spacing: -.03em`
+- **every numeral** uses `font-variant-numeric: tabular-nums`
+- monospace (`ui-monospace, SFMono-Regular, monospace`) for model names, API keys, URIs, prompt bodies, filenames
+
+**Shape:** panels `border-radius: 18px` · tiles 16px · inner tiles/rows 11–13px · controls 9–12px · pills, bars and switch tracks 99px · avatars 50%.
+
+**Elevation:** dark themes = 1px border + gradient surface, `--tk-shadow: none`. Light theme = the same border plus `0 2px 12px rgba(24,26,38,.07)`. Popovers only may use `0 22px 50px rgba(0,0,0,.35)`.
+
+**Motion:** state changes only, 180–200ms ease (active nav mark height, switch knob offset). No entrance animation, no parallax, no hover lift.
+
+**Never:** emoji, decorative illustration, rainbow gradients, headings bolder than 500, pure `#000`/`#fff` as a surface, heavy stacked shadows on dark.
+
+---
+
+## 3. Theme engine (core requirement)
+
+Two inputs drive every color in the app, set as CSS custom properties on the app root:
+
+- `theme` ∈ `light` | `dark` | `midnight` (default `dark`)
+- `accent` ∈ 7 swatches (default violet `#8b5cf6`)
+
+```
+Blue #3b82f6 · Emerald #10b981 · Violet #8b5cf6 · Orange #f97316
+Pink #ec4899 · Red #ef4444 · Amber #f5b301
+```
+
+### 3.1 Accent-derived tokens (theme-independent)
+
+```css
+--tk-accent:        <chosen hex>;
+--tk-accent-soft:   color-mix(in srgb, var(--tk-accent) 16%, transparent);
+--tk-accent-mid:    color-mix(in srgb, var(--tk-accent) 42%, transparent);
+--tk-accent-line:   color-mix(in srgb, var(--tk-accent) 52%, transparent);
+--tk-accent-strong: color-mix(in srgb, var(--tk-accent) 72%, transparent);
+--tk-on-accent:     /* computed, see 3.2 */;
+```
+
+Roles: `soft` = tinted fill (chips, active nav, score chips) · `mid` = gradient start, histogram low bars, radial bloom · `line` = borders of outlined primaries, hover borders, hero border · `strong` = the 1px top hairline on tiles.
+
+### 3.2 `--tk-on-accent` — computed, never per theme
+
+Foreground for anything filled with the raw accent (selected theme pill, logo glyph, swatch check, switch knob, RBAC checkbox tick). Compute from the accent's own relative luminance and pick the **higher-contrast** of two candidates:
+
+```js
+const lin = c => (c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4));
+const lum = 0.2126*lin(r/255) + 0.7152*lin(g/255) + 0.0722*lin(b/255);
+const cr  = (a,b) => (Math.max(a,b)+0.05)/(Math.min(a,b)+0.05);
+onAccent  = cr(lum, 0.0086) >= cr(lum, 1) ? '#14161f' : '#ffffff'; // 0.0086 = luminance of #14161f
+```
+
+### 3.3 Per-theme tokens
+
+| Token | light | dark | midnight |
+|---|---|---|---|
+| `--tk-page-solid` | `#f5f6fa` | `#12141f` | `#07080c` |
+| `--tk-text` | `#191b24` | `#e9e9ed` | `#f3f3f6` |
+| `--tk-soft` | `#3d4150` | `#cfd3e5` | `#d6d6de` |
+| `--tk-muted` | `#5f6474` | `#9397ab` | `#9a9aa6` |
+| `--tk-dim` | `#8a8f9e` | `#75798c` | `#6e6e79` |
+| `--tk-panel` | `linear-gradient(165deg,#fff,#fbfbfe)` | `linear-gradient(165deg,rgba(35,37,50,.95),rgba(21,23,34,.92))` | `linear-gradient(165deg,#101218,#0a0b10)` |
+| `--tk-tile` | `linear-gradient(160deg,#fff,#f8f9fd)` | `linear-gradient(160deg,rgba(35,37,50,.92),rgba(24,26,38,.9))` | `linear-gradient(160deg,#101218,#0b0c11)` |
+| `--tk-inset` | `#f4f5fa` | `rgba(18,20,31,.5)` | `rgba(255,255,255,.03)` |
+| `--tk-input` | `#ffffff` | `rgba(35,37,50,.7)` | `rgba(255,255,255,.04)` |
+| `--tk-border` | `rgba(24,26,38,.10)` | `rgba(233,233,237,.08)` | `color-mix(in srgb,var(--tk-accent) 22%,transparent)` |
+| `--tk-border-strong` | `rgba(24,26,38,.16)` | `rgba(233,233,237,.14)` | `color-mix(in srgb,var(--tk-accent) 42%,transparent)` |
+| `--tk-hover` | `rgba(24,26,38,.04)` | `rgba(233,233,237,.05)` | `color-mix(in srgb,var(--tk-accent) 9%,transparent)` |
+| `--tk-track` | `rgba(24,26,38,.09)` | `rgba(233,233,237,.08)` | `rgba(255,255,255,.08)` |
+| `--tk-rail` | `linear-gradient(180deg,#fff,#f3f4f9)` | `linear-gradient(180deg,rgba(35,37,50,.55),rgba(18,20,31,.2))` | `linear-gradient(180deg,#0d0f14,#07080c)` |
+| `--tk-hero` | `linear-gradient(158deg, color-mix(accent 15%,#fff), #fff 72%)` | `linear-gradient(158deg, color-mix(accent 26%,rgba(28,30,44,.95)), rgba(28,30,44,.92) 64%)` | `linear-gradient(158deg, color-mix(accent 20%,#0d0f14), #0a0b10 66%)` |
+| `--tk-dropzone` | radial accent 10% over `#fff` | radial accent 16% over `rgba(24,26,38,.7)` | radial accent 14% over `#0b0c11` |
+| `--tk-accent-text` | `color-mix(accent 82%, #14161f)` | `color-mix(accent 58%, #fff)` | `color-mix(accent 74%, #fff)` |
+| `--tk-shadow` | `0 2px 12px rgba(24,26,38,.07)` | `none` | `none` |
+
+**Page background** — layered accent-tinted glow over the solid:
+
+```css
+/* dark */
+radial-gradient(1200px 600px at 12% -8%, color-mix(in srgb, var(--tk-accent) 20%, transparent), transparent 60%),
+radial-gradient(900px 500px at 92% 4%, rgba(96,120,190,.12), transparent 62%),
+var(--tk-page-solid)
+/* light: 14% + 7%, two glows · midnight: one 15% glow */
+```
+
+**Rules**
+- `--tk-accent-text` (a mixed step) is what carries accent-colored **text**; the raw accent is for chrome, marks and fills only.
+- Entering Midnight sets the accent to Amber by default; any swatch may then be chosen. In Midnight all borders and dividers are accent-tinted, so the chrome glows in the accent hue over near-black.
+- Mirror the tokens into any consumed design-system variables (`--color-accent`, `--color-bg`, `--color-surface`, `--color-text`, `--color-divider`).
+- Sync `document.body.background` to `--tk-page-solid` so overscroll matches.
+- Persist `theme` + `accent` (localStorage or user profile) and expose both as component props so they can be driven externally.
+
+---
+
+## 4. Layout shell
+
+```
+┌────────┬──────────────────────────────────────────────┐
+│  rail  │  header (kicker + title · controls)          │
+│ sticky │  screen content                              │
+└────────┴──────────────────────────────────────────────┘
+```
+
+- **Rail** — `width: clamp(60px, 6vw, 76px)`, `flex: none`, sticky, `height: 100vh`, `--tk-rail` background, 1px `--tk-border` inline-end border, `padding: 18px 0 14px`.
+  - Logo mark: 40px, `border-radius: 12px`, `linear-gradient(150deg, var(--tk-accent), color-mix(accent 55%, #000))`, glyph stroked in `--tk-on-accent`, glow `0 6px 20px color-mix(accent 45%, transparent)`, 14px bottom margin.
+  - 8 nav buttons: 44px square, `border-radius: 13px`, icon 19px. Inactive `color: var(--tk-muted)`; hover `background: var(--tk-hover); color: var(--tk-text)`; **active** `background: var(--tk-accent-soft)`, `color: var(--tk-accent-text)`, `box-shadow: 0 0 0 1px var(--tk-accent-line)`, plus a 3px × 20px accent bar at `inset-inline-start: -14px` with `box-shadow: 0 0 12px color-mix(accent 70%, transparent)` (height animates 0 → 20px).
+  - Bottom: 1px 22px divider + 34px avatar with a 1px ring.
+- **Main** — `flex: 1 1 0; min-width: 0`, `padding: clamp(16px,2vw,24px) clamp(14px,2.2vw,30px) 44px`.
+- **Header** — wrapping flex, `margin-bottom: clamp(18px,2vw,26px)`. Start: kicker (10px uppercase `.22em`, `--tk-accent-text`) over the page title. End cluster (`justify-content: flex-end`, gap 10px):
+  1. Search field — 36px, radius 10px, `--tk-input`, `--tk-border-strong`, inline search glyph at `inset-inline-start: 11px`, `padding-inline-start: 34px`, `flex: 1 1 170px; max-width: 260px; min-width: 150px`.
+  2. **GDPR** button — 36px, radius 10px, shield-check glyph + label. Off: `--tk-border-strong` border, `--tk-soft` text, transparent. On: `--tk-accent-line` border, `--tk-accent-text` text, `--tk-accent-soft` fill.
+  3. **Language** button — 36px, radius 10px, 12px/600 label showing the *other* language (`العربية` in EN, `EN` in AR).
+  4. **Palette** button — 36px square, radius 10px, palette glyph; active (popover open) takes the accent-soft treatment.
+
+### 4.1 Appearance popover
+
+Anchored below the palette button, `position: absolute; top: 46px; inset-inline-end: 0; z-index: 40`, `width: min(360px, 84vw)`, radius 16px, 1px `--tk-border-strong`, `--tk-panel`, `box-shadow: 0 22px 50px rgba(0,0,0,.35)`, padding `16px 18px 18px`.
+
+1. Header row — palette glyph + **VISUAL APPEARANCE** (11px/600 uppercase `.14em`, `--tk-accent-text`), then a 1px `--tk-border` rule.
+2. **THEME SELECTION** micro label, then three pills (`Light Mode` / `Dark Mode` / `Midnight Accent`), `padding: 9px 15px`, radius 10px, 12.5px/600. Selected: `background: var(--tk-accent)`, `color: var(--tk-on-accent)`, `box-shadow: 0 6px 18px color-mix(accent 38%, transparent)`, transparent border. Unselected: transparent, `--tk-border-strong` border, `--tk-soft` label.
+3. **PRIMARY COLOR ACCENT** micro label, then a wrapping row of 30px circular swatches, gap 10px. Selected: 2px `--tk-text` ring, halo `0 0 0 3px color-mix(hex 30%, transparent)`, and a 14px check glyph stroked in `--tk-on-accent`.
+
+The same appearance block is repeated inline as the first panel of Settings → General.
+
+### 4.2 Shared component recipes
+
+- **Panel** — `padding: clamp(15px,1.6vw,22px)`, radius 18px, 1px `--tk-border`, `background: var(--tk-panel)`, `box-shadow: var(--tk-shadow)`, `min-width: 0`.
+- **Tile** — same but radius 16px, `--tk-tile`, plus a 1px top hairline: `linear-gradient(90deg, transparent, var(--tk-accent-strong), transparent)`.
+- **Outlined primary button** (the only "primary" style) — transparent fill, 1px `--tk-accent-line`, `color: var(--tk-accent-text)`; hover `background: var(--tk-accent-soft)` (+ `box-shadow: 0 0 22–24px color-mix(accent 26–30%, transparent)` on large ones). Heights: 40px block / 38px large / 36px medium / 32px small / 30px inline-row.
+- **Neutral button** — transparent, 1px `--tk-border-strong`, `--tk-soft` text; hover `--tk-hover` + `--tk-text`.
+- **Icon button** — 30–32px square, radius 9px, `--tk-muted` glyph.
+- **Segmented control** — wrapper `padding: 3px`, radius 11px, 1px `--tk-border-strong`, `--tk-inset`; options radius 8px, 11.5–12px; selected `--tk-accent-soft` + `--tk-accent-text` + 1px accent ring.
+- **Status pill** — 10px uppercase `.1em`, `padding: 4px 9px`, radius 99px. Positive/active: `--tk-accent-soft` + `--tk-accent-text`. Neutral/inactive: `--tk-hover` + `--tk-muted`.
+- **Progress bar** — track 4–6px, radius 99px, `--tk-track`, `overflow: hidden`; fill `linear-gradient(90deg, var(--tk-accent-mid), var(--tk-accent))`.
+- **Switch** — track 40×22px radius 99px (`--tk-accent` on / `--tk-track` off, glow `0 0 14px color-mix(accent 40%, transparent)` when on); knob 16px circle at `inset-inline-start: 3px → 21px`, `--tk-on-accent` when on / `--tk-muted` when off, transition 180ms.
+- **Row list** — rows separated by `border-top: 1px solid var(--tk-border)`, `padding: 12–13px 4px`, hover `--tk-hover`, wrapping flex with per-cell `flex-basis` minimums.
+- **Text field** — 38px, radius 11px, `--tk-inset` (or `--tk-input` in the header), 1px `--tk-border-strong`, 12.5px. Read-only display values use the identical styling on a `div`. **Any prefilled editable input must be uncontrolled (`defaultValue`) or wired to state — never a `value` prop without a change handler.**
+
+---
+
+## 5. Screen 0 — Dashboard
+
+**KPI row** — `grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))`, gap 14px, four *tiles*. Each: micro label + delta pill on one line; then the big value with an 90×34 sparkline (`polyline`, `stroke: var(--tk-accent)`, 1.8px, round) on the end side, `max-width: 40%`. Hover raises the border to `--tk-accent-line`.
+
+| Label | Value | Delta | Sparkline points (y of 8) |
+|---|---|---|---|
+| Total CVs | 1,284 | +12% (accent pill) | 42 36 30 33 24 18 12 8 |
+| Active jobs | 24 | +8 (accent pill) | 40 38 32 30 26 22 20 14 |
+| Excellent matches | 42 | Top 5% (accent pill) | 44 40 34 36 28 20 16 10 |
+| Average score | 74.8% | −2.4% (**neutral** pill) | 20 24 22 28 26 30 27 32 |
+
+Sparkline x = `index * 12.5`, y = `value * 0.7`.
+
+**CV flow panel** (grid `repeat(auto-fit, minmax(330px,1fr))`, this one ~1.6fr) — title *CV flow & match quality* + sub *Volume processed against average match score*; segmented `7 days / 30 days`; two-item legend (accent line = CVs processed, `--tk-dim` line = Avg match score); then the chart:
+
+- SVG `viewBox="0 0 780 250"`, `width: 100%`, `height: clamp(190px, 22vw, 250px)` **set in the style, not the attribute** (attributes reject `clamp()`); keep `height="250"` as attribute fallback.
+- Plot box: `H = 216`, `TOP = 14`. `x = i * 780/(n-1)`, `y = TOP + (H-TOP) * (1 - v/max)`; CV series max = `max(values) * 1.08`, match series max = 100.
+- 4 grid lines at `y = TOP + (H-TOP)*i/3`, `--tk-track`, 1px.
+- Area = the CV path closed to `L 780 216 L 0 216 Z`, filled with a vertical gradient `--tk-accent` 0.42 → 0.
+- CV line: 2.4px `--tk-accent`, round caps. Match line: 1.6px `--tk-dim`, `stroke-dasharray="4 5"`.
+- Curve = midpoint cubic bezier: for each pair, `C mx a.y, mx b.y, b.x b.y` where `mx = (a.x+b.x)/2`.
+- 7-day view: 3.4px dots (`fill: var(--tk-page-solid)`, 2px accent stroke) + all 7 day labels. 30-day view: no dots, every other tick.
+- x labels at `y=245`, 11px, `--tk-dim`, `text-anchor="middle"`.
+
+Data — 7d: CVs `120 148 178 141 208 112 132`, match `65 70 76 72 85 79 78`. 30d (14 pts): CVs `110 132 126 148 162 155 174 191 182 212 201 224 216 238`, match `66 70 73 72 79 81 80 84 85 84 87 90 87 90`.
+
+**AI Assistant panel** (~1fr) — `--tk-hero` background, 1px `--tk-accent-line`, and a bloom `radial-gradient(circle, var(--tk-accent-mid), transparent 65%)` in a 200px circle at `top:-60px; inset-inline-end:-60px`. Contents:
+1. Sparkle glyph (`--tk-accent-text`) + **AI Assistant**.
+2. A 104px donut: `viewBox 0 0 120 120`, `r=50`, 9px stroke, back `--tk-track`, front `--tk-accent` with `stroke-dasharray = 2π·50·0.982` and `filter: drop-shadow(0 0 8px color-mix(accent 60%, transparent))`, group rotated −90°. Centered overlay: **98.2%** (23px) over **ACCURACY** (9px uppercase).
+3. Insight sentence: *142 CVs screened today. Three candidates pass 90% match for Senior Network Engineer.*
+4. Three rows: 30px score chip (`--tk-accent-soft`, `--tk-accent-text`) + name + role (role truncated at `max-width: 40%`). Scores 94 / 91 / 88.
+5. Full-width outlined primary **Run AI summary** with a trailing arrow (mirrored in RTL).
+
+**Top candidates** (~1.6fr) — heading + *ranked by match score* + link **View leaderboard** (→ screen 3). Five rows: rank `01…05` (20px, `--tk-dim`), 34px avatar, name + role (`flex: 1 1 150px`), match bar (`flex: 1 1 90px`), score (48px, end-aligned, 14px, `--tk-accent-text`), outlined **Open** (→ screen 8).
+
+**Active jobs** (~1fr) — heading + small outlined **New job** (→ screen 9). Four inset cards: title + candidate count, 4px progress bar, department micro label. Progress 78 / 52 / 64 / 35.
+
+---
+
+## 6. Screen 1 — Jobs
+
+Filter bar: segmented `All / Open / Paused` (filters the grid) + large outlined **New job** pushed to the end.
+
+Grid `repeat(auto-fit, minmax(320px, 1fr))`, gap 14px. Card = panel + accent top hairline:
+1. Department micro label (`--tk-accent-text`) over the title (15.5px, line-height 1.35); status pill on the end side.
+2. Meta row: location glyph + city, clock glyph + experience, 11.5px `--tk-muted`.
+3. Inset block: **Avg match distribution** micro label + the average (15px, `--tk-accent-text`); below it a 10-bar histogram, `height: 38px`, `gap: 4px`, each bar `flex: 1`, `height: round(v/26*100)%`, `min-height: 3px`, radius `3px 3px 0 0`; bars at index ≥ 5 use `--tk-accent`, the rest `--tk-accent-mid`.
+4. Footer: candidate count, then edit + pause icon buttons and an outlined **Results** (→ screen 3).
+
+| Job | Dept | Location | Exp | Avg | Candidates | Status | Histogram |
+|---|---|---|---|---|---|---|---|
+| Senior Network & Systems Engineer | Software | Riyadh, KSA | 7+ | 86% | 15 | Open | 3 5 8 14 20 26 22 16 10 6 |
+| Senior Audit Test Engineer | Quality | Riyadh / Hybrid | 5+ | 74% | 8 | Open | 4 7 12 18 22 18 13 9 5 3 |
+| Cloud Platform Engineer | Infrastructure | Jeddah, KSA | 4+ | 81% | 11 | Open | 2 4 7 12 18 24 21 15 9 5 |
+| Data Governance Lead | Data | Remote | 6+ | 69% | 6 | **Paused** | 6 9 14 20 21 15 10 7 4 2 |
+| Security Operations Analyst | Security | Riyadh, KSA | 3+ | 77% | 9 | Open | 3 6 10 16 21 22 18 12 7 4 |
+| Frontend Engineer | Product | Remote | 2+ | 83% | 14 | Open | 2 5 9 13 19 25 23 17 11 6 |
+
+---
+
+## 7. Screen 2 — Upload CVs
+
+Two columns, `repeat(auto-fit, minmax(320px, 1fr))`.
+
+**Left column**
+
+1. **Drop zone** — `padding: clamp(24px,3vw,44px) clamp(18px,2vw,28px)`, radius 18px, **1.5px dashed `--tk-accent-line`**, `background: var(--tk-dropzone)`, centered. 56px icon square (radius 17px, `--tk-accent-soft`, upload glyph in `--tk-accent-text`, `box-shadow: 0 0 30px color-mix(accent 28%, transparent)`), then **Drop CVs here** (`clamp(17px,2vw,21px)`), *PDF, DOCX or ZIP — up to 200 files per batch*, and a large outlined **Browse files**. Hover brightens the dash to the full accent.
+2. **Processing queue** panel — heading + `5 files · 2 done` meta. Rows: file glyph, filename (mono-ish 12.5px), 4px progress bar (`flex: 1 1 90px`), fixed 72px status pill.
+
+| File | Progress | Status |
+|---|---|---|
+| ahmad-al-mansoor-cv.pdf | 100 | Parsed |
+| sarah-jenkins-resume.pdf | 100 | Parsed |
+| omar-haddad.docx | 64 | Parsing |
+| lina-farouk-cv.pdf | 22 | Parsing |
+| batch-network-eng.zip | 0 | Queued |
+
+**Right column — Screening setup** panel
+
+1. **Target job** — select-styled row (value + chevron).
+2. **Match threshold** — micro label + `80%` in `--tk-accent-text`; a 5px track with an 80% accent-gradient fill and a 14px knob at `inset-inline-start: 80%`, `transform: translate(-50%,-50%)`, `background: var(--tk-accent)`, `box-shadow: 0 0 12px color-mix(accent 70%, transparent)`.
+3. Three switch rows (label + hint + switch): *Auto-screen on upload* (on) / *Anonymize personal data* (**bound to the header GDPR toggle**) / *Notify hiring manager* (off). Hints: "Score each CV as soon as it lands" · "Hide names, photos and contacts" · "Email when a 90%+ match appears".
+4. Full-width outlined **Start screening**.
+
+---
+
+## 8. Screen 3 — Leaderboard
+
+Filter bar: a job select (label `Job` + value + chevron, `min-width: 200px`) and a neutral **Export CSV** with a download glyph pushed to the end.
+
+Panel with a uppercase 10px column header — `#` (20px) · Candidate (`flex: 1 1 170px`) · Match score (`flex: 1 1 100px`) · Stage (96px, centered) · 62px action gutter — then 8 rows: rank (top 3 in `--tk-accent-text`, rest `--tk-dim`), 34px avatar, name + role, bar + score (13.5px `--tk-accent-text`), stage label (10px uppercase, `--tk-muted`, 96px, truncating), outlined **Open** (→ screen 8).
+
+| # | Name | Role | Score | Stage |
+|---|---|---|---|---|
+| 01 | Ahmad Al-Mansoor | Senior Network Engineer | 94% | Interview |
+| 02 | Sarah Jenkins | Lead QA Audit Engineer | 91% | Interview |
+| 03 | Omar Haddad | Systems Engineer | 88% | Screening |
+| 04 | Lina Farouk | Automation Tester | 86% | Shortlist |
+| 05 | Daniel Reyes | Cloud Engineer | 83% | Screening |
+| 06 | Maya Suleiman | Data Governance Analyst | 81% | Screening |
+| 07 | Tarek Nabil | Platform Engineer | 79% | Offer |
+| 08 | Hana Yusuf | Security Analyst | 76% | Screening |
+
+---
+
+## 9. Screen 4 — Analytics
+
+**Stat tiles** — `repeat(auto-fit, minmax(220px,1fr))`, tile recipe with the accent hairline: value (big) + delta (11.5px `--tk-accent-text`) on a baseline row.
+
+| Label | Value | Delta |
+|---|---|---|
+| Time to shortlist | 3.4 days | −28% vs last month |
+| Screening cost / CV | $0.11 | −14% vs last month |
+| Offer acceptance | 82% | +6% vs last month |
+
+**Hiring funnel** panel — *Conversion across the last 30 days*. Five rows: label · count · % of top (44px, end-aligned); below each a 26px bar in a `--tk-track` groove, `width: max(6%, count/top*100%)`, radius 9px, `background: linear-gradient(90deg, color-mix(accent (70-8i)%, transparent), var(--tk-accent))`, `box-shadow: 0 0 18px color-mix(accent 22%, transparent)`.
+
+`CVs received 1,284 (100%) · Passed screening 612 (48%) · Shortlisted 214 (17%) · Interviewed 96 (7%) · Offers 34 (3%)`
+
+**CVs by department** panel — *Volume screened this month*. Six columns in a 210px-tall flex row (`gap: clamp(8px,1.4vw,18px)`, bottom-aligned): value (11.5px `--tk-accent-text`) above a bar (`width: 100%`, `height: round(v/max*148)px`, radius `8px 8px 0 0`, `linear-gradient(180deg, var(--tk-accent), color-mix(accent 18%, transparent))`, accent glow) above the department label (10px uppercase, truncating).
+
+`Software 318 · Quality 244 · Infrastructure 196 · Data 152 · Security 128 · Product 96`
+
+---
+
+## 10. Screen 5 — Settings
+
+Tab bar: three tabs as buttons with `padding: 10px 16px`, `border-bottom: 2px solid` (accent when active, transparent otherwise), 12.5px/600, active label `--tk-accent-text`; the bar itself sits on a 1px `--tk-border` rule with `margin-bottom: 16px`.
+
+`General & AI Providers` · `Role Capabilities (RBAC)` · `Audit Trail Logs`
+
+### 10.1 Tab — General & AI Providers
+
+1. **Visual appearance** panel — the same theme pills + accent swatches as the popover (§4.1), laid out side by side with `gap: 28px`, wrapping.
+2. **Token consumption** panel — micro label + `66,356 / 1,000,000` (13px `--tk-accent-text`) on a baseline row; a 6px 7%-filled accent-gradient bar; then *Resets at the end of each billing cycle* and a neutral **Reset usage counter** on the end side.
+3. **AI service providers** panel — heading + small outlined **Add provider** (plus glyph). Row list: provider name (`flex: 1 1 130px`), model (mono, `flex: 1 1 120px`), masked key (110px, mono), status pill, then edit + run icon buttons (the run button hovers to accent).
+
+| Provider | Model | Key | Status |
+|---|---|---|---|
+| Google Gemini | gemini-2.0-flash | ••••••••••6f1a | Inactive |
+| OpenAI | gpt-4o | ••••••••••b7c2 | Inactive |
+| Google Gemini | gemma-3-27b-it | ••••••••••9d04 | **Active** |
+
+4. Two side-by-side panels (`repeat(auto-fit, minmax(320px,1fr))`):
+   - **Candidate outreach templates** — Email subject (`Talenta — application update`), Email body (min-height 84px: *Hi {name}, thank you for applying to {job}. Your application status is now {status}.*), WhatsApp message (min-height 52px: *Hi {name}, your {job} application is now {status}.*), then an inset note: `Supported placeholders: {name} · {job} · {score} · {status} · {degree} · {exp}`.
+   - **Data retention** — *Candidate data retention (days)* = `90` with a neutral **Purge now**; *Audit log retention (days)* = `120` with **Purge now**; then a full-width outlined **Save configuration**.
+
+### 10.2 Tab — Role Capabilities (RBAC)
+
+Panel: title *Role capabilities matrix* + sub *Fine-grained capabilities per role* + small outlined **Save matrix**. Column header: `Capability` (`flex: 1 1 200px`) then three 96px centered role pills (`ADMIN` / `MANAGER` / `RECRUITER`, accent-soft). Seven rows: capability name (13px) + hint (11px `--tk-muted`), then three 18px checkboxes (radius 5px; checked = `--tk-accent` fill + 12px tick in `--tk-on-accent`; unchecked = transparent with `--tk-border-strong`).
+
+| Capability | Hint | Admin | Manager | Recruiter |
+|---|---|---|---|---|
+| View dashboard & results | Rankings, match scores and overview | ✓ | ✓ | ✓ |
+| Manage job positions | Create, edit and archive openings | ✓ | — | ✓ |
+| Upload & analyze CVs | Batch upload and run AI parsing | ✓ | — | ✓ |
+| Change candidate status | Move candidates through the pipeline | ✓ | ✓ | ✓ |
+| Delete candidates & jobs | Permanently remove records | ✓ | — | — |
+| Manage system settings | Providers, prompts, theme and security | ✓ | — | — |
+| Toggle GDPR anonymization | Mask or unmask PII across the app | ✓ | ✓ | — |
+
+### 10.3 Tab — Audit Trail Logs
+
+Panel: title *Security audit trail* + sub *Append-only record of system actions and role changes* + neutral **Refresh** (circular-arrow glyph). Rows: ID (40px `--tk-dim`) · timestamp (170px `--tk-muted`, tabular) · actor + role pill (150px) · action pill (`--tk-hover`) · target (110px mono) · details (`flex: 1 1 200px`, truncating).
+
+| ID | Timestamp | Actor | Role | Action | Target | Details |
+|---|---|---|---|---|---|---|
+| #89 | Jul 26, 2026 · 21:00 | system | SYSTEM | Audit purge | audit_logs | Purged 0 entries older than 120 days |
+| #88 | Jul 25, 2026 · 23:59 | admin | ADMIN | Job change | jobs #5 | Activated 'Senior Audit Test Engineer' |
+| #87 | Jul 25, 2026 · 23:59 | admin | ADMIN | Job change | jobs #5 | Paused 'Senior Audit Test Engineer' |
+| #86 | Jul 25, 2026 · 23:36 | admin | ADMIN | Job change | jobs #5 | Updated 'Senior Audit Test Engineer' |
+| #85 | Jul 25, 2026 · 23:12 | noor | RECRUITER | CV batch | cvs #211-226 | Uploaded 16 CVs, 14 parsed successfully |
+
+---
+
+## 11. Screen 6 — Prompts Manager
+
+**Header card** — `--tk-hero` panel with 1px `--tk-accent-line`: title *AI system prompt versioning* + sub *Edit and version the instructions that direct CV parsing*; end cluster = neutral **Restore defaults** + outlined **Create version** (plus glyph).
+
+**Version panel** — `System Default v1` (14px/600) over `Version ID: #1` (11px `--tk-dim`), with an **Active** pill on the end side, separated by a 1px rule. Then two blocks, each: micro label + a small outlined **Copy** on the end, and the body in a code surface — `padding: 14px 16px`, radius 13px, 1px `--tk-border`, `--tk-inset`, monospace 11.5px, `line-height: 1.85`, `--tk-soft`, `white-space: pre-wrap`, `max-height: 280px; overflow: auto`, **`dir="ltr"` even in Arabic**.
+
+Block 1 — *Analysis / extraction prompt*:
+
+```
+You are an expert AI recruiter. Analyze the candidate CV (text, PDF or image) and match it
+against the job description and the ATS checklist.
+
+1. Extract the candidate name and contact details (email, phone). Use empty strings when absent.
+2. Produce four scores from 0–100: match_score (weighted by checklist importance — Mandatory /
+   Important / Additional), score_technical, score_experience, score_cultural.
+3. Extract skills, identified gaps and certifications.
+4. Build a structured education and work timeline.
+5. For EACH ATS checklist requirement, decide matched | partial | missing and quote literal
+   evidence from the CV.
+
+Return ONLY valid JSON matching the schema — no markdown fences.
+```
+
+Block 2 — *Re-analysis prompt*:
+
+```
+You are re-analyzing a candidate CV against an updated job description or ATS checklist.
+
+1. Evaluate every checklist item in the new list.
+2. Quote literal evidence from the CV for each match.
+3. Recalculate match, technical, experience and cultural scores using the new weighting.
+
+Return ONLY valid JSON matching the schema — no markdown fences.
+```
+
+---
+
+## 12. Screen 7 — Integrations & API
+
+Intro: title *Integrations & API connections* + sub *Third-party ERP, sourcing syncs and custom webhooks*.
+
+Three stacked cards (radius 18px, 1px `--tk-border`, `--tk-panel`, `overflow: hidden`, hover border → `--tk-accent-line`). Collapsed header row: 40px accent-soft icon square (link glyph, `--tk-accent-text`), name (14px/600) + description (12px `--tk-muted`), a **Disabled** pill, and a switch (off).
+
+1. **LinkedIn AI Sourcing** — *Connect the LinkedIn Recruiter API to source candidate profiles.* — **expanded**.
+2. **Odoo ERP Sync** — *Synchronize jobs and applicant records with your Odoo database.*
+3. **Custom webhook** — *Arbitrary API endpoint with custom JSON payload mapping.*
+
+Expanded body (1px `--tk-border` top rule, same padding, `display: grid; gap: 14px`):
+- Two fields side by side (`repeat(auto-fit, minmax(240px,1fr))`): **Client ID** (empty input, mono, placeholder `Enter client ID`) and **Client secret** (masked display `••••••••••••••`, `letter-spacing: .2em`).
+- **OAuth redirect URI** — read-only mono field (`dir="ltr"`, truncating) `https://app.talenta.io/api/integrations/linkedin/callback` + neutral **Copy**; below it the note *Must match the authorized redirect URL in your developer portal.* (11px `--tk-dim`).
+- Footer: *Never synced* (11px `--tk-dim`) + neutral **Test connection** + outlined **Save connection**.
+
+---
+
+## 13. Screen 8 — Candidate AI Report
+
+**Action bar** — a back link (`← Back`, arrow mirrored in RTL) → screen 3; end cluster: neutral **Schedule interview**, neutral **Send notification**, outlined **Export PDF**.
+
+**Candidate header** — `--tk-hero` panel with 1px `--tk-accent-line`: 56px avatar, name (`clamp(18px,2vw,22px)`) + role (12.5px `--tk-muted`) + contact line (11.5px `--tk-dim`, `dir="ltr"`) `a.mansoor@example.com · +966 55 000 0000`, then four 64px donuts (`viewBox 0 0 64 64`, `r=26`, 5px stroke, `--tk-track` back, `--tk-accent` front, `dasharray = 2π·26·v/100`, rotated −90°) with the value (13px) over an 8px uppercase label:
+
+`Overall 72% · Technical 48% · Experience 65% · Cultural 83%`
+
+**Executive recommendation** panel — micro label in `--tk-accent-text` then 13px/1.75 body with `text-wrap: pretty`:
+
+> Strong backend and network fundamentals with 8 years of hands-on infrastructure work, exceeding the 7-year requirement. Deep evidence of automation and cloud migration ownership. Gaps in formal certification and Kubernetes at scale — worth probing in the technical round.
+
+**Strengths / Gaps** — two panels (`repeat(auto-fit, minmax(300px,1fr))`). Each item is an inset row (radius 11px, `--tk-inset`, 1px `--tk-border`) with a glyph: strengths use a check stroked in `--tk-accent` and `--tk-text` labels; gaps use an × stroked in `--tk-muted` and `--tk-soft` labels.
+
+- Strengths: Network architecture & routing · Linux systems administration · Terraform / IaC · Incident response leadership
+- Gaps: Kubernetes at scale · CISSP certification · Formal ITIL training
+
+**Extracted skills** panel — wrapping accent-soft pills (11.5px, `padding: 6px 12px`, radius 99px, `--tk-accent-text`):
+`Cisco IOS · BGP / OSPF · Linux · Terraform · Ansible · AWS · Azure · Zabbix · Python · Docker · VMware · Fortinet`
+
+**Timeline** panel (`repeat(auto-fit, minmax(330px,1fr))` with the right column) — each entry: a 9px accent dot with an accent glow and a 1px `--tk-border-strong` connector filling the remaining height, then period (10.5px uppercase `--tk-accent-text`), role (13.5px), org (11.5px `--tk-muted`), note (11.5px `--tk-dim`).
+
+| Period | Role | Org | Note |
+|---|---|---|---|
+| 2022 — Present | Senior Network Engineer | Almarai | Led the cloud migration of 12 sites. |
+| 2019 — 2022 | Systems Engineer | STC Solutions | Automated server provisioning with Ansible. |
+| 2017 — 2019 | Network Support Engineer | Elm | Supported a 3,000-user estate. |
+| 2013 — 2017 | BSc Computer Science | King Saud University | Graduated with honours |
+
+**ATS requirement matching** panel — rows with requirement (`flex: 1 1 160px`), weight pill (accent-soft), status pill (Matched = accent-soft, Missing/Partial = `--tk-hover`), and the evidence quote on its own full-width line (11.5px `--tk-dim`).
+
+| Requirement | Weight | Status | Evidence |
+|---|---|---|---|
+| 7+ years in network engineering | Mandatory | Matched | 8 years across three employers. |
+| University degree in CS | Mandatory | Matched | BSc Computer Science, KSU 2017. |
+| CISSP / CCIE | Important | Missing | No certification listed. |
+
+**Suggested interview questions** panel — four inset rows, each a question-mark glyph (accent) + 12.5px/1.6 text:
+1. Walk through the largest network migration you have owned end to end.
+2. How do you approach capacity planning for a multi-region deployment?
+3. Describe an incident where your monitoring failed you — what changed after?
+4. Which parts of your IaC would you refactor today, and why?
+
+---
+
+## 14. Screen 9 — Define New Position
+
+Back link → screen 1. Content column `max-width: 900px`, `display: grid; gap: 14px`.
+
+1. **Basic job specifications** panel (micro label in `--tk-accent-text`) — six fields in `repeat(auto-fit, minmax(240px,1fr))`, each a micro label + a **typeable uncontrolled** 38px input: Job title `Senior Network & Systems Engineer` · Department `Software` · Location `Riyadh, KSA` · Min. experience (years) `7` · Required degree `BSc` · Specialization `Senior Network Engineer`.
+2. **Requirements & specifications** panel — seven stacked fields (last two are taller text areas, `min-height: 38px`, `line-height: 1.7`): Target core skills `BGP, OSPF, Terraform, Linux, AWS` · Certifications `CCNP, AWS SA, PMP` · Nationality / status `Saudi or transferable iqama` · Languages `Arabic and English` · Soft skills `Leadership, problem solving, communication` · Job description `General overview of the role and work environment…` · Responsibilities `Day-to-day duties and responsibilities…`.
+3. **ATS evaluation criteria** panel — micro label + small outlined **Add requirement**; then criterion cards (inset, radius 13px): the requirement text (12.5px), then `Importance` micro label, a weight pill (accent-soft), and a delete icon button on the end.
+   - *Minimum 7 years of experience in the core field* — **Mandatory**
+   - *University degree in CS or a related field* — **Important**
+   - Weight vocabulary: Mandatory · Important · Additional.
+4. Footer, end-aligned: neutral **Cancel** (→ screen 1) + outlined **Save position** (with accent glow on hover).
+
+---
+
+## 15. Behaviors
+
+- **Navigation** — the rail selects screens 0–7 and drives the header kicker/title. Cross-links: dashboard *View leaderboard* → 3, dashboard/jobs **New job** → 9, candidate **Open** (dashboard + leaderboard) → 8, job **Results** → 3. Screens 8 and 9 show a back link (8 → 3, 9 → 1) and never appear in the rail.
+- **GDPR anonymization** — header toggle. When on, every candidate name across the AI panel, top candidates, leaderboard and report becomes `Candidate #1041`, `#1042`, … (index-based, stable), and the *Anonymize personal data* switch on screen 2 reflects the same state. The button itself takes the accent-soft active treatment.
+- **Language** — flips `dir` to `rtl`, swaps every string, converts counts and analytics figures to Arabic-Indic digits (`toLocaleString('ar-EG')`), and mirrors directional glyphs with `transform: scaleX(-1)`. Prompt bodies, URIs, emails, model names and filenames stay `dir="ltr"`. Use logical properties everywhere (`inset-inline-start`, `margin-inline-start`, `border-inline-end`, `padding-inline-start`) so RTL needs no second stylesheet.
+- **Chart range** — the 7/30-day segment swaps dataset, curve, dot visibility and tick density.
+- **Job filter** — All / Open / Paused filters the job grid; Paused currently matches one job.
+- **Settings tabs** — independent of screen state; the selected tab persists while the user navigates away and back.
+- **Theme + accent** — apply instantly to every screen, persist, and re-derive `--tk-on-accent`.
+
+---
+
+## 16. Responsive rules
+
+- No fixed page widths. Every multi-column section is `repeat(auto-fit, minmax(200–330px, 1fr))` so 4 → 2 → 1 column happens with **no media queries**.
+- Type, panel padding and chart height scale with `clamp()`.
+- Every row (header cluster, candidate rows, provider rows, audit rows, card footers) is `flex-wrap: wrap` with `flex-basis` minimums, so cells reflow instead of truncating to nothing.
+- Long strings truncate inside `min-width: 0` flex children (`overflow: hidden; text-overflow: ellipsis; white-space: nowrap`).
+- Charts are `viewBox`-based SVG at `width: 100%`; bars use percentage heights inside a fixed-height flex row.
+- The rail narrows with `clamp(60px, 6vw, 76px)` and keeps 44px targets; inline row actions stay ≥ 30px.
+- Wide data tables (leaderboard, audit) reflow rather than horizontally scroll; if a horizontal scroll is unavoidable, keep the rank + name cell pinned.
+
+---
+
+## 17. Accessibility
+
+- Body text ≥ 4.5:1 in all three themes. Accent-colored text always uses `--tk-accent-text`, never the raw accent on a panel.
+- Every accent-filled surface takes its foreground from the computed `--tk-on-accent` (§3.2).
+- `:focus-visible { outline: 2px solid var(--tk-accent); outline-offset: 2px; }` on every interactive element — never remove focus rings.
+- Icon-only buttons carry `title` + `aria-label`; switches and toggles expose `aria-pressed`/`aria-checked`; tabs use `role="tab"` + `aria-selected`; the appearance popover is dismissible with `Esc` and returns focus to the palette button.
+- Status is never color-only — every pill carries a text label.
+- Touch targets ≥ 44px in the rail, ≥ 30px for inline row actions.
+- Respect `prefers-reduced-motion`: drop the two state transitions.
+
+---
+
+## 18. Definition of done
+
+1. All three themes × seven accents render with no hard-coded color anywhere and no sub-AA text.
+2. All ten screens are reachable, including both drill-downs and their back links.
+3. Arabic mode mirrors the entire layout with no clipped or reversed technical strings.
+4. GDPR masking affects every surface that shows a candidate name.
+5. Every prefilled input is typeable; no controlled input lacks a change handler.
+6. No console warnings; no runtime library mutates DOM nodes owned by the framework.
+7. From 1920px down to 360px, no horizontal page scroll and no overlapping content.
