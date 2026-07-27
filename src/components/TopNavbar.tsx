@@ -1,84 +1,104 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useI18n } from '../i18n/I18nContext.js';
 import { useRole } from '../context/RoleContext.js';
-import { ShieldAlert, LogOut, Globe, Moon, Sun, Monitor } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext.js';
+import { ShieldCheck, Globe, Search } from 'lucide-react';
 import { hasPermission } from '../utils/rbac.js';
+import AppearancePopover from './AppearancePopover.js';
 
 interface TopNavbarProps {
-  onToggleSidebar: () => void;
+  kicker: string;
   title: string;
 }
 
-export const TopNavbar: React.FC<TopNavbarProps> = ({ onToggleSidebar, title }) => {
-  const { t, language, setLanguage, dir } = useI18n();
-  const { role, username, gdprActive, capabilities, toggleGdpr, logout } = useRole();
-
-  const handleLanguageToggle = () => {
-    setLanguage(language === 'ar' ? 'en' : 'ar');
-  };
+/** Header — kicker/title + search, GDPR, language and appearance controls (des-2.txt §4). */
+export const TopNavbar: React.FC<TopNavbarProps> = ({ kicker, title }) => {
+  const { t, language, setLanguage } = useI18n();
+  const { role, gdprActive, capabilities, toggleGdpr } = useRole();
+  const { themeMode, accent, setThemeMode, setAccent } = useTheme();
+  const [search, setSearch] = useState('');
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   const showGdprToggle = role && hasPermission(role, 'toggle_gdpr', capabilities);
 
   return (
-    <nav className="h-16 border-b border-border-main bg-bg-card/75 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-6 no-print">
-      {/* Title / Breadcrumb */}
-      <div className="flex items-center gap-4">
-        <h1 className="text-lg font-bold text-text-main tracking-tight">{title}</h1>
+    <header
+      className="flex flex-wrap items-center gap-3 justify-between no-print"
+      style={{ marginBottom: 'clamp(18px,2vw,26px)' }}
+    >
+      <div style={{ minWidth: 0 }}>
+        <div
+          className="text-[10px] font-bold uppercase"
+          style={{ letterSpacing: '.22em', color: 'var(--tk-accent-text)' }}
+        >
+          {kicker}
+        </div>
+        <h1
+          className="font-medium truncate"
+          style={{ fontSize: 'clamp(21px,2.4vw,30px)', letterSpacing: '-.02em', color: 'var(--tk-text)' }}
+        >
+          {title}
+        </h1>
       </div>
 
-      {/* Action items */}
-      <div className="flex items-center gap-3">
-        {/* GDPR Toggle */}
+      <div className="flex items-center gap-2.5" style={{ justifyContent: 'flex-end' }}>
+        <div className="relative" style={{ flex: '1 1 170px', maxWidth: 260, minWidth: 150 }}>
+          <Search
+            className="w-4 h-4 absolute pointer-events-none"
+            style={{ insetInlineStart: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--tk-muted)' }}
+          />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('search') || 'Search'}
+            className="tk-field tk-focusable"
+            style={{ height: 36, borderRadius: 10, background: 'var(--tk-input)', paddingInlineStart: 34, width: '100%' }}
+          />
+        </div>
+
         {showGdprToggle && (
           <button
+            type="button"
             onClick={toggleGdpr}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-              gdprActive
-                ? 'bg-red-500/10 border-red-500/30 text-red-500 animate-pulse'
-                : 'bg-bg-hover border-border-main text-text-muted hover:text-text-main'
-            }`}
-            title="Toggle GDPR anonymization mode to mask contact details"
+            title="Toggle GDPR anonymization mode"
+            aria-pressed={gdprActive}
+            className="flex items-center gap-1.5 px-3 tk-focusable"
+            style={{
+              height: 36, borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              background: gdprActive ? 'var(--tk-accent-soft)' : 'transparent',
+              color: gdprActive ? 'var(--tk-accent-text)' : 'var(--tk-soft)',
+              border: `1px solid ${gdprActive ? 'var(--tk-accent-line)' : 'var(--tk-border-strong)'}`
+            }}
           >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">
-              {gdprActive ? t('gdprMode') : t('gdprMode')}
-            </span>
+            <ShieldCheck className="w-4 h-4" />
+            <span className="hidden sm:inline">{t('gdprMode')}</span>
           </button>
         )}
 
-        {/* Language Toggle */}
         <button
-          onClick={handleLanguageToggle}
-          className="p-2 rounded-xl bg-bg-hover hover:bg-border-main border border-border-main/50 text-text-muted hover:text-text-main transition-colors flex items-center gap-1.5 text-xs font-medium"
+          type="button"
+          onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+          className="flex items-center gap-1.5 px-3 tk-focusable"
+          style={{
+            height: 36, borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            background: 'transparent', color: 'var(--tk-soft)', border: '1px solid var(--tk-border-strong)'
+          }}
         >
           <Globe className="w-4 h-4" />
           <span>{language === 'ar' ? 'English' : 'العربية'}</span>
         </button>
 
-        {/* Divider */}
-        <div className="h-5 w-[1px] bg-border-main mx-1"></div>
-
-        {/* User Card */}
-        {username && (
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden md:block">
-              <p className="text-xs font-bold text-text-main leading-3">{username}</p>
-              <span className="text-[10px] text-brand font-medium tracking-wide uppercase">
-                {t(role as any)}
-              </span>
-            </div>
-            
-            <button
-              onClick={logout}
-              className="p-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 transition-all cursor-pointer"
-              title={t('logout')}
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+        <AppearancePopover
+          open={popoverOpen}
+          onOpenChange={setPopoverOpen}
+          themeMode={themeMode}
+          accent={accent}
+          onThemeChange={setThemeMode}
+          onAccentChange={setAccent}
+        />
       </div>
-    </nav>
+    </header>
   );
 };
 export default TopNavbar;

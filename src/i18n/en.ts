@@ -191,5 +191,9 @@ export const en = {
   
   // Toggles and status
   enabled: "Enabled",
-  disabled: "Disabled"
+  disabled: "Disabled",
+
+  // Header
+  search: "Search",
+  navAnalytics: "Analytics & Funnel"
 };

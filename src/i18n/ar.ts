@@ -191,5 +191,9 @@ export const ar = {
   
   // Toggles and status
   enabled: "مفعّل",
-  disabled: "معطّل"
+  disabled: "معطّل",
+
+  // Header
+  search: "بحث",
+  navAnalytics: "التحليلات والقمع التحويلي"
 };

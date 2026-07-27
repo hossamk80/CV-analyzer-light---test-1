@@ -19,7 +19,8 @@ import {
   ShieldCheck,
   Shield
 } from 'lucide-react';
-import { getSavedTheme, getSavedPrimaryColor, applyTheme, applyPrimaryColor, ThemeMode, PrimaryColor } from '../utils/theme.js';
+import { useTheme } from '../context/ThemeContext.js';
+import AppearancePanel from '../components/AppearancePanel.js';
 import AccessDenied from '../components/AccessDenied.js';
 import AuditLogsView from './Settings/AuditLogsView.js';
 import RbacSettingsView from './Settings/RbacSettingsView.js';
@@ -36,10 +37,7 @@ interface Provider {
 
 export const Settings: React.FC = () => {
   const { t } = useI18n();
-
-  // Color Theme States
-  const [themeMode, setThemeMode] = useState<ThemeMode>(getSavedTheme);
-  const [primaryColor, setPrimaryColor] = useState<PrimaryColor>(getSavedPrimaryColor);
+  const { themeMode, accent, setThemeMode, setAccent } = useTheme();
 
   // General Settings
   const [quota, setQuota] = useState(1000000);
@@ -323,21 +321,9 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const handleThemeChange = (theme: ThemeMode) => {
-    setThemeMode(theme);
-    applyTheme(theme);
-  };
-
-  const handlePrimaryColorChange = (color: PrimaryColor) => {
-    setPrimaryColor(color);
-    applyPrimaryColor(color);
-  };
-
   const [activeTab, setActiveTab] = useState<'general' | 'audit' | 'rbac'>('general');
 
   const tokenPercentage = Math.min(Math.round((tokensUsed / quota) * 100), 100);
-
-  const colorsList: PrimaryColor[] = ['blue', 'green', 'purple', 'orange', 'pink', 'red'];
 
   if (error) {
     return <AccessDenied message={error} onRetry={fetchSettingsData} />;
@@ -390,73 +376,13 @@ export const Settings: React.FC = () => {
         <RbacSettingsView />
       ) : (
         <div className="space-y-8">
-      {/* 1. Theme Configuration */}
-      <div className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-6">
-        <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider flex items-center gap-1.5 border-b border-border-main/50 pb-3">
-          <Palette className="w-4 h-4 text-brand" />
-          {t('themeSettings')}
+      {/* 1. Visual appearance (des-2.txt §4.1 / §10.1.1) */}
+      <div className="tk-panel space-y-6">
+        <h3 className="text-[11px] font-bold uppercase tracking-[.14em] flex items-center gap-1.5 border-b pb-3" style={{ color: 'var(--tk-accent-text)', borderColor: 'var(--tk-border)' }}>
+          <Palette className="w-4 h-4" />
+          Visual appearance
         </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Theme Selector */}
-          <div>
-            <span className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-3">Theme Selection</span>
-            <div className="flex flex-wrap gap-2.5">
-              <button
-                onClick={() => handleThemeChange('light')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                  themeMode === 'light'
-                    ? 'bg-brand text-white border-brand shadow-md shadow-brand/10'
-                    : 'bg-bg-main border-border-main text-text-muted hover:text-text-main'
-                }`}
-              >
-                {t('themeLight')}
-              </button>
-              <button
-                onClick={() => handleThemeChange('dark')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                  themeMode === 'dark'
-                    ? 'bg-brand text-white border-brand shadow-md shadow-brand/10'
-                    : 'bg-bg-main border-border-main text-text-muted hover:text-text-main'
-                }`}
-              >
-                {t('themeDark')}
-              </button>
-              <button
-                onClick={() => handleThemeChange('midnight-yellow')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                  themeMode === 'midnight-yellow'
-                    ? 'bg-brand text-black border-brand shadow-md shadow-brand/10'
-                    : 'bg-bg-main border-border-main text-text-muted hover:text-text-main'
-                }`}
-              >
-                {t('themeMidnightYellow')}
-              </button>
-            </div>
-          </div>
-
-          {/* Accent Color picker */}
-          <div>
-            <span className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-3">{t('primaryColor')}</span>
-            <div className="flex gap-3">
-              {colorsList.map(color => (
-                <button
-                  key={color}
-                  onClick={() => handlePrimaryColorChange(color)}
-                  className={`w-7 h-7 rounded-full transition-all hover:scale-110 relative flex items-center justify-center cursor-pointer ${
-                    color === 'blue' ? 'bg-blue-500' :
-                    color === 'green' ? 'bg-emerald-500' :
-                    color === 'purple' ? 'bg-violet-500' :
-                    color === 'orange' ? 'bg-orange-500' :
-                    color === 'pink' ? 'bg-pink-500' : 'bg-red-500'
-                  } ${primaryColor === color ? 'ring-2 ring-offset-2 ring-brand' : ''}`}
-                >
-                  {primaryColor === color && <Check className="w-3.5 h-3.5 text-white" />}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        <AppearancePanel themeMode={themeMode} accent={accent} onThemeChange={setThemeMode} onAccentChange={setAccent} />
       </div>
 
       {/* 2. Token Consumption Meter */}
