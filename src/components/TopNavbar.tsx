@@ -11,13 +11,13 @@ interface TopNavbarProps {
 
 export const TopNavbar: React.FC<TopNavbarProps> = ({ onToggleSidebar, title }) => {
   const { t, language, setLanguage, dir } = useI18n();
-  const { role, username, gdprActive, toggleGdpr, logout } = useRole();
+  const { role, username, gdprActive, capabilities, toggleGdpr, logout } = useRole();
 
   const handleLanguageToggle = () => {
     setLanguage(language === 'ar' ? 'en' : 'ar');
   };
 
-  const showGdprToggle = role && hasPermission(role, 'toggle_gdpr');
+  const showGdprToggle = role && hasPermission(role, 'toggle_gdpr', capabilities);
 
   return (
     <nav className="h-16 border-b border-border-main bg-bg-card/75 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-6 no-print">

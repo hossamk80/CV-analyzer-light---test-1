@@ -38,7 +38,7 @@ import TopNavbar from './components/TopNavbar.js';
 // Navigation layout wrapper
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { t, dir } = useI18n();
-  const { role, isAuthenticated } = useRole();
+  const { role, isAuthenticated, capabilities } = useRole();
   const location = useLocation();
 
   // Collapsible sidebar state, persisted
@@ -80,7 +80,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Filter based on roles permissions
   const visibleNavs = navItems.filter(item => {
     if (!role) return false;
-    return hasPermission(role, item.capability as any);
+    return hasPermission(role, item.capability as any, capabilities);
   });
 
   if (!isAuthenticated) {
@@ -190,13 +190,13 @@ export const AppContent: React.FC = () => {
           } />
           
           <Route path="/jobs" element={
-            <ProtectedRoute allowedRoles={['admin', 'recruiter']}>
+            <ProtectedRoute requiredCapability="manage_jobs">
               <Jobs />
             </ProtectedRoute>
           } />
 
           <Route path="/upload" element={
-            <ProtectedRoute allowedRoles={['admin', 'recruiter']}>
+            <ProtectedRoute requiredCapability="upload_cvs">
               <Upload />
             </ProtectedRoute>
           } />
@@ -220,19 +220,19 @@ export const AppContent: React.FC = () => {
           } />
 
           <Route path="/settings" element={
-            <ProtectedRoute allowedRoles={['admin']}>
+            <ProtectedRoute requiredCapability="manage_settings">
               <Settings />
             </ProtectedRoute>
           } />
 
           <Route path="/settings/prompts" element={
-            <ProtectedRoute allowedRoles={['admin']}>
+            <ProtectedRoute requiredCapability="manage_settings">
               <PromptSettings />
             </ProtectedRoute>
           } />
 
           <Route path="/settings/integrations" element={
-            <ProtectedRoute allowedRoles={['admin']}>
+            <ProtectedRoute requiredCapability="manage_settings">
               <IntegrationsSettings />
             </ProtectedRoute>
           } />

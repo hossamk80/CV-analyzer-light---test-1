@@ -1,23 +1,27 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useRole } from '../context/RoleContext.js';
-import { UserRole } from '../utils/rbac.js';
+import { UserRole, Capability, hasPermission } from '../utils/rbac.js';
 import { useI18n } from '../i18n/I18nContext.js';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: UserRole[];
+  requiredCapability?: Capability;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
-  const { isAuthenticated, role } = useRole();
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles, requiredCapability }) => {
+  const { isAuthenticated, role, capabilities } = useRole();
   const { t } = useI18n();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && role && !allowedRoles.includes(role)) {
+  const deniedByRole = allowedRoles && role && !allowedRoles.includes(role);
+  const deniedByCapability = requiredCapability && (!role || !hasPermission(role, requiredCapability, capabilities));
+
+  if (deniedByRole || deniedByCapability) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center">
         <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl max-w-md">

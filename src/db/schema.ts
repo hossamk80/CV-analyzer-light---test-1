@@ -4,6 +4,7 @@ export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   username: text('username').unique().notNull(),
   passwordHash: text('password_hash').notNull(),
+  passwordSalt: text('password_salt'), // per-user random salt; null on legacy rows until their next successful login
   role: text('role').notNull(), // 'admin' | 'manager' | 'recruiter'
 });
 

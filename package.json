@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --target=node18 --outfile=dist/server.cjs --format=cjs --external:framer-motion --external:mammoth",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --target=node18 --outfile=dist/server.cjs --format=cjs --external:framer-motion --external:mammoth --external:pdf-parse",
     "build:fe": "vite build",
-    "build:server": "esbuild server.ts --bundle --platform=node --target=node18 --outfile=dist/server.cjs --format=cjs --external:framer-motion --external:mammoth",
+    "build:server": "esbuild server.ts --bundle --platform=node --target=node18 --outfile=dist/server.cjs --format=cjs --external:framer-motion --external:mammoth --external:pdf-parse",
     "start": "node dist/server.cjs",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
@@ -23,6 +23,7 @@
     "lucide-react": "^0.469.0",
     "mammoth": "^1.8.0",
     "multer": "^1.4.5-lts.1",
+    "pdf-parse": "^1.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.1"
@@ -33,6 +34,7 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/multer": "^1.4.12",
     "@types/node": "^22.5.0",
+    "@types/pdf-parse": "^1.1.4",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^4.3.4",

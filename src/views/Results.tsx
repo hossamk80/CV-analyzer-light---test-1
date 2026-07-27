@@ -69,7 +69,7 @@ interface Job {
 
 export const Results: React.FC = () => {
   const { t } = useI18n();
-  const { role, gdprActive } = useRole();
+  const { role, gdprActive, capabilities } = useRole();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryJobId = searchParams.get('job');
@@ -562,9 +562,9 @@ export const Results: React.FC = () => {
     return { label: 'Unmatched', color: 'bg-red-500/10 border-red-500/20 text-red-500' };
   };
 
-  const canEditStatus = role && hasPermission(role, 'change_status');
-  const canDelete = role && hasPermission(role, 'delete_data');
-  const canReanalyze = role && hasPermission(role, 'upload_cvs');
+  const canEditStatus = role && hasPermission(role, 'change_status', capabilities);
+  const canDelete = role && hasPermission(role, 'delete_data', capabilities);
+  const canReanalyze = role && hasPermission(role, 'upload_cvs', capabilities);
 
   return (
     <div className="space-y-6">

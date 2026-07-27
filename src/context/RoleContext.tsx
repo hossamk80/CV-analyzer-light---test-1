@@ -1,12 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { UserRole } from '../utils/rbac.js';
+import { UserRole, Capability } from '../utils/rbac.js';
 import { apiRequest } from '../utils/api.js';
+
+type CapabilityMap = Partial<Record<Capability, boolean>>;
 
 interface RoleContextType {
   token: string | null;
   role: UserRole | null;
   username: string | null;
   gdprActive: boolean;
+  capabilities: CapabilityMap | null;
   login: (tokenOrRole: string, roleOrUsername?: string, userName?: string) => void;
   logout: () => void;
   toggleGdpr: () => void;
@@ -16,22 +19,36 @@ interface RoleContextType {
 
 const RoleContext = createContext<RoleContextType | undefined>(undefined);
 
+/** Fetches the saved RBAC matrix and picks out just this role's capabilities (Settings > RBAC). */
+async function loadCapabilitiesForRole(forRole: UserRole): Promise<CapabilityMap | null> {
+  try {
+    const matrix = await apiRequest('GET', '/api/rbac');
+    return (matrix && matrix[forRole]) || null;
+  } catch {
+    // No saved overrides (or request failed) — hasPermission() falls back to its static defaults.
+    return null;
+  }
+}
+
 export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [role, setRole] = useState<UserRole | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [capabilities, setCapabilities] = useState<CapabilityMap | null>(null);
   const [gdprActive, setGdprActive] = useState<boolean>(() => localStorage.getItem('ats_gdpr') === 'true');
 
   useEffect(() => {
     // Verify session on boot via httpOnly cookie /api/auth/me (Phase 1.2)
     apiRequest('GET', '/api/auth/me')
-      .then(user => {
+      .then(async (user) => {
         setRole(user.role as UserRole);
         setUsername(user.username);
+        setCapabilities(await loadCapabilitiesForRole(user.role as UserRole));
       })
       .catch(() => {
         setRole(null);
         setUsername(null);
+        setCapabilities(null);
       })
       .finally(() => {
         setLoading(false);
@@ -52,6 +69,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setRole(finalRole);
     setUsername(finalUsername);
+    loadCapabilitiesForRole(finalRole).then(setCapabilities);
   };
 
   const logout = async () => {
@@ -60,6 +78,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {}
     setRole(null);
     setUsername(null);
+    setCapabilities(null);
   };
 
   const toggleGdpr = () => {
@@ -86,6 +105,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role,
         username,
         gdprActive,
+        capabilities,
         login,
         logout,
         toggleGdpr,

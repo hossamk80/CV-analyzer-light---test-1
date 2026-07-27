@@ -54,11 +54,11 @@ interface Stats {
 
 export const Dashboard: React.FC = () => {
   const { t } = useI18n();
-  const { role } = useRole();
+  const { role, capabilities } = useRole();
   const navigate = useNavigate();
 
-  const canEditJobs = role ? hasPermission(role, 'manage_jobs') : false;
-  const canDeleteJobs = role ? hasPermission(role, 'delete_data') : false;
+  const canEditJobs = role ? hasPermission(role, 'manage_jobs', capabilities) : false;
+  const canDeleteJobs = role ? hasPermission(role, 'delete_data', capabilities) : false;
 
   const [stats, setStats] = useState<Stats>({ totalCvs: 0, activeJobs: 0, excellentMatches: 0, averageMatch: 0 });
   const [jobsList, setJobsList] = useState<Job[]>([]);

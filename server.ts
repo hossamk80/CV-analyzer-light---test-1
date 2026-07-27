@@ -70,9 +70,45 @@ function parseCookies(req: express.Request): Record<string, string> {
 // DATABASE INITIALIZATION & SEEDING (Idempotent)
 // ----------------------------------------------------
 
-function hashPassword(password: string): string {
-  const salt = 'ats-salt-12345';
+// Legacy fixed salt — kept ONLY to verify passwords on rows seeded before per-user salts existed.
+// Never used for new hashes; verifyAndMigratePassword() upgrades a legacy row to a random salt
+// the moment its owner logs in successfully.
+const LEGACY_SHARED_SALT = 'ats-salt-12345';
+
+function generateSalt(): string {
+  return crypto.randomBytes(16).toString('hex');
+}
+
+function hashPassword(password: string, salt: string): string {
   return crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+}
+
+function timingSafeEqualHex(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, 'hex');
+  const bufB = Buffer.from(b, 'hex');
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+/**
+ * Verifies a login password against a user row, transparently migrating legacy rows
+ * (password_salt IS NULL, hashed with the old shared salt) to a fresh random per-user salt.
+ */
+function verifyAndMigratePassword(user: { id: number; passwordHash: string; passwordSalt: string | null }, password: string): boolean {
+  if (user.passwordSalt) {
+    return timingSafeEqualHex(user.passwordHash, hashPassword(password, user.passwordSalt));
+  }
+
+  // Legacy row: verify against the old shared-salt scheme.
+  const legacyMatch = timingSafeEqualHex(user.passwordHash, hashPassword(password, LEGACY_SHARED_SALT));
+  if (legacyMatch) {
+    const newSalt = generateSalt();
+    db.update(users)
+      .set({ passwordHash: hashPassword(password, newSalt), passwordSalt: newSalt })
+      .where(eq(users.id, user.id))
+      .run();
+  }
+  return legacyMatch;
 }
 
 /** Compute SHA-256 hash of a file buffer — used for deduplication */
@@ -87,6 +123,7 @@ function initDbSchema() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
+      password_salt TEXT,
       role TEXT NOT NULL
     );
     
@@ -189,6 +226,11 @@ function initDbSchema() {
 
   // ── Non-destructive column migrations (safe to run on existing databases) ──
   // Add file_hash column if it doesn't exist yet (idempotent)
+  try {
+    sqlite.exec(`ALTER TABLE users ADD COLUMN password_salt TEXT;`);
+    console.log('[DB Migration] Added password_salt column to users table.');
+  } catch {}
+
   try {
     sqlite.exec(`ALTER TABLE candidates ADD COLUMN file_hash TEXT;`);
     console.log('[DB Migration] Added file_hash column to candidates table.');
@@ -353,10 +395,14 @@ function seedDatabase() {
   const userCount = sqlite.prepare('SELECT count(*) as count FROM users').get() as { count: number };
   if (userCount.count === 0) {
     console.log('Seeding default users...');
+    const seedUser = (password: string) => {
+      const salt = generateSalt();
+      return { passwordHash: hashPassword(password, salt), passwordSalt: salt };
+    };
     db.insert(users).values([
-      { username: 'admin', passwordHash: hashPassword('admin123'), role: 'admin' },
-      { username: 'manager', passwordHash: hashPassword('manager123'), role: 'manager' },
-      { username: 'recruiter', passwordHash: hashPassword('recruiter123'), role: 'recruiter' }
+      { username: 'admin', ...seedUser('admin123'), role: 'admin' },
+      { username: 'manager', ...seedUser('manager123'), role: 'manager' },
+      { username: 'recruiter', ...seedUser('recruiter123'), role: 'recruiter' }
     ]).run();
   }
 
@@ -393,7 +439,7 @@ function seedDatabase() {
     console.log('Seeding default Gemini AI Provider...');
     db.insert(aiProviders).values({
       providerName: 'Google Gemini',
-      modelName: 'gemini-3.6-flash',
+      modelName: 'gemini-2.5-flash',
       apiKey: process.env.GEMINI_API_KEY || '',
       isActive: 1
     }).run();
@@ -469,6 +515,42 @@ function requireRole(roles: string[]) {
   };
 }
 
+/**
+ * Resolves the effective (DB-overridden, falling back to the built-in default) value of a
+ * dynamic RBAC capability for a role. Backs both the `/api/rbac` settings screen and
+ * requireCapability() below, so a saved matrix actually changes what each role can do.
+ */
+function getEffectiveCapability(role: string, capability: string): boolean {
+  const override = db
+    .select()
+    .from(roleCapabilities)
+    .where(and(eq(roleCapabilities.role, role), eq(roleCapabilities.capability, capability)))
+    .get() as any;
+  if (override) return override.isEnabled === 1;
+  return DEFAULT_RBAC_MATRIX[role]?.[capability] ?? false;
+}
+
+/** Route guard for one of the dynamic RBAC capabilities configurable from Settings > RBAC. */
+function requireCapability(capability: string) {
+  return (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
+    const role = req.user?.role;
+    if (!role || !getEffectiveCapability(role, capability)) {
+      const endpoint = `${req.method} ${req.originalUrl || req.url}`;
+      logAuditEvent(
+        req,
+        'Access Denied',
+        endpoint,
+        undefined,
+        null,
+        { requiredCapability: capability, userRole: role || 'none' },
+        `Access denied to ${endpoint} for user '${req.user?.username || 'anonymous'}' (${role || 'no-role'}) — missing capability '${capability}'`
+      );
+      return res.status(403).json({ error: 'Permission denied. Insufficient role clearances.' });
+    }
+    next();
+  };
+}
+
 // ----------------------------------------------------
 // BRUTE-FORCE PROTECTION & INPUT VALIDATION (Phase 1)
 // ----------------------------------------------------
@@ -525,7 +607,7 @@ app.post('/api/auth/login', (req, res) => {
   }
 
   const user = db.select().from(users).where(eq(users.username, trimmedUsername)).get();
-  if (!user || user.passwordHash !== hashPassword(trimmedPassword)) {
+  if (!user || !verifyAndMigratePassword(user, trimmedPassword)) {
     record.count += 1;
     if (record.count >= MAX_FAILED_ATTEMPTS) {
       record.lockoutUntil = now + LOCKOUT_WINDOW_MS;
@@ -582,14 +664,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
-app.get('/api/ai-status', authenticateToken, async (req, res) => {
-  const activeProv = db.select().from(aiProviders).where(eq(aiProviders.isActive, 1)).get();
-  if (!activeProv || !activeProv.apiKey) {
-    return res.json({ configured: false, provider: null, error: 'Gemini API key not configured' });
-  }
-  res.json({ configured: true, provider: activeProv.providerName, model: activeProv.modelName });
-});
-
 // 2. Jobs API (Admin & Recruiter can manage, Manager can only read)
 app.get('/api/jobs', authenticateToken, (req, res) => {
   const allJobs = db.select().from(jobs).orderBy(desc(jobs.id)).all();
@@ -602,7 +676,7 @@ app.get('/api/jobs/:id', authenticateToken, (req, res) => {
   res.json(job);
 });
 
-app.post('/api/jobs', authenticateToken, requireRole(['admin', 'recruiter']), (req: AuthRequest, res) => {
+app.post('/api/jobs', authenticateToken, requireCapability('manage_jobs'), (req: AuthRequest, res) => {
   const { title, department, location, experience, degree, skills, checklist, specialization, technicalSkills, nationality, languages, softSkills, requiredCerts, jobDescription, coreResponsibilities, additionalRequirements } = req.body;
   if (!title || !department || !location || !checklist) {
     return res.status(400).json({ error: 'Required job fields are missing' });
@@ -646,7 +720,7 @@ app.post('/api/jobs', authenticateToken, requireRole(['admin', 'recruiter']), (r
   res.status(201).json(createdJob);
 });
 
-app.put('/api/jobs/:id', authenticateToken, requireRole(['admin', 'recruiter']), (req: AuthRequest, res) => {
+app.put('/api/jobs/:id', authenticateToken, requireCapability('manage_jobs'), (req: AuthRequest, res) => {
   const jobId = parseInt(req.params.id);
   const { title, department, location, experience, degree, skills, checklist, status, specialization, technicalSkills, nationality, languages, softSkills, requiredCerts, jobDescription, coreResponsibilities, additionalRequirements } = req.body;
 
@@ -690,7 +764,7 @@ app.put('/api/jobs/:id', authenticateToken, requireRole(['admin', 'recruiter']),
 });
 
 // Phase 3.2: Pause/Suspend Job Action
-app.put('/api/jobs/:id/pause', authenticateToken, requireRole(['admin', 'recruiter']), (req: AuthRequest, res) => {
+app.put('/api/jobs/:id/pause', authenticateToken, requireCapability('manage_jobs'), (req: AuthRequest, res) => {
   const jobId = parseInt(req.params.id);
   const existingJob = db.select().from(jobs).where(eq(jobs.id, jobId)).get() as any;
   if (!existingJob) return res.status(404).json({ error: 'Job not found' });
@@ -713,7 +787,7 @@ app.put('/api/jobs/:id/pause', authenticateToken, requireRole(['admin', 'recruit
 });
 
 // Phase 3.3: Activate/Reactivate Job Action
-app.put('/api/jobs/:id/activate', authenticateToken, requireRole(['admin', 'recruiter']), (req: AuthRequest, res) => {
+app.put('/api/jobs/:id/activate', authenticateToken, requireCapability('manage_jobs'), (req: AuthRequest, res) => {
   const jobId = parseInt(req.params.id);
   const existingJob = db.select().from(jobs).where(eq(jobs.id, jobId)).get() as any;
   if (!existingJob) return res.status(404).json({ error: 'Job not found' });
@@ -736,7 +810,7 @@ app.put('/api/jobs/:id/activate', authenticateToken, requireRole(['admin', 'recr
 });
 
 // Phase 3.1: Permanently Delete Job (Admin-only / delete_data)
-app.delete('/api/jobs/:id', authenticateToken, requireRole(['admin']), (req: AuthRequest, res) => {
+app.delete('/api/jobs/:id', authenticateToken, requireCapability('delete_data'), (req: AuthRequest, res) => {
   const jobId = parseInt(req.params.id);
   const existingJob = db.select().from(jobs).where(eq(jobs.id, jobId)).get() as any;
   if (!existingJob) return res.status(404).json({ error: 'Job not found' });
@@ -800,7 +874,7 @@ app.get('/api/candidates/:id', authenticateToken, (req, res) => {
   });
 });
 
-app.put('/api/candidates/:id', authenticateToken, requireRole(['admin', 'manager']), (req: AuthRequest, res) => {
+app.put('/api/candidates/:id', authenticateToken, requireCapability('change_status'), (req: AuthRequest, res) => {
   const cId = parseInt(req.params.id);
   const { status, gdprAnonymized } = req.body;
 
@@ -974,7 +1048,7 @@ app.post('/api/candidates/:id/schedule-interview', authenticateToken, requireRol
   });
 });
 
-app.delete('/api/candidates/:id', authenticateToken, requireRole(['admin']), (req: AuthRequest, res) => {
+app.delete('/api/candidates/:id', authenticateToken, requireCapability('delete_data'), (req: AuthRequest, res) => {
   const cId = parseInt(req.params.id);
   const c = db.select().from(candidates).where(eq(candidates.id, cId)).get() as any;
   if (!c) return res.status(404).json({ error: 'Candidate not found' });
@@ -1082,7 +1156,7 @@ app.get('/api/candidates/:id/download', authenticateToken, (req: AuthRequest, re
 });
 
 // 4. Token usage tracking
-app.get('/api/token-usage', authenticateToken, requireRole(['admin']), (req, res) => {
+app.get('/api/token-usage', authenticateToken, requireCapability('manage_settings'), (req, res) => {
   const currentSettings = db.select().from(settings).where(eq(settings.id, 1)).get();
   res.json({
     quota: currentSettings?.tokenQuota || 1000000,
@@ -1090,18 +1164,18 @@ app.get('/api/token-usage', authenticateToken, requireRole(['admin']), (req, res
   });
 });
 
-app.post('/api/token-usage/reset', authenticateToken, requireRole(['admin']), (req, res) => {
+app.post('/api/token-usage/reset', authenticateToken, requireCapability('manage_settings'), (req, res) => {
   db.update(settings).set({ tokensUsed: 0 }).where(eq(settings.id, 1)).run();
   res.json({ message: 'Token usage counter reset' });
 });
 
 // 5. Settings, Providers, and Prompts management
-app.get('/api/settings', authenticateToken, requireRole(['admin']), (req, res) => {
+app.get('/api/settings', authenticateToken, requireCapability('manage_settings'), (req, res) => {
   const s = db.select().from(settings).where(eq(settings.id, 1)).get();
   res.json(s);
 });
 
-app.put('/api/settings', authenticateToken, requireRole(['admin']), (req: AuthRequest, res) => {
+app.put('/api/settings', authenticateToken, requireCapability('manage_settings'), (req: AuthRequest, res) => {
   const { tokenQuota, emailSubject, emailBody, whatsappMessage, gdprRetentionDays, auditLogRetentionDays } = req.body;
 
   if (auditLogRetentionDays !== undefined && (typeof auditLogRetentionDays !== 'number' || auditLogRetentionDays < 90)) {
@@ -1223,7 +1297,7 @@ app.get('/api/message-templates', authenticateToken, (req, res) => {
 });
 
 // 5b. Integrations & API Connections API
-app.get('/api/integrations', authenticateToken, requireRole(['admin']), (req, res) => {
+app.get('/api/integrations', authenticateToken, requireCapability('manage_settings'), (req, res) => {
   try {
     // Self-healing: ensure table exists for databases created before this feature was added
     sqlite.exec(`
@@ -1274,7 +1348,7 @@ app.get('/api/integrations', authenticateToken, requireRole(['admin']), (req, re
   }
 });
 
-app.put('/api/integrations/:platformName', authenticateToken, requireRole(['admin']), (req, res) => {
+app.put('/api/integrations/:platformName', authenticateToken, requireCapability('manage_settings'), (req, res) => {
   try {
     const { platformName } = req.params;
     const { isActive, endpointUrl, apiKey, clientId, clientSecret, customHeaders } = req.body;
@@ -1313,7 +1387,7 @@ app.put('/api/integrations/:platformName', authenticateToken, requireRole(['admi
   }
 });
 
-app.post('/api/integrations/test-connection', authenticateToken, requireRole(['admin']), async (req, res) => {
+app.post('/api/integrations/test-connection', authenticateToken, requireCapability('manage_settings'), async (req, res) => {
   const { platformName, endpointUrl, apiKey, clientId, clientSecret } = req.body;
 
   if (platformName === 'LinkedIn') {
@@ -1396,14 +1470,36 @@ async function fetchLiveModelsFromProvider(providerName: string, apiKey: string)
       .map((m: any) => m.id)
       .filter((id: string) => id.startsWith('gpt'));
     return validModels.length > 0 ? validModels : ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'];
+  } else if (providerName === 'Anthropic') {
+    const url = 'https://api.anthropic.com/v1/models';
+    const res = await fetch(url, {
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error?.message || `Anthropic API error ${res.status}`);
+    }
+    const validModels = (data.data || []).map((m: any) => m.id);
+    return validModels.length > 0 ? validModels : ['claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest'];
+  } else if (providerName === 'Mistral') {
+    const url = 'https://api.mistral.ai/v1/models';
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` }
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error?.message || `Mistral API error ${res.status}`);
+    }
+    const validModels = (data.data || []).map((m: any) => m.id);
+    return validModels.length > 0 ? validModels : ['mistral-large-latest'];
   } else {
-    // Custom / fallback
+    // Azure OpenAI (deployment-scoped, no uniform list API) / Custom endpoints — fallback.
     return ['Custom'];
   }
 }
 
 // AI Providers
-app.get('/api/ai-providers', authenticateToken, requireRole(['admin']), (req, res) => {
+app.get('/api/ai-providers', authenticateToken, requireCapability('manage_settings'), (req, res) => {
   const providersList = db.select().from(aiProviders).all();
   // Redact API key before returning to browser (e.g. ••••1234)
   const redacted = providersList.map((p: any) => {
@@ -1419,7 +1515,7 @@ app.get('/api/ai-providers', authenticateToken, requireRole(['admin']), (req, re
 });
 
 // Live Model Discovery endpoint (Requirement 1 & 3)
-app.post('/api/ai-providers/models', authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+app.post('/api/ai-providers/models', authenticateToken, requireCapability('manage_settings'), async (req: AuthRequest, res) => {
   const { providerName, apiKey, providerId } = req.body;
   
   let keyToUse = apiKey;
@@ -1441,7 +1537,7 @@ app.post('/api/ai-providers/models', authenticateToken, requireRole(['admin']), 
 });
 
 // Active AI Model Periodic Re-Validation & Health Check (Requirement 6)
-app.get('/api/ai-providers/health-check', authenticateToken, requireRole(['admin']), async (req, res) => {
+app.get('/api/ai-providers/health-check', authenticateToken, requireCapability('manage_settings'), async (req, res) => {
   const activeProv = db.select().from(aiProviders).where(eq(aiProviders.isActive, 1)).get() as any;
   if (!activeProv) {
     return res.json({ isConfigured: false, isModelSupported: false, warning: 'No active AI Provider configured' });
@@ -1477,7 +1573,7 @@ app.get('/api/ai-providers/health-check', authenticateToken, requireRole(['admin
   }
 });
 
-app.post('/api/ai-providers', authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+app.post('/api/ai-providers', authenticateToken, requireCapability('manage_settings'), async (req: AuthRequest, res) => {
   const { providerName, modelName, apiKey, baseUrl } = req.body;
   if (!providerName || !modelName || !apiKey) {
     return res.status(400).json({ error: 'Provider Name, Model Name, and API Key are required' });
@@ -1508,7 +1604,7 @@ app.post('/api/ai-providers', authenticateToken, requireRole(['admin']), async (
   res.status(201).json({ id: Number(result.lastInsertRowid), providerName, modelName });
 });
 
-app.put('/api/ai-providers/:id', authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+app.put('/api/ai-providers/:id', authenticateToken, requireCapability('manage_settings'), async (req: AuthRequest, res) => {
   const providerId = parseInt(req.params.id);
   const { providerName, modelName, apiKey, baseUrl } = req.body;
 
@@ -1548,7 +1644,7 @@ app.put('/api/ai-providers/:id', authenticateToken, requireRole(['admin']), asyn
   res.json({ message: 'AI Provider updated successfully' });
 });
 
-app.delete('/api/ai-providers/:id', authenticateToken, requireRole(['admin']), (req, res) => {
+app.delete('/api/ai-providers/:id', authenticateToken, requireCapability('manage_settings'), (req, res) => {
   const providerId = parseInt(req.params.id);
   const existing = db.select().from(aiProviders).where(eq(aiProviders.id, providerId)).get();
   if (!existing) return res.status(404).json({ error: 'Provider not found' });
@@ -1561,7 +1657,7 @@ app.delete('/api/ai-providers/:id', authenticateToken, requireRole(['admin']), (
   res.json({ message: 'AI Provider deleted successfully' });
 });
 
-app.post('/api/ai-providers/:id/activate', authenticateToken, requireRole(['admin']), (req, res) => {
+app.post('/api/ai-providers/:id/activate', authenticateToken, requireCapability('manage_settings'), (req, res) => {
   const providerId = parseInt(req.params.id);
   const existing = db.select().from(aiProviders).where(eq(aiProviders.id, providerId)).get();
   if (!existing) return res.status(404).json({ error: 'Provider not found' });
@@ -1575,7 +1671,7 @@ app.post('/api/ai-providers/:id/activate', authenticateToken, requireRole(['admi
   res.json({ message: 'AI Provider activated successfully' });
 });
 
-app.post('/api/test-connection', authenticateToken, requireRole(['admin']), async (req, res) => {
+app.post('/api/test-connection', authenticateToken, requireCapability('manage_settings'), async (req, res) => {
   const { providerName, modelName, apiKey, baseUrl } = req.body;
   if (!apiKey) return res.status(400).json({ error: 'API key required to test connection' });
 
@@ -1588,37 +1684,93 @@ app.post('/api/test-connection', authenticateToken, requireRole(['admin']), asyn
   try {
     if (providerName === 'Google Gemini') {
       const ai = new GoogleGenAI({ apiKey: testKey });
-      // Call a quick lightweight model or call models list
       const response = await ai.models.generateContent({
-        model: modelName || 'gemini-3.6-flash',
+        model: modelName || 'gemini-2.5-flash',
         contents: 'Hello, respond with success.'
       });
       if (response && response.text) {
         return res.json({ success: true, message: 'Connection test passed: ' + response.text.substring(0, 100) });
       }
-    } else {
-      // Mock other providers for simplicity
-      return res.json({ success: true, message: `Mock connection test for ${providerName} passed successfully!` });
+      return res.status(500).json({ success: false, error: 'Provider returned an empty response' });
     }
+
+    if (providerName === 'OpenAI' || providerName === 'Mistral') {
+      const url = providerName === 'OpenAI' ? 'https://api.openai.com/v1/models' : 'https://api.mistral.ai/v1/models';
+      const response = await fetch(url, { headers: { Authorization: `Bearer ${testKey}` } });
+      const data: any = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        return res.status(400).json({ success: false, error: data?.error?.message || `${providerName} API error ${response.status}` });
+      }
+      return res.json({ success: true, message: `${providerName} connection verified — API key accepted.` });
+    }
+
+    if (providerName === 'Anthropic') {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': testKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: modelName || 'claude-3-5-haiku-latest',
+          max_tokens: 8,
+          messages: [{ role: 'user', content: 'Hello' }]
+        })
+      });
+      const data: any = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        return res.status(400).json({ success: false, error: data?.error?.message || `Anthropic API error ${response.status}` });
+      }
+      return res.json({ success: true, message: 'Anthropic connection verified — API key accepted.' });
+    }
+
+    if (providerName === 'Azure OpenAI') {
+      if (!baseUrl) return res.status(400).json({ success: false, error: 'Azure OpenAI requires the deployment Base URL to test the connection.' });
+      const response = await fetch(baseUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'api-key': testKey },
+        body: JSON.stringify({ messages: [{ role: 'user', content: 'Hello' }], max_tokens: 8 })
+      });
+      const data: any = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        return res.status(400).json({ success: false, error: data?.error?.message || `Azure OpenAI API error ${response.status}` });
+      }
+      return res.json({ success: true, message: 'Azure OpenAI connection verified.' });
+    }
+
+    // Fully custom OpenAI-compatible endpoint — best-effort reachability check.
+    if (!baseUrl) {
+      return res.status(400).json({ success: false, error: `Set a Base URL to test a custom '${providerName}' endpoint.` });
+    }
+    const response = await fetch(baseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${testKey}` },
+      body: JSON.stringify({ messages: [{ role: 'user', content: 'Hello' }], max_tokens: 8 })
+    });
+    if (response.ok || response.status < 500) {
+      return res.json({ success: true, message: `Endpoint reachable (status ${response.status}).` });
+    }
+    return res.status(400).json({ success: false, error: `Endpoint returned error status ${response.status}` });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message || 'Connection test failed' });
   }
 });
 
 // AI Prompts
-app.get('/api/prompts', authenticateToken, requireRole(['admin']), (req, res) => {
+app.get('/api/prompts', authenticateToken, requireCapability('manage_settings'), (req, res) => {
   const list = db.select().from(aiPrompts).all();
   res.json(list);
 });
 
-app.get('/api/prompts/defaults', authenticateToken, requireRole(['admin']), (req, res) => {
+app.get('/api/prompts/defaults', authenticateToken, requireCapability('manage_settings'), (req, res) => {
   res.json({
     analysisPrompt: DEFAULT_ANALYSIS_PROMPT,
     reanalysisPrompt: DEFAULT_REANALYSIS_PROMPT
   });
 });
 
-app.post('/api/prompts', authenticateToken, requireRole(['admin']), (req, res) => {
+app.post('/api/prompts', authenticateToken, requireCapability('manage_settings'), (req, res) => {
   const { name, analysisPrompt, reanalysisPrompt } = req.body;
   if (!name || !analysisPrompt || !reanalysisPrompt) {
     return res.status(400).json({ error: 'Name, Analysis Prompt, and Re-analysis Prompt are required' });
@@ -1634,7 +1786,7 @@ app.post('/api/prompts', authenticateToken, requireRole(['admin']), (req, res) =
   res.status(201).json({ id: Number(result.lastInsertRowid), name });
 });
 
-app.put('/api/prompts/:id', authenticateToken, requireRole(['admin']), (req, res) => {
+app.put('/api/prompts/:id', authenticateToken, requireCapability('manage_settings'), (req, res) => {
   const pId = parseInt(req.params.id);
   const { name, analysisPrompt, reanalysisPrompt } = req.body;
 
@@ -1650,7 +1802,7 @@ app.put('/api/prompts/:id', authenticateToken, requireRole(['admin']), (req, res
   res.json({ message: 'Prompt version updated successfully' });
 });
 
-app.delete('/api/prompts/:id', authenticateToken, requireRole(['admin']), (req, res) => {
+app.delete('/api/prompts/:id', authenticateToken, requireCapability('manage_settings'), (req, res) => {
   const pId = parseInt(req.params.id);
   const existing = db.select().from(aiPrompts).where(eq(aiPrompts.id, pId)).get();
   if (!existing) return res.status(404).json({ error: 'Prompt version not found' });
@@ -1663,7 +1815,7 @@ app.delete('/api/prompts/:id', authenticateToken, requireRole(['admin']), (req, 
   res.json({ message: 'Prompt version deleted successfully' });
 });
 
-app.post('/api/prompts/:id/activate', authenticateToken, requireRole(['admin']), (req, res) => {
+app.post('/api/prompts/:id/activate', authenticateToken, requireCapability('manage_settings'), (req, res) => {
   const pId = parseInt(req.params.id);
   const existing = db.select().from(aiPrompts).where(eq(aiPrompts.id, pId)).get();
   if (!existing) return res.status(404).json({ error: 'Prompt version not found' });
@@ -1676,7 +1828,7 @@ app.post('/api/prompts/:id/activate', authenticateToken, requireRole(['admin']),
   res.json({ message: 'Prompt version activated successfully' });
 });
 
-app.post('/api/prompts/restore-defaults', authenticateToken, requireRole(['admin']), (req, res) => {
+app.post('/api/prompts/restore-defaults', authenticateToken, requireCapability('manage_settings'), (req, res) => {
   // Clear other versions or just reset the active one
   db.insert(aiPrompts).values({
     name: 'Restored Built-in Default (' + new Date().toLocaleDateString() + ')',
@@ -1903,69 +2055,258 @@ async function callGeminiWithRetry(
   }
 }
 
+/** Extract plain text from a PDF buffer — used as a fallback for providers without native PDF input support. */
+async function extractPdfText(buffer: Buffer): Promise<string> {
+  const pdfParseModule: any = await import('pdf-parse');
+  const pdfParse = pdfParseModule.default || pdfParseModule;
+  const data = await pdfParse(buffer);
+  return data.text || '';
+}
+
+/** Generic HTTP retry helper (exponential backoff on 429/500/502/503/504) shared by all REST-based providers. */
+async function fetchWithRetry(url: string, options: RequestInit, attempt = 1): Promise<Response> {
+  const res = await fetch(url, options);
+  if (!res.ok && [429, 500, 502, 503, 504].includes(res.status) && attempt < MAX_RETRIES) {
+    const delayMs = Math.pow(2, attempt) * 1000;
+    console.warn(`[AI Retry] HTTP ${res.status} from ${url}. Retrying in ${delayMs / 1000}s (attempt ${attempt})…`);
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+    return fetchWithRetry(url, options, attempt + 1);
+  }
+  return res;
+}
+
+async function runGeminiAnalysis(
+  provider: any,
+  systemPrompt: string,
+  cvContent: { text?: string; buffer?: Buffer; mimeType?: string },
+  jobData: any
+): Promise<{ result: any; tokensUsed: number }> {
+  const ai = new GoogleGenAI({ apiKey: provider.apiKey });
+  const contentParts: any[] = [
+    { text: `System Instructions: ${systemPrompt}\n\nJob details:\n${JSON.stringify(jobData)}\n\nPlease match the uploaded candidate CV against these requirements.` }
+  ];
+
+  if (cvContent.buffer && cvContent.mimeType) {
+    // Send PDF or Image inline using base64
+    contentParts.push({
+      inlineData: {
+        data: cvContent.buffer.toString('base64'),
+        mimeType: cvContent.mimeType
+      }
+    });
+  } else if (cvContent.text) {
+    // Send extracted Word/DOCX text
+    contentParts.push({ text: `Candidate CV Text:\n${cvContent.text}` });
+  } else {
+    throw new Error('No CV content provided for AI analysis');
+  }
+
+  // Use retry helper instead of direct call
+  const response = await callGeminiWithRetry(ai, provider.modelName || 'gemini-2.5-flash', contentParts);
+
+  const textOutput = response.text;
+  if (!textOutput) throw new Error('AI Provider returned empty response');
+
+  const parsedResult = safeParseJson(textOutput);
+  const tokens = response.usageMetadata?.totalTokenCount || 0;
+
+  return { result: parsedResult, tokensUsed: tokens };
+}
+
+/** Builds the OpenAI-style `messages[].content` array (works for OpenAI, Azure OpenAI, Mistral & custom OpenAI-compatible endpoints). */
+async function buildOpenAiCompatibleUserContent(
+  userInstruction: string,
+  cvContent: { text?: string; buffer?: Buffer; mimeType?: string },
+  providerLabel: string,
+  supportsVision: boolean
+): Promise<any[]> {
+  const userContent: any[] = [{ type: 'text', text: userInstruction }];
+
+  if (cvContent.text) {
+    userContent.push({ type: 'text', text: `Candidate CV Text:\n${cvContent.text}` });
+  } else if (cvContent.buffer && cvContent.mimeType) {
+    if (cvContent.mimeType === 'application/pdf') {
+      // Chat Completions-style APIs don't accept raw PDF bytes — extract text instead.
+      const extractedText = await extractPdfText(cvContent.buffer);
+      userContent.push({ type: 'text', text: `Candidate CV Text (extracted from PDF):\n${extractedText}` });
+    } else if (cvContent.mimeType.startsWith('image/') && supportsVision) {
+      userContent.push({
+        type: 'image_url',
+        image_url: { url: `data:${cvContent.mimeType};base64,${cvContent.buffer.toString('base64')}` }
+      });
+    } else {
+      throw new Error(`${providerLabel} does not support ${cvContent.mimeType} CV files in this integration. Please use a PDF, DOCX, or plain-text CV, or switch to Google Gemini/Anthropic for image analysis.`);
+    }
+  } else {
+    throw new Error('No CV content provided for AI analysis');
+  }
+
+  return userContent;
+}
+
+async function runOpenAiCompatibleAnalysis(opts: {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  authHeader: (key: string) => Record<string, string>;
+  providerLabel: string;
+  systemPrompt: string;
+  userInstruction: string;
+  cvContent: { text?: string; buffer?: Buffer; mimeType?: string };
+  supportsVision?: boolean;
+}): Promise<{ result: any; tokensUsed: number }> {
+  const { baseUrl, apiKey, model, authHeader, providerLabel, systemPrompt, userInstruction, cvContent, supportsVision = true } = opts;
+
+  const userContent = await buildOpenAiCompatibleUserContent(userInstruction, cvContent, providerLabel, supportsVision);
+
+  const res = await fetchWithRetry(baseUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader(apiKey) },
+    body: JSON.stringify({
+      model,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: `${systemPrompt}\n\nRespond ONLY with a single valid JSON object — no markdown fences, no commentary.` },
+        { role: 'user', content: userContent }
+      ]
+    })
+  });
+
+  const data: any = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data?.error?.message || `${providerLabel} API error ${res.status}`);
+  }
+
+  const textOutput = data?.choices?.[0]?.message?.content;
+  if (!textOutput) throw new Error(`${providerLabel} returned an empty response`);
+
+  const parsedResult = safeParseJson(textOutput);
+  const tokensUsed = data?.usage?.total_tokens || 0;
+
+  return { result: parsedResult, tokensUsed };
+}
+
+async function runAnthropicAnalysis(
+  provider: any,
+  systemPrompt: string,
+  userInstruction: string,
+  cvContent: { text?: string; buffer?: Buffer; mimeType?: string }
+): Promise<{ result: any; tokensUsed: number }> {
+  const userContent: any[] = [{ type: 'text', text: userInstruction }];
+
+  if (cvContent.text) {
+    userContent.push({ type: 'text', text: `Candidate CV Text:\n${cvContent.text}` });
+  } else if (cvContent.buffer && cvContent.mimeType) {
+    if (cvContent.mimeType === 'application/pdf') {
+      // Claude supports PDF documents natively — no text-extraction fallback needed.
+      userContent.push({
+        type: 'document',
+        source: { type: 'base64', media_type: 'application/pdf', data: cvContent.buffer.toString('base64') }
+      });
+    } else if (cvContent.mimeType.startsWith('image/')) {
+      userContent.push({
+        type: 'image',
+        source: { type: 'base64', media_type: cvContent.mimeType, data: cvContent.buffer.toString('base64') }
+      });
+    } else {
+      throw new Error(`Anthropic does not support ${cvContent.mimeType} CV files. Please use a PDF, image, DOCX, or plain-text CV.`);
+    }
+  } else {
+    throw new Error('No CV content provided for AI analysis');
+  }
+
+  const res = await fetchWithRetry('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': provider.apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: provider.modelName || 'claude-3-5-sonnet-latest',
+      max_tokens: 4096,
+      system: `${systemPrompt}\n\nRespond ONLY with a single valid JSON object — no markdown fences, no commentary.`,
+      messages: [{ role: 'user', content: userContent }]
+    })
+  });
+
+  const data: any = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data?.error?.message || `Anthropic API error ${res.status}`);
+  }
+
+  const textOutput = (data?.content || []).map((block: any) => block.text || '').join('');
+  if (!textOutput) throw new Error('Anthropic returned an empty response');
+
+  const parsedResult = safeParseJson(textOutput);
+  const tokensUsed = (data?.usage?.input_tokens || 0) + (data?.usage?.output_tokens || 0);
+
+  return { result: parsedResult, tokensUsed };
+}
+
 async function runModelAnalysis(
   provider: any,
   systemPrompt: string,
   cvContent: { text?: string; buffer?: Buffer; mimeType?: string },
   jobData: any
 ): Promise<{ result: any; tokensUsed: number }> {
-  
-  if (provider.providerName === 'Google Gemini') {
-    const ai = new GoogleGenAI({ apiKey: provider.apiKey });
-    const contentParts: any[] = [
-      { text: `System Instructions: ${systemPrompt}\n\nJob details:\n${JSON.stringify(jobData)}\n\nPlease match the uploaded candidate CV against these requirements.` }
-    ];
+  const userInstruction = `Job details:\n${JSON.stringify(jobData)}\n\nPlease match the uploaded candidate CV against these requirements.`;
 
-    if (cvContent.buffer && cvContent.mimeType) {
-      // Send PDF or Image inline using base64
-      contentParts.push({
-        inlineData: {
-          data: cvContent.buffer.toString('base64'),
-          mimeType: cvContent.mimeType
-        }
+  switch (provider.providerName) {
+    case 'Google Gemini':
+      return runGeminiAnalysis(provider, systemPrompt, cvContent, jobData);
+
+    case 'OpenAI':
+      return runOpenAiCompatibleAnalysis({
+        baseUrl: 'https://api.openai.com/v1/chat/completions',
+        apiKey: provider.apiKey,
+        model: provider.modelName || 'gpt-4o',
+        authHeader: (key) => ({ Authorization: `Bearer ${key}` }),
+        providerLabel: 'OpenAI',
+        systemPrompt, userInstruction, cvContent
       });
-    } else if (cvContent.text) {
-      // Send extracted Word/DOCX text
-      contentParts.push({ text: `Candidate CV Text:\n${cvContent.text}` });
-    } else {
-      throw new Error('No CV content provided for AI analysis');
+
+    case 'Azure OpenAI':
+      if (!provider.baseUrl) {
+        throw new Error('Azure OpenAI requires the full deployment chat-completions URL to be set as the Base URL in provider settings.');
+      }
+      return runOpenAiCompatibleAnalysis({
+        baseUrl: provider.baseUrl,
+        apiKey: provider.apiKey,
+        model: provider.modelName,
+        authHeader: (key) => ({ 'api-key': key }),
+        providerLabel: 'Azure OpenAI',
+        systemPrompt, userInstruction, cvContent
+      });
+
+    case 'Mistral':
+      return runOpenAiCompatibleAnalysis({
+        baseUrl: provider.baseUrl || 'https://api.mistral.ai/v1/chat/completions',
+        apiKey: provider.apiKey,
+        model: provider.modelName || 'mistral-large-latest',
+        authHeader: (key) => ({ Authorization: `Bearer ${key}` }),
+        providerLabel: 'Mistral',
+        systemPrompt, userInstruction, cvContent,
+        supportsVision: false
+      });
+
+    case 'Anthropic':
+      return runAnthropicAnalysis(provider, systemPrompt, userInstruction, cvContent);
+
+    default: {
+      // A fully custom OpenAI-compatible endpoint (providerName === 'Custom' or anything unrecognized).
+      if (!provider.baseUrl) {
+        throw new Error(`Unsupported AI provider '${provider.providerName}'. Set a Base URL pointing to an OpenAI-compatible chat-completions endpoint.`);
+      }
+      return runOpenAiCompatibleAnalysis({
+        baseUrl: provider.baseUrl,
+        apiKey: provider.apiKey,
+        model: provider.modelName || 'Custom',
+        authHeader: (key) => ({ Authorization: `Bearer ${key}` }),
+        providerLabel: provider.providerName || 'Custom',
+        systemPrompt, userInstruction, cvContent
+      });
     }
-
-    // Use retry helper instead of direct call
-    const response = await callGeminiWithRetry(ai, provider.modelName || 'gemini-2.0-flash', contentParts);
-
-    const textOutput = response.text;
-    if (!textOutput) throw new Error('AI Provider returned empty response');
-    
-    const parsedResult = safeParseJson(textOutput);
-    const tokens = response.usageMetadata?.totalTokenCount || 0;
-    
-    return { result: parsedResult, tokensUsed: tokens };
-  } else {
-    // Mock response for non-Gemini providers if keys are not set
-    const mockResult = {
-      name: "Mock Candidate (" + provider.providerName + ")",
-      contact_email: "mock@example.com",
-      contact_phone: "+123 456 7890",
-      match_score: 78,
-      score_technical: 80,
-      score_experience: 75,
-      score_cultural: 80,
-      skills: ["Mock Skill 1", "Mock Skill 2"],
-      gaps: ["Missing specific requirements"],
-      certifications_list: ["Certified Tester"],
-      experience_timeline: [
-        { yearStart: "2021", yearEnd: "2024", company: "Mock Corp", title: "Software Builder", description: "Wrote mock code" }
-      ],
-      checklist_eval: jobData.checklist.map((c: any) => ({
-        id: c.id,
-        matched: Math.random() > 0.3,
-        evidence: "Found matching mock evidence in CV for: " + c.requirement
-      })),
-      interview_questions: ["What is your mock testing experience?"],
-      recommendation: "Candidate evaluated via mock connection."
-    };
-    return { result: mockResult, tokensUsed: 150 };
   }
 }
 
@@ -2030,7 +2371,7 @@ const uploadMiddleware = (req: express.Request, res: express.Response, next: exp
   });
 };
 
-app.post('/api/upload', authenticateToken, requireRole(['admin', 'recruiter']), uploadMiddleware, async (req, res) => {
+app.post('/api/upload', authenticateToken, requireCapability('upload_cvs'), uploadMiddleware, async (req, res) => {
   const files = req.files as Express.Multer.File[];
   const jobId = parseInt(req.body.jobId);
   
@@ -2400,7 +2741,7 @@ app.post('/api/candidates/:id/reanalyze', authenticateToken, requireRole(['admin
       cvContent.text = fs.readFileSync(filePath, 'utf8');
     }
 
-    const { result, tokensUsed } = await runModelAnalysis(activeProv, systemPrompt, cvContent, jobData);
+    const { result, tokensUsed } = await runModelAnalysisWithFailover(activeProv, systemPrompt, cvContent, jobData, req);
 
     db.update(candidates).set({
       name: result.name || c.name,
@@ -2440,7 +2781,7 @@ app.get('/api/dashboard/stats', authenticateToken, (req, res) => {
   const allJobs = db.select().from(jobs).all();
 
   const totalCvs = allCand.length;
-  const activeJobs = allJobs.length;
+  const activeJobs = allJobs.filter((j: any) => j.status !== 'Paused').length;
   const excellentMatches = allCand.filter((c: any) => c.matchScore >= 80).length;
   const averageMatch = totalCvs > 0 ? Math.round(allCand.reduce((sum: number, c: any) => sum + c.matchScore, 0) / totalCvs) : 0;
 

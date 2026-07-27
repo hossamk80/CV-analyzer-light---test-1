@@ -39,6 +39,18 @@ const RBAC_MATRIX: Record<UserRole, Record<Capability, boolean>> = {
   }
 };
 
-export function hasPermission(role: UserRole, capability: Capability): boolean {
+/**
+ * `overrides` is the saved Settings > RBAC matrix for the caller's role (fetched by
+ * RoleContext from `/api/rbac`). When it defines the capability explicitly, that value wins;
+ * otherwise this falls back to the built-in default matrix.
+ */
+export function hasPermission(
+  role: UserRole,
+  capability: Capability,
+  overrides?: Partial<Record<Capability, boolean>> | null
+): boolean {
+  if (overrides && capability in overrides) {
+    return !!overrides[capability];
+  }
   return RBAC_MATRIX[role]?.[capability] || false;
 }

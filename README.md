@@ -127,7 +127,7 @@ The entire system runs from **a single Node.js process** backed by a local **SQL
 | **Portability** | Single Node process + local SQLite file; runs on laptop, on-prem server, Codespaces, or any Node host; no external DB or mandatory cloud. |
 | **Maintainability** | TypeScript end-to-end; Drizzle ORM schema with **idempotent auto-migrations**; clear `views/` / `components/` / `db/` / `utils/` / `i18n/` separation; editable prompts & providers instead of hard-coding. |
 | **Usability & Accessibility** | Bilingual RTL/LTR, theme-aware (light/dark), keyboard-friendly comboboxes, print/PDF-optimized report styles, responsive layout. |
-| **Observability** | Health (`/api/health`) & AI-status (`/api/ai-status`) probes; server logs for AI retries/fallbacks and migrations; live token-usage tracking. |
+| **Observability** | Health (`/api/health`) & AI-provider health-check (`/api/ai-providers/health-check`) probes; server logs for AI retries/fallbacks and migrations; live token-usage tracking. |
 | **Cost** | Runs free locally; the only optional cost is AI tokens (the Gemini free tier is sufficient for light use). |
 
 ---
@@ -254,7 +254,7 @@ Enforced in the UI (route guards + hidden controls) **and** on the server (every
 All routes require a valid `Authorization: Bearer <token>` unless noted; Admin-only routes are marked 🔒.
 
 **Auth & health**
-`POST /api/auth/login` · `GET /api/auth/me` · `GET /api/health` (public) · `GET /api/ai-status`
+`POST /api/auth/login` · `GET /api/auth/me` · `GET /api/health` (public)
 
 **Jobs** — `GET /api/jobs` · `GET /api/jobs/:id` · `POST /api/jobs` · `PUT /api/jobs/:id` · `DELETE /api/jobs/:id`
 
