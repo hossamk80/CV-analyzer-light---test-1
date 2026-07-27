@@ -156,7 +156,7 @@ export const Jobs: React.FC = () => {
           <Briefcase className="w-3.5 h-3.5" />
           Basic job specifications
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 14 }}>
           {basicFields.map(({ label, value, set, placeholder, type, required }) => (
             <div key={label}>
               <label className={microLabel} style={microLabelStyle}>{label}</label>

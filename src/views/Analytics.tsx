@@ -230,7 +230,7 @@ export const Analytics: React.FC = () => {
       </div>
 
       {/* Stat tiles */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: 14 }}>
         {statTiles.map(({ label, value, delta, icon: Icon }) => (
           <div key={label} className="tk-tile">
             <span className="text-[11px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
@@ -248,7 +248,7 @@ export const Analytics: React.FC = () => {
       </div>
 
       {/* Hiring funnel + CVs by department */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(330px, 100%), 1fr))', gap: 14 }}>
         <div className="tk-panel">
           <h3 className="text-[15px] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
             <PieChart className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
@@ -330,7 +330,7 @@ export const Analytics: React.FC = () => {
         </h3>
         <p className="text-[11px] mb-4" style={{ color: 'var(--tk-muted)' }}>Candidates grouped by overall match score</p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 14 }}>
           {tierCards.map(({ label, count, hint }) => (
             <div key={label} style={{ padding: 14, borderRadius: 13, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
               <span className="text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>{label}</span>
@@ -355,7 +355,7 @@ export const Analytics: React.FC = () => {
       </div>
 
       {/* Top matched skills & common gaps */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 14 }}>
         <div className="tk-panel">
           <h3 className="text-[15px] font-medium flex items-center gap-2 mb-3" style={{ color: 'var(--tk-text)' }}>
             <CheckCircle2 className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />

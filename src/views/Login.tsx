@@ -56,7 +56,7 @@ export const Login: React.FC = () => {
       </button>
 
       {/* Login Card */}
-      <div className="w-full max-w-md bg-bg-card border border-border-main p-8 rounded-3xl shadow-xl glass-panel">
+      <div className="tk-panel w-full max-w-md p-8 shadow-xl">
         <div className="flex flex-col items-center mb-8">
           <div className="w-14 h-14 bg-brand/10 rounded-2xl flex items-center justify-center border border-brand/20 mb-3.5 shadow-inner">
             <BrainCircuit className="w-8 h-8 text-brand animate-pulse" />
@@ -83,7 +83,7 @@ export const Login: React.FC = () => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="e.g. recruiter"
-              className="w-full px-4 py-2.5 rounded-xl border border-border-main bg-bg-main/50 text-text-main placeholder-text-muted/40 focus:outline-none focus:border-brand text-sm transition-colors"
+              className="tk-field tk-focusable"
             />
           </div>
 
@@ -97,17 +97,21 @@ export const Login: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-4 py-2.5 rounded-xl border border-border-main bg-bg-main/50 text-text-main placeholder-text-muted/40 focus:outline-none focus:border-brand text-sm transition-colors"
+              className="tk-field tk-focusable"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 mt-4 bg-brand hover:bg-brand-hover text-white rounded-xl font-bold text-sm shadow-lg shadow-brand/10 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+            className="tk-btn-primary tk-focusable w-full mt-4 disabled:opacity-50 disabled:pointer-events-none"
+            style={{ height: 40, fontSize: 13 }}
           >
             {loading ? (
-              <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+              <div
+                className="w-4 h-4 rounded-full animate-spin"
+                style={{ border: '2px solid var(--tk-accent-soft)', borderTopColor: 'var(--tk-accent)' }}
+              />
             ) : null}
             <span>{t('signIn')}</span>
           </button>

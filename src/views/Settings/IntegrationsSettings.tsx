@@ -242,7 +242,7 @@ export const IntegrationsSettings: React.FC = () => {
 
       <div className="space-y-4">
         {/* Module 1: LinkedIn AI Sourcing */}
-        <div className="bg-bg-card border border-border-main rounded-2xl overflow-hidden shadow-sm transition-all duration-300">
+        <div className="tk-panel overflow-hidden transition-all duration-300">
           <div 
             className="p-5 flex items-center justify-between cursor-pointer hover:bg-bg-hover/30 transition-colors"
             onClick={() => setExpandedPlatform(expandedPlatform === 'LinkedIn' ? null : 'LinkedIn')}
@@ -263,11 +263,11 @@ export const IntegrationsSettings: React.FC = () => {
                 <span className="text-xs font-bold text-text-muted">{liActive ? t('enabled') : t('disabled')}</span>
                 <button
                   onClick={() => handleToggleActive('LinkedIn', liActive)}
-                  className={`w-10 h-6 flex items-center rounded-full p-1 cursor-pointer transition-all ${
-                    liActive ? 'bg-brand justify-end' : 'bg-border-main justify-start'
-                  }`}
+                  className={`tk-switch tk-focusable ${liActive ? 'is-on' : ''}`}
+                  role="switch"
+                  aria-checked={!!liActive}
                 >
-                  <span className="bg-white w-4 h-4 rounded-full shadow-sm block"></span>
+                  <span className="tk-switch-knob" />
                 </button>
               </div>
               
@@ -292,7 +292,7 @@ export const IntegrationsSettings: React.FC = () => {
                     value={liClientId}
                     onChange={(e) => setLiClientId(e.target.value)}
                     placeholder="Enter LinkedIn Client ID"
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                    className="tk-field tk-focusable"
                   />
                 </div>
                 <div>
@@ -304,7 +304,7 @@ export const IntegrationsSettings: React.FC = () => {
                     value={liClientSecret}
                     onChange={(e) => setLiClientSecret(e.target.value)}
                     placeholder="••••••••••••••••"
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                    className="tk-field tk-focusable"
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -316,7 +316,7 @@ export const IntegrationsSettings: React.FC = () => {
                     value={liRedirectUri}
                     onChange={(e) => setLiRedirectUri(e.target.value)}
                     placeholder="https://your-ats.com/api/integrations/linkedin/callback"
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                    className="tk-field tk-focusable"
                   />
                 </div>
               </div>
@@ -357,7 +357,7 @@ export const IntegrationsSettings: React.FC = () => {
                   <button
                     onClick={() => handleSaveSettings('LinkedIn')}
                     disabled={testingPlatform !== null || savingPlatform !== null}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                    className="tk-btn-primary tk-focusable flex items-center gap-1.5 text-xs transition-colors cursor-pointer disabled:opacity-50"
                   >
                     {savingPlatform === 'LinkedIn' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                     <span>{t('saveSettings') || 'Save Connection'}</span>
@@ -369,7 +369,7 @@ export const IntegrationsSettings: React.FC = () => {
         </div>
 
         {/* Module 2: Odoo ERP Sync */}
-        <div className="bg-bg-card border border-border-main rounded-2xl overflow-hidden shadow-sm transition-all duration-300">
+        <div className="tk-panel overflow-hidden transition-all duration-300">
           <div 
             className="p-5 flex items-center justify-between cursor-pointer hover:bg-bg-hover/30 transition-colors"
             onClick={() => setExpandedPlatform(expandedPlatform === 'Odoo' ? null : 'Odoo')}
@@ -389,11 +389,11 @@ export const IntegrationsSettings: React.FC = () => {
                 <span className="text-xs font-bold text-text-muted">{odActive ? t('enabled') : t('disabled')}</span>
                 <button
                   onClick={() => handleToggleActive('Odoo', odActive)}
-                  className={`w-10 h-6 flex items-center rounded-full p-1 cursor-pointer transition-all ${
-                    odActive ? 'bg-brand justify-end' : 'bg-border-main justify-start'
-                  }`}
+                  className={`tk-switch tk-focusable ${odActive ? 'is-on' : ''}`}
+                  role="switch"
+                  aria-checked={!!odActive}
                 >
-                  <span className="bg-white w-4 h-4 rounded-full shadow-sm block"></span>
+                  <span className="tk-switch-knob" />
                 </button>
               </div>
               
@@ -418,7 +418,7 @@ export const IntegrationsSettings: React.FC = () => {
                     value={odUrl}
                     onChange={(e) => setOdUrl(e.target.value)}
                     placeholder="https://your-company.odoo.com"
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                    className="tk-field tk-focusable"
                   />
                 </div>
                 <div>
@@ -430,7 +430,7 @@ export const IntegrationsSettings: React.FC = () => {
                     value={odDb}
                     onChange={(e) => setOdDb(e.target.value)}
                     placeholder="Enter Odoo Database Name"
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                    className="tk-field tk-focusable"
                   />
                 </div>
                 <div>
@@ -442,7 +442,7 @@ export const IntegrationsSettings: React.FC = () => {
                     value={odEmail}
                     onChange={(e) => setOdEmail(e.target.value)}
                     placeholder="admin@your-company.com"
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                    className="tk-field tk-focusable"
                   />
                 </div>
                 <div>
@@ -454,7 +454,7 @@ export const IntegrationsSettings: React.FC = () => {
                     value={odPassword}
                     onChange={(e) => setOdPassword(e.target.value)}
                     placeholder="••••••••••••••••"
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                    className="tk-field tk-focusable"
                   />
                 </div>
               </div>
@@ -495,7 +495,7 @@ export const IntegrationsSettings: React.FC = () => {
                   <button
                     onClick={() => handleSaveSettings('Odoo')}
                     disabled={testingPlatform !== null || savingPlatform !== null}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                    className="tk-btn-primary tk-focusable flex items-center gap-1.5 text-xs transition-colors cursor-pointer disabled:opacity-50"
                   >
                     {savingPlatform === 'Odoo' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                     <span>{t('saveSettings') || 'Save Connection'}</span>
@@ -507,7 +507,7 @@ export const IntegrationsSettings: React.FC = () => {
         </div>
 
         {/* Module 3: Custom Webhook / API */}
-        <div className="bg-bg-card border border-border-main rounded-2xl overflow-hidden shadow-sm transition-all duration-300">
+        <div className="tk-panel overflow-hidden transition-all duration-300">
           <div 
             className="p-5 flex items-center justify-between cursor-pointer hover:bg-bg-hover/30 transition-colors"
             onClick={() => setExpandedPlatform(expandedPlatform === 'Custom' ? null : 'Custom')}
@@ -527,11 +527,11 @@ export const IntegrationsSettings: React.FC = () => {
                 <span className="text-xs font-bold text-text-muted">{custActive ? t('enabled') : t('disabled')}</span>
                 <button
                   onClick={() => handleToggleActive('Custom', custActive)}
-                  className={`w-10 h-6 flex items-center rounded-full p-1 cursor-pointer transition-all ${
-                    custActive ? 'bg-brand justify-end' : 'bg-border-main justify-start'
-                  }`}
+                  className={`tk-switch tk-focusable ${custActive ? 'is-on' : ''}`}
+                  role="switch"
+                  aria-checked={!!custActive}
                 >
-                  <span className="bg-white w-4 h-4 rounded-full shadow-sm block"></span>
+                  <span className="tk-switch-knob" />
                 </button>
               </div>
               
@@ -556,7 +556,7 @@ export const IntegrationsSettings: React.FC = () => {
                     value={custPlatformName}
                     onChange={(e) => setCustPlatformName(e.target.value)}
                     placeholder="e.g. Local HR Webhook"
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                    className="tk-field tk-focusable"
                   />
                 </div>
                 <div>
@@ -568,7 +568,7 @@ export const IntegrationsSettings: React.FC = () => {
                     value={custUrl}
                     onChange={(e) => setCustUrl(e.target.value)}
                     placeholder="https://api.yourdomain.com/v1/recruitment"
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                    className="tk-field tk-focusable"
                   />
                 </div>
                 <div>
@@ -578,7 +578,7 @@ export const IntegrationsSettings: React.FC = () => {
                   <select
                     value={custAuthType}
                     onChange={(e) => setCustAuthType(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                    className="tk-field tk-focusable"
                   >
                     <option value="Bearer">Bearer Token</option>
                     <option value="ApiKey">API Key Header</option>
@@ -594,7 +594,7 @@ export const IntegrationsSettings: React.FC = () => {
                     value={custAuthValue}
                     onChange={(e) => setCustAuthValue(e.target.value)}
                     placeholder="Enter security token / key value"
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                    className="tk-field tk-focusable"
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -606,7 +606,7 @@ export const IntegrationsSettings: React.FC = () => {
                     value={custPayload}
                     onChange={(e) => setCustPayload(e.target.value)}
                     placeholder="Define template field mapping structure in JSON"
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm font-mono"
+                    className="tk-field tk-focusable"
                   />
                 </div>
               </div>
@@ -647,7 +647,7 @@ export const IntegrationsSettings: React.FC = () => {
                   <button
                     onClick={() => handleSaveSettings('Custom')}
                     disabled={testingPlatform !== null || savingPlatform !== null}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                    className="tk-btn-primary tk-focusable flex items-center gap-1.5 text-xs transition-colors cursor-pointer disabled:opacity-50"
                   >
                     {savingPlatform === 'Custom' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                     <span>{t('saveSettings') || 'Save Connection'}</span>

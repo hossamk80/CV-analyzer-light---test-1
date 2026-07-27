@@ -54,7 +54,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         aria-modal="true"
         aria-labelledby="confirmation-modal-title"
         aria-describedby="confirmation-modal-warning"
-        className="bg-bg-card border border-border-main rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl glass-panel"
+        className="tk-panel max-w-md w-full space-y-4 shadow-2xl"
       >
         <div className="flex items-center gap-3 border-b border-border-main/50 pb-3">
           <div className={`p-2.5 rounded-xl ${danger ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-brand/10 text-brand border border-brand/20'}`}>
@@ -89,7 +89,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 value={typedValue}
                 onChange={(e) => setTypedValue(e.target.value)}
                 placeholder={confirmWord}
-                className="w-full px-3 py-2 rounded-xl border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-xs font-mono"
+                className="tk-field tk-focusable"
               />
             </div>
           )}

@@ -235,7 +235,7 @@ export const CandidateDetail: React.FC = () => {
       <div className="flex items-center justify-between gap-4 no-print">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-xs font-bold text-text-muted hover:text-text-main transition-colors cursor-pointer"
+          className="tk-focusable flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'var(--tk-accent-text)', background: 'transparent', border: 'none', cursor: 'pointer' }}
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Go Back</span>
@@ -252,7 +252,7 @@ export const CandidateDetail: React.FC = () => {
 
           <button
             onClick={() => { setShowNotifyModal(true); setNotifyResult(null); }}
-            className="flex items-center gap-1.5 px-4 py-2 bg-bg-card border border-border-main text-text-main hover:bg-bg-hover rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
+            className="tk-btn-neutral tk-focusable" style={{ height: 36, padding: '0 16px', fontSize: 12 }}
           >
             <Send className="w-4 h-4 text-brand" />
             <span>Send Notification</span>
@@ -260,7 +260,7 @@ export const CandidateDetail: React.FC = () => {
 
           <button
             onClick={handlePrint}
-            className="flex items-center gap-1.5 px-4 py-2 bg-brand hover:bg-brand-hover text-white rounded-xl font-bold text-xs shadow-md shadow-brand/10 transition-all cursor-pointer"
+            className="tk-btn-primary tk-focusable" style={{ height: 36, padding: '0 16px', fontSize: 12 }}
           >
             <Printer className="w-4 h-4" />
             <span>{t('printReport')}</span>
@@ -269,10 +269,10 @@ export const CandidateDetail: React.FC = () => {
       </div>
 
       {/* Profile Card Header */}
-      <div className="bg-bg-card border border-border-main p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="tk-hero flex flex-col md:flex-row justify-between items-start md:items-center gap-6" style={{ padding: 'clamp(15px,1.6vw,22px)' }}>
         <div className="space-y-2">
           {/* Target Job Badge - Positioned clearly at top */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand/10 border border-brand/20 text-brand text-xs font-bold rounded-xl">
+          <div className="tk-pill is-active">
             <span className="text-text-muted font-medium">الوظيفة المستهدفة للتحليل:</span>
             <span className="font-extrabold">{job?.title || 'Target Job Position'}</span>
           </div>
@@ -308,7 +308,7 @@ export const CandidateDetail: React.FC = () => {
       </div>
 
       {/* SVG Score Gauges */}
-      <div className="bg-bg-card border border-border-main p-6 rounded-2xl grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="tk-panel grid grid-cols-2 md:grid-cols-4 gap-6">
         <CircularGauge percentage={activeCand.matchScore} label="Overall Match" color="stroke-brand" />
         <CircularGauge percentage={activeCand.scoreTechnical} label="Technical Fit" color="stroke-emerald-500" />
         <CircularGauge percentage={activeCand.scoreExperience} label="Experience Fit" color="stroke-violet-500" />
@@ -316,9 +316,9 @@ export const CandidateDetail: React.FC = () => {
       </div>
 
       {/* Executive Summary & Recommendation */}
-      <div className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-4">
+      <div className="tk-panel space-y-4">
         <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider">{t('executiveSummary')}</h3>
-        <p className="text-sm text-text-main leading-relaxed font-medium bg-bg-main/50 p-4 rounded-xl border border-border-main/40">
+        <p className="text-[13px] leading-[1.75]" style={{ padding: 16, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)', color: 'var(--tk-text)', textWrap: 'pretty' }}>
           {activeCand.recommendation || 'No executive summary outputted by the model.'}
         </p>
 
@@ -362,7 +362,7 @@ export const CandidateDetail: React.FC = () => {
       {/* Education History & Certifications Cards (Screenshot 2) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Certifications (الشهادات المهنية المعتمدة) */}
-        <div className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-4">
+        <div className="tk-panel space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-text-main flex items-center gap-2">
               <Award className="w-4 h-4 text-amber-500" />
@@ -372,7 +372,7 @@ export const CandidateDetail: React.FC = () => {
           <div className="grid grid-cols-2 gap-3">
             {activeCand.certificationsList && activeCand.certificationsList.length > 0 ? (
               activeCand.certificationsList.map((cert, idx) => (
-                <div key={idx} className="p-3 bg-bg-main/50 border border-border-main/50 rounded-xl flex items-center justify-between font-bold text-xs text-text-main shadow-xs">
+                <div key={idx} className="flex items-center justify-between text-xs" style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)', color: 'var(--tk-text)' }}>
                   <span>{cert}</span>
                   <Award className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 </div>
@@ -387,7 +387,7 @@ export const CandidateDetail: React.FC = () => {
         {(() => {
           const ext = resolveCandidateDetails(activeCand);
           return (
-            <div className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-4">
+            <div className="tk-panel space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-text-main flex items-center gap-2">
                   <GraduationCap className="w-4 h-4 text-purple-500" />
@@ -395,7 +395,7 @@ export const CandidateDetail: React.FC = () => {
                 </h3>
               </div>
               <div className="space-y-3">
-                <div className="p-3 bg-bg-main/50 border border-border-main/50 rounded-xl space-y-1">
+                <div className="space-y-1" style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
                   <span className="text-[10px] font-bold text-purple-500 uppercase tracking-wider block">المؤهل العلمي والتخصص</span>
                   <p className="text-xs font-bold text-text-main">
                     {ext.educationDegree !== '—' ? (
@@ -408,7 +408,7 @@ export const CandidateDetail: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="p-3 bg-bg-main/50 border border-border-main/50 rounded-xl space-y-1">
+                <div className="space-y-1" style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
                   <span className="text-[10px] font-bold text-purple-500 uppercase tracking-wider block">سنوات الخبرة الإجمالية</span>
                   <p className="text-xs font-bold text-text-main">
                     {ext.totalExp !== '—' ? ext.totalExp : 'غير محدد'}
@@ -421,12 +421,12 @@ export const CandidateDetail: React.FC = () => {
       </div>
 
       {/* Skills Tag Cloud */}
-      <div className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-3">
+      <div className="tk-panel space-y-3">
         <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider">{t('skillsCloud')}</h3>
         <div className="flex flex-wrap gap-2">
           {activeCand.skills && activeCand.skills.length > 0 ? (
             activeCand.skills.map((skill, idx) => (
-              <span key={idx} className="bg-brand/10 text-brand text-xs font-semibold px-3 py-1 rounded-full border border-brand/20">
+              <span key={idx} className="text-[11.5px]" style={{ padding: '6px 12px', borderRadius: 99, background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' }}>
                 {skill}
               </span>
             ))
@@ -437,7 +437,7 @@ export const CandidateDetail: React.FC = () => {
       </div>
 
       {/* Timeline Section */}
-      <div className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-5">
+      <div className="tk-panel space-y-5">
         <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider">{t('timelineTitle')}</h3>
         <div className="relative pl-6 border-l border-border-main/50 space-y-6">
           {activeCand.experienceTimeline && activeCand.experienceTimeline.length > 0 ? (
@@ -461,7 +461,7 @@ export const CandidateDetail: React.FC = () => {
       </div>
 
       {/* ATS Checklist Matching Table (Screenshot 3 - 5 Columns with Justification) */}
-      <div className="bg-bg-card border border-border-main rounded-2xl overflow-hidden">
+      <div className="tk-panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="p-5 border-b border-border-main/50 flex items-center justify-between">
           <h3 className="text-sm font-bold text-text-main flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-purple-500" />
@@ -516,7 +516,7 @@ export const CandidateDetail: React.FC = () => {
                             مطابق
                           </span>
                         ) : (
-                          <span className="px-2.5 py-1 rounded-md bg-gray-500/10 text-text-muted border border-border-main text-[11px]">
+                          <span className="tk-pill">
                             غير مذكور
                           </span>
                         )}
@@ -551,12 +551,12 @@ export const CandidateDetail: React.FC = () => {
       </div>
 
       {/* Suggested Interview Questions */}
-      <div className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-4">
+      <div className="tk-panel space-y-4">
         <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider">{t('interviewQuestions')}</h3>
         <ul className="space-y-2.5">
           {activeCand.interviewQuestions && activeCand.interviewQuestions.length > 0 ? (
             activeCand.interviewQuestions.map((q, idx) => (
-              <li key={idx} className="p-3 bg-bg-main/50 rounded-xl border border-border-main/40 text-xs text-text-main font-semibold flex gap-2.5">
+              <li key={idx} className="text-xs flex gap-2.5" style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)', color: 'var(--tk-text)' }}>
                 <span className="w-5 h-5 rounded-full bg-brand/10 border border-brand/20 text-brand text-[10px] flex items-center justify-center shrink-0 font-bold">
                   {idx + 1}
                 </span>
@@ -572,7 +572,7 @@ export const CandidateDetail: React.FC = () => {
       {/* Notification Dispatch Modal (Phase 3.2) */}
       {showNotifyModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
-          <div className="bg-bg-card border border-border-main rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl glass-panel">
+          <div className="tk-panel max-w-lg w-full space-y-4" style={{ boxShadow: '0 22px 50px rgba(0,0,0,.35)' }}>
             <div className="flex justify-between items-center border-b border-border-main/50 pb-3">
               <h3 className="text-base font-bold text-text-main flex items-center gap-2">
                 <Send className="w-5 h-5 text-brand" />
@@ -629,7 +629,7 @@ export const CandidateDetail: React.FC = () => {
                   value={customMsg}
                   onChange={(e) => setCustomMsg(e.target.value)}
                   placeholder="Leave empty to use default system template with {name}, {job}, {score}, {status} placeholders..."
-                  className="w-full p-3 rounded-xl border border-border-main bg-bg-main/50 text-text-main text-xs focus:outline-none focus:border-brand font-mono"
+                  className="tk-field tk-focusable" style={{ height: 'auto', minHeight: 38, paddingBlock: 10, fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}
                 />
               </div>
 
@@ -641,7 +641,7 @@ export const CandidateDetail: React.FC = () => {
                     <span>{notifyResult.message || notifyResult.error}</span>
                   </div>
                   {notifyResult.body && (
-                    <div className="p-2 bg-bg-main/70 rounded-lg text-[11px] font-mono text-text-main whitespace-pre-wrap border border-border-main/40">
+                    <div className="text-[11px] whitespace-pre-wrap" style={{ padding: 10, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)', color: 'var(--tk-soft)', fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}>
                       <p className="font-bold text-brand border-b border-border-main/40 pb-1 mb-1">Subject: {notifyResult.subject}</p>
                       {notifyResult.body}
                     </div>
@@ -653,14 +653,14 @@ export const CandidateDetail: React.FC = () => {
             <div className="pt-2 flex justify-end gap-2">
               <button
                 onClick={() => setShowNotifyModal(false)}
-                className="px-4 py-2 bg-bg-main border border-border-main text-text-muted hover:text-text-main rounded-xl font-bold text-xs cursor-pointer"
+                className="tk-btn-neutral tk-focusable" style={{ height: 36, padding: '0 16px', fontSize: 12 }}
               >
                 Close
               </button>
               <button
                 onClick={handleSendNotification}
                 disabled={notifySending}
-                className="px-4 py-2 bg-brand hover:bg-brand-hover text-white rounded-xl font-bold text-xs shadow-md flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                className="tk-btn-primary tk-focusable" style={{ height: 36, padding: '0 16px', fontSize: 12 }}
               >
                 {notifySending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                 <span>Dispatch Notification</span>
@@ -673,7 +673,7 @@ export const CandidateDetail: React.FC = () => {
       {/* Schedule Interview Modal (Phase 4.1 & 4.2) */}
       {showScheduleModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
-          <div className="bg-bg-card border border-border-main rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl glass-panel">
+          <div className="tk-panel max-w-lg w-full space-y-4" style={{ boxShadow: '0 22px 50px rgba(0,0,0,.35)' }}>
             <div className="flex justify-between items-center border-b border-border-main/50 pb-3">
               <h3 className="text-base font-bold text-text-main flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-emerald-500" />
@@ -697,7 +697,7 @@ export const CandidateDetail: React.FC = () => {
                     type="date"
                     value={schedDate}
                     onChange={(e) => setSchedDate(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-border-main bg-bg-main/50 text-text-main font-bold text-xs focus:outline-none focus:border-brand"
+                    className="tk-field tk-focusable"
                   />
                 </div>
 
@@ -710,7 +710,7 @@ export const CandidateDetail: React.FC = () => {
                       type="time"
                       value={schedStart}
                       onChange={(e) => setSchedStart(e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-border-main bg-bg-main/50 text-text-main font-bold text-xs focus:outline-none focus:border-brand"
+                      className="tk-field tk-focusable"
                     />
                   </div>
                   <div>
@@ -721,7 +721,7 @@ export const CandidateDetail: React.FC = () => {
                       type="time"
                       value={schedEnd}
                       onChange={(e) => setSchedEnd(e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-border-main bg-bg-main/50 text-text-main font-bold text-xs focus:outline-none focus:border-brand"
+                      className="tk-field tk-focusable"
                     />
                   </div>
                 </div>
@@ -735,7 +735,7 @@ export const CandidateDetail: React.FC = () => {
                   type="text"
                   value={schedLocation}
                   onChange={(e) => setSchedLocation(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-border-main bg-bg-main/50 text-text-main text-xs focus:outline-none focus:border-brand"
+                  className="tk-field tk-focusable"
                 />
               </div>
 
@@ -748,7 +748,7 @@ export const CandidateDetail: React.FC = () => {
                   value={schedNotes}
                   onChange={(e) => setSchedNotes(e.target.value)}
                   placeholder="Technical assessment, team introduction, coding preview..."
-                  className="w-full p-3 rounded-xl border border-border-main bg-bg-main/50 text-text-main text-xs focus:outline-none focus:border-brand"
+                  className="tk-field tk-focusable" style={{ height: 'auto', minHeight: 38, paddingBlock: 10 }}
                 />
               </div>
 
@@ -801,7 +801,7 @@ export const CandidateDetail: React.FC = () => {
                             href={schedResult.gcalUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-bg-hover hover:bg-border-main text-text-main rounded-lg font-bold text-xs border border-border-main transition-all"
+                            className="tk-btn-neutral tk-focusable" style={{ height: 32, padding: '0 12px', fontSize: 11.5 }}
                           >
                             <Calendar className="w-3.5 h-3.5 text-emerald-500" />
                             <span>Open Google Calendar Event</span>
@@ -817,7 +817,7 @@ export const CandidateDetail: React.FC = () => {
             <div className="pt-2 flex justify-end gap-2">
               <button
                 onClick={() => setShowScheduleModal(false)}
-                className="px-4 py-2 bg-bg-main border border-border-main text-text-muted hover:text-text-main rounded-xl font-bold text-xs cursor-pointer"
+                className="tk-btn-neutral tk-focusable" style={{ height: 36, padding: '0 16px', fontSize: 12 }}
               >
                 Close
               </button>

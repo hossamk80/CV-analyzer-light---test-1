@@ -178,9 +178,13 @@ const Rail: React.FC = () => {
               }}
             >
               {isActive && (
+                // -8px lands exactly on the rail's inline-start edge at its narrowest
+                // (60px rail - 44px button = 8px gutter). Going further out (the spec's
+                // -14px) pushes the bar past the page edge in RTL, where the rail is on
+                // the right, and creates a horizontal scrollbar at small widths.
                 <span
                   style={{
-                    position: 'absolute', insetInlineStart: -14, width: 3, height: 20, borderRadius: 3,
+                    position: 'absolute', insetInlineStart: -8, width: 3, height: 20, borderRadius: 3,
                     background: 'var(--tk-accent)', boxShadow: '0 0 12px color-mix(in srgb, var(--tk-accent) 70%, transparent)'
                   }}
                 />

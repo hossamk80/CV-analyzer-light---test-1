@@ -292,7 +292,7 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-5">
       {/* KPI row — des-2.txt §5 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 14 }}>
         {kpiTiles.map(({ label, value, series, icon: Icon }) => (
           <div key={label} className="tk-tile tk-focusable" style={{ transition: 'border-color 180ms ease' }}>
             <div className="flex items-center justify-between gap-2">
@@ -316,7 +316,7 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* AI Assistant hero panel + Top candidates — des-2.txt §5 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(330px, 100%), 1fr))', gap: 14 }}>
         <div className="tk-hero p-5" style={{ flex: '1 1 0' }}>
           <div
             style={{
@@ -438,7 +438,7 @@ export const Dashboard: React.FC = () => {
             <p className="text-sm font-semibold" style={{ color: 'var(--tk-muted)' }}>{t('noJobsYet')}</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 14 }}>
             {jobsList.map(job => {
               const checklistItems = job.checklist ? JSON.parse(job.checklist) : [];
               return (

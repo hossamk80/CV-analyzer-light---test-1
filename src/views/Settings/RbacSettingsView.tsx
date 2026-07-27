@@ -127,7 +127,7 @@ export const RbacSettingsView: React.FC = () => {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-1.5 px-4 py-2 bg-brand hover:bg-brand-hover text-white rounded-xl font-bold text-xs shadow-md transition-colors cursor-pointer disabled:opacity-50"
+          className="tk-btn-primary tk-focusable flex items-center gap-1.5 text-xs transition-colors cursor-pointer disabled:opacity-50"
         >
           {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           <span>{saving ? 'Saving...' : 'Save Matrix'}</span>
@@ -142,7 +142,7 @@ export const RbacSettingsView: React.FC = () => {
       )}
 
       {/* RBAC Matrix Table */}
-      <div className="bg-bg-card border border-border-main rounded-2xl overflow-hidden shadow-sm glass-panel">
+      <div className="tk-panel overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-bg-main/60 border-b border-border-main text-text-muted font-bold uppercase tracking-wider">

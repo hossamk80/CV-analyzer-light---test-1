@@ -57,17 +57,17 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
 
   return (
     <div className="flex flex-col w-full relative" ref={containerRef}>
-      <label className="text-xs font-semibold text-text-muted mb-1 px-1">{label}</label>
+      <label className="text-[11px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: 'var(--tk-muted)' }}>{label}</label>
       
       {/* Selector Box */}
       <div 
-        className="min-h-[42px] p-1.5 flex flex-wrap gap-1.5 items-center rounded-xl border border-border-main bg-bg-card text-text-main focus-within:border-brand cursor-text text-sm transition-all"
+        className="min-h-[38px] p-1.5 flex flex-wrap gap-1.5 items-center cursor-text text-sm" style={{ borderRadius: 11, border: '1px solid var(--tk-border-strong)', background: 'var(--tk-inset)', color: 'var(--tk-text)' }}
         onClick={() => setIsOpen(true)}
       >
         {selectedValues.map(val => (
           <span 
             key={val} 
-            className="inline-flex items-center gap-1 bg-brand/10 border border-brand/20 text-brand text-xs px-2 py-0.5 rounded-full font-medium"
+            className="tk-pill is-active"
           >
             {val}
             <button 
@@ -76,7 +76,7 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
                 e.stopPropagation();
                 handleRemove(val);
               }}
-              className="hover:text-brand-hover focus:outline-none"
+              className="tk-focusable"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -88,30 +88,30 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={selectedValues.length === 0 ? placeholder : ''}
-          className="flex-1 bg-transparent border-none outline-none min-w-[80px] p-0.5 text-text-main placeholder-text-muted/60 focus:ring-0"
+          className="flex-1 bg-transparent border-none outline-none min-w-[80px] p-0.5 text-[12.5px]" style={{ color: 'var(--tk-text)' }}
           onFocus={() => setIsOpen(true)}
         />
         
-        <ChevronsUpDown className="w-4 h-4 text-text-muted/60 pointer-events-none mr-1" />
+        <ChevronsUpDown className="w-4 h-4 pointer-events-none me-1" style={{ color: 'var(--tk-muted)' }} />
       </div>
 
       {/* Dropdown Options */}
       {isOpen && (
-        <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-bg-card border border-border-main rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto p-1 glass-panel animate-in fade-in slide-in-from-top-1 duration-150">
+        <div className="absolute w-full z-50 max-h-60 overflow-y-auto p-1" style={{ top: 'calc(100% + 4px)', insetInlineStart: 0, borderRadius: 12, border: '1px solid var(--tk-border-strong)', background: 'var(--tk-panel)', boxShadow: '0 22px 50px rgba(0,0,0,.35)' }}>
           {filteredOptions.length > 0 ? (
             filteredOptions.map(option => (
               <button
                 key={option}
                 type="button"
                 onClick={() => handleSelect(option)}
-                className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-bg-hover hover:text-brand flex items-center justify-between text-text-main"
+                className="w-full text-start px-3 py-2 rounded-lg text-[12.5px] flex items-center justify-between tk-focusable" style={{ color: 'var(--tk-text)' }}
               >
                 <span>{option}</span>
               </button>
             ))
           ) : (
             query.trim() === '' && (
-              <div className="px-3 py-2 text-xs text-text-muted text-center">No options available</div>
+              <div className="px-3 py-2 text-xs text-center" style={{ color: 'var(--tk-muted)' }}>No options available</div>
             )
           )}
 
@@ -119,7 +119,7 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
             <button
               type="button"
               onClick={handleAddCustom}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm text-brand hover:bg-brand-light flex items-center justify-between font-medium border-t border-border-main/50 mt-1"
+              className="w-full text-start px-3 py-2 rounded-lg text-[12.5px] flex items-center justify-between mt-1 tk-focusable" style={{ color: 'var(--tk-accent-text)', borderTop: '1px solid var(--tk-border)' }}
             >
               <span>Add Custom: "{query}"</span>
             </button>

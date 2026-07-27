@@ -145,7 +145,7 @@ export const PromptSettings: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-bg-card border border-border-main p-5 rounded-2xl">
+      <div className="tk-panel flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center">
             <MessageSquareCode className="w-5 h-5 text-brand" />
@@ -170,7 +170,7 @@ export const PromptSettings: React.FC = () => {
               setShowAddForm(!showAddForm);
               loadDefaultTemplate();
             }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer"
+            className="tk-btn-primary tk-focusable flex items-center gap-1.5 text-xs transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>{t('addNewPrompt')}</span>
@@ -180,7 +180,7 @@ export const PromptSettings: React.FC = () => {
 
       {/* Add Prompt Version Form */}
       {showAddForm && (
-        <form onSubmit={handleCreatePrompt} className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-4">
+        <form onSubmit={handleCreatePrompt} className="tk-panel space-y-4">
           <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider">Create Prompt Version</h3>
           
           <div>
@@ -191,7 +191,7 @@ export const PromptSettings: React.FC = () => {
               placeholder="e.g. Gemini 2.5 optimized prompt v2"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+              className="tk-field tk-focusable"
             />
           </div>
 
@@ -203,7 +203,7 @@ export const PromptSettings: React.FC = () => {
                 rows={12}
                 value={newAnalysis}
                 onChange={(e) => setNewAnalysis(e.target.value)}
-                className="w-full p-3 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-xs font-mono"
+                className="tk-field tk-focusable"
               />
             </div>
 
@@ -214,7 +214,7 @@ export const PromptSettings: React.FC = () => {
                 rows={12}
                 value={newReanalysis}
                 onChange={(e) => setNewReanalysis(e.target.value)}
-                className="w-full p-3 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-xs font-mono"
+                className="tk-field tk-focusable"
               />
             </div>
           </div>
@@ -238,7 +238,7 @@ export const PromptSettings: React.FC = () => {
       )}
 
       {/* Prompts Versions List */}
-      <div className="bg-bg-card border border-border-main rounded-2xl overflow-hidden">
+      <div className="tk-panel overflow-hidden">
         {loading ? (
           <div className="py-12 text-center text-text-muted">Loading prompt versions...</div>
         ) : promptsList.length === 0 ? (

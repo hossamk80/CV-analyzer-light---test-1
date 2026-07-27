@@ -129,6 +129,13 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+  /* Default size — callers override height/padding inline where the spec asks for a
+     specific one (40/38/36/32/30px). Without these defaults a converted button
+     would collapse to bare text. */
+  height: 36px;
+  padding-inline: 16px;
+  font-size: 12.5px;
+  white-space: nowrap;
   background: transparent;
   border: 1px solid var(--tk-accent-line);
   color: var(--tk-accent-text);
@@ -146,6 +153,10 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+  height: 36px;
+  padding-inline: 16px;
+  font-size: 12.5px;
+  white-space: nowrap;
   background: transparent;
   border: 1px solid var(--tk-border-strong);
   color: var(--tk-soft);
@@ -263,6 +274,42 @@
 }
 .tk-row-list > *:hover {
   background: var(--tk-hover);
+}
+
+/* Range sliders — the browser default track is opaque white and clashes with the
+   dark themes, so the track is drawn from the tokens and only the thumb uses accent-color. */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 5px;
+  border-radius: 99px;
+  background: var(--tk-track);
+  accent-color: var(--tk-accent);
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: none;
+  background: var(--tk-accent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--tk-accent) 70%, transparent);
+  cursor: pointer;
+}
+input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: none;
+  background: var(--tk-accent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--tk-accent) 70%, transparent);
+  cursor: pointer;
+}
+input[type='range']::-moz-range-track {
+  height: 5px;
+  border-radius: 99px;
+  background: var(--tk-track);
 }
 
 /* Page canvas — layered accent glow over the flat theme background. */

@@ -386,7 +386,7 @@ export const Settings: React.FC = () => {
       </div>
 
       {/* 2. Token Consumption Meter */}
-      <div className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-4">
+      <div className="tk-panel space-y-4">
         <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider flex items-center gap-1.5 border-b border-border-main/50 pb-3">
           <TrendingUp className="w-4 h-4 text-brand" />
           {t('tokenUsageTitle')}
@@ -422,7 +422,7 @@ export const Settings: React.FC = () => {
       </div>
 
       {/* 3. AI Providers List */}
-      <div className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-6">
+      <div className="tk-panel space-y-6">
         <div className="flex justify-between items-center border-b border-border-main/50 pb-3">
           <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
             <Database className="w-4 h-4 text-brand" />
@@ -430,7 +430,7 @@ export const Settings: React.FC = () => {
           </h3>
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
+            className="tk-btn-primary tk-focusable flex items-center gap-1.5 text-xs transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Provider</span>
@@ -441,7 +441,7 @@ export const Settings: React.FC = () => {
         {healthWarning && (
           <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-2.5 text-xs text-amber-500 font-bold">
             <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>⚠️ Warning: {healthWarning}</span>
+            <span>{healthWarning}</span>
           </div>
         )}
 
@@ -617,7 +617,7 @@ export const Settings: React.FC = () => {
                                 placeholder="Enter new key to replace..."
                                 value={editApiKey}
                                 onChange={e => setEditApiKey(e.target.value)}
-                                className="w-full px-2.5 py-1.5 rounded-lg border border-border-main bg-bg-main text-text-main focus:outline-none focus:border-brand text-xs font-mono"
+                                className="tk-field tk-focusable"
                               />
                             </div>
                             <div>
@@ -627,7 +627,7 @@ export const Settings: React.FC = () => {
                                 placeholder="https://..."
                                 value={editBaseUrl}
                                 onChange={e => setEditBaseUrl(e.target.value)}
-                                className="w-full px-2.5 py-1.5 rounded-lg border border-border-main bg-bg-main text-text-main focus:outline-none focus:border-brand text-xs"
+                                className="tk-field tk-focusable"
                               />
                             </div>
                           </div>
@@ -642,7 +642,7 @@ export const Settings: React.FC = () => {
                             <button
                               type="submit"
                               disabled={editSaving}
-                              className="flex items-center gap-1.5 px-4 py-1.5 bg-brand hover:bg-brand-hover text-white rounded-lg text-xs font-bold shadow-sm shadow-brand/20 transition-colors cursor-pointer disabled:opacity-60"
+                              className="tk-btn-primary tk-focusable flex items-center gap-1.5 text-xs transition-colors cursor-pointer disabled:opacity-60"
                             >
                               <Check className="w-3.5 h-3.5" />
                               {editSaving ? 'Saving...' : 'Save Changes'}
@@ -660,7 +660,7 @@ export const Settings: React.FC = () => {
       </div>
 
       {/* 4. Outreach Message Templates */}
-      <form onSubmit={handleSaveGeneralSettings} className="bg-bg-card border border-border-main p-6 rounded-2xl space-y-6">
+      <form onSubmit={handleSaveGeneralSettings} className="tk-panel space-y-6">
         <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider flex items-center gap-1.5 border-b border-border-main/50 pb-3">
           <Mail className="w-4 h-4 text-brand" />
           {t('messageTemplates')}
@@ -675,7 +675,7 @@ export const Settings: React.FC = () => {
                 required
                 value={quota}
                 onChange={(e) => setQuota(parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                className="tk-field tk-focusable"
               />
             </div>
             <div>
@@ -685,7 +685,7 @@ export const Settings: React.FC = () => {
                 required
                 value={emailSubject}
                 onChange={(e) => setEmailSubject(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                className="tk-field tk-focusable"
               />
             </div>
           </div>
@@ -697,7 +697,7 @@ export const Settings: React.FC = () => {
               rows={4}
               value={emailBody}
               onChange={(e) => setEmailBody(e.target.value)}
-              className="w-full p-3 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm font-medium leading-relaxed"
+              className="tk-field tk-focusable"
             />
           </div>
 
@@ -708,7 +708,7 @@ export const Settings: React.FC = () => {
               rows={2}
               value={whatsappMessage}
               onChange={(e) => setWhatsappMessage(e.target.value)}
-              className="w-full p-3 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm font-medium leading-relaxed"
+              className="tk-field tk-focusable"
             />
           </div>
 
@@ -805,7 +805,7 @@ export const Settings: React.FC = () => {
         <div className="flex justify-end pt-4 border-t border-border-main/50">
           <button
             type="submit"
-            className="px-5 py-2.5 bg-brand hover:bg-brand-hover text-white rounded-xl font-bold text-xs shadow-md shadow-brand/10 transition-all cursor-pointer"
+            className="tk-btn-primary tk-focusable text-xs transition-all cursor-pointer"
           >
             {t('saveSettings')}
           </button>

@@ -41,7 +41,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ kicker, title }) => {
         </h1>
       </div>
 
-      <div className="flex items-center gap-2.5" style={{ justifyContent: 'flex-end' }}>
+      <div className="flex items-center gap-2.5 flex-wrap" style={{ justifyContent: 'flex-end', minWidth: 0 }}>
         <div className="relative" style={{ flex: '1 1 170px', maxWidth: 260, minWidth: 150 }}>
           <Search
             className="w-4 h-4 absolute pointer-events-none"

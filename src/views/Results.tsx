@@ -557,9 +557,9 @@ export const Results: React.FC = () => {
   };
 
   const getMatchClassification = (score: number) => {
-    if (score >= 80) return { label: 'Full Match', color: 'bg-green-500/10 border-green-500/20 text-green-500' };
-    if (score >= 50) return { label: 'Partial Match', color: 'bg-amber-500/10 border-amber-500/20 text-amber-500' };
-    return { label: 'Unmatched', color: 'bg-red-500/10 border-red-500/20 text-red-500' };
+    if (score >= 80) return { label: 'Full match', isStrong: true };
+    if (score >= 50) return { label: 'Partial match', isStrong: false };
+    return { label: 'Unmatched', isStrong: false };
   };
 
   const canEditStatus = role && hasPermission(role, 'change_status', capabilities);
@@ -567,14 +567,12 @@ export const Results: React.FC = () => {
   const canReanalyze = role && hasPermission(role, 'upload_cvs', capabilities);
 
   return (
-    <div className="space-y-6">
-      {/* Target Job Header Selector */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-bg-card border border-border-main p-5 rounded-2xl">
-        <div className="space-y-1">
-          <h2 className="text-xl font-black text-text-main">{t('leaderboardTitle')}</h2>
-          <p className="text-xs text-text-muted">Displaying candidate ranks, scoring, and checklist outcomes.</p>
-        </div>
-
+    <div style={{ display: 'grid', gap: 14 }}>
+      {/* Filter bar — job select + export (des-2.txt §8) */}
+      <div className="flex items-center gap-2.5 flex-wrap">
+        <label className="text-[11px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>
+          {t('selectJob')}
+        </label>
         <select
           value={selectedJobId}
           onChange={(e) => {
@@ -583,9 +581,10 @@ export const Results: React.FC = () => {
             setDualCompareLeft(null);
             setDualCompareRight(null);
           }}
-          className="px-3 py-2 rounded-xl border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm md:w-64"
+          className="tk-field tk-focusable"
+          style={{ width: 'auto', minWidth: 200, height: 36, cursor: 'pointer' }}
         >
-          <option value="">Select target job...</option>
+          <option value="">Select target job…</option>
           {jobs.map(j => (
             <option key={j.id} value={j.id}>
               {j.title}
@@ -596,50 +595,55 @@ export const Results: React.FC = () => {
 
       {/* Stats Summary row */}
       {selectedJobId && (
-        <div className="bg-bg-card border border-border-main/50 p-4 rounded-2xl grid grid-cols-3 gap-4 text-center">
-          <div>
-            <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Total CVs</span>
-            <p className="text-lg font-black text-text-main mt-0.5">{statsSummary.totalCount}</p>
-          </div>
-          <div className="border-x border-border-main/50">
-            <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Filtered Set</span>
-            <p className="text-lg font-black text-brand mt-0.5">{statsSummary.filteredCount}</p>
-          </div>
-          <div>
-            <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Avg. Match Score</span>
-            <p className="text-lg font-black text-emerald-500 mt-0.5">{statsSummary.averageScore}%</p>
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 14 }}>
+          {[
+            { label: 'Total CVs', value: String(statsSummary.totalCount) },
+            { label: 'Filtered set', value: String(statsSummary.filteredCount) },
+            { label: 'Avg. match score', value: `${statsSummary.averageScore}%` }
+          ].map(({ label, value }) => (
+            <div key={label} className="tk-tile">
+              <span className="text-[11px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>{label}</span>
+              <p style={{ fontSize: 'clamp(24px,2.6vw,32px)', fontWeight: 500, letterSpacing: '-.03em', color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>
+                {value}
+              </p>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Horizontal Advanced Filters Bar */}
-      <div className="bg-bg-card border border-border-main p-5 rounded-2xl space-y-4 shadow-sm">
+      <div className="tk-panel space-y-4">
         {/* Header row: Title, Global Search, Clear Button */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-border-main/50">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3" style={{ borderBottom: '1px solid var(--tk-border)' }}>
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-brand" />
-            <h3 className="text-sm font-bold text-text-main uppercase tracking-wider">Advanced Filters</h3>
+            <Filter className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
+            <h3 className="text-[11px] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-accent-text)' }}>Advanced filters</h3>
           </div>
 
           {/* Global Search Input */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-text-muted/65" />
+          <div className="relative flex-1" style={{ maxWidth: 420 }}>
+            <Search
+              className="absolute w-4 h-4 pointer-events-none"
+              style={{ insetInlineStart: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--tk-muted)' }}
+            />
             <input
               type="text"
-              placeholder="Global keyword search..."
+              placeholder="Global keyword search…"
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-border-main bg-bg-main/50 text-text-main placeholder-text-muted/40 focus:outline-none focus:border-brand text-xs"
+              className="tk-field tk-focusable"
+              style={{ height: 36, paddingInlineStart: 34 }}
             />
           </div>
 
           {/* Clear Button */}
           <button
             onClick={handleClearFilters}
-            className="text-xs text-brand hover:underline font-bold flex items-center gap-1.5 shrink-0 cursor-pointer"
+            className="tk-btn-neutral tk-focusable shrink-0"
+            style={{ height: 32, padding: '0 12px', fontSize: 11.5 }}
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Clear All Filters</span>
+            <span>Clear all</span>
           </button>
         </div>
 
@@ -687,38 +691,27 @@ export const Results: React.FC = () => {
         </div>
 
         {/* Sliders Row: Min Experience & Min Match Score */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-border-main/30">
-          {/* Slider: Experience threshold */}
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className="text-text-muted">Min Experience</span>
-              <span className="text-brand font-bold">{minExp} years</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-3" style={{ borderTop: '1px solid var(--tk-border)' }}>
+          {[
+            { label: 'Min experience', value: minExp, set: setMinExp, max: 15, suffix: ' years' },
+            { label: 'Min match score', value: minScore, set: setMinScore, max: 100, suffix: '%' }
+          ].map(({ label, value, set, max, suffix }) => (
+            <div key={label} className="space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span style={{ color: 'var(--tk-muted)' }}>{label}</span>
+                <span style={{ color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>{value}{suffix}</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={max}
+                value={value}
+                onChange={(e) => set(parseInt(e.target.value))}
+                className="w-full tk-focusable"
+                style={{ accentColor: 'var(--tk-accent)', cursor: 'pointer' }}
+              />
             </div>
-            <input
-              type="range"
-              min={0}
-              max={15}
-              value={minExp}
-              onChange={(e) => setMinExp(parseInt(e.target.value))}
-              className="w-full accent-brand h-1.5 bg-bg-hover rounded-lg appearance-none cursor-pointer"
-            />
-          </div>
-
-          {/* Slider: Match score threshold */}
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className="text-text-muted">Min Match Score</span>
-              <span className="text-brand font-bold">{minScore}%</span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={minScore}
-              onChange={(e) => setMinScore(parseInt(e.target.value))}
-              className="w-full accent-brand h-1.5 bg-bg-hover rounded-lg appearance-none cursor-pointer"
-            />
-          </div>
+          ))}
         </div>
       </div>
 
@@ -726,32 +719,30 @@ export const Results: React.FC = () => {
       <div className="space-y-4">
           
           {/* Compare & Bulk Actions Toolbar (Phase 4.1) */}
-          <div className="bg-bg-card border border-border-main p-3.5 rounded-2xl flex flex-wrap justify-between items-center gap-3">
+          <div className="tk-panel flex flex-wrap justify-between items-center gap-3" style={{ padding: 14 }}>
             <div className="flex items-center gap-3 flex-wrap">
               {/* Bulk Select count */}
-              <span className="text-xs font-bold text-text-main flex items-center gap-1.5">
-                <CheckSquare className="w-4 h-4 text-brand" />
-                {selectedForBulk.length > 0 ? (
-                  <span className="text-brand">{selectedForBulk.length} candidate(s) selected</span>
-                ) : (
-                  <span className="text-text-muted">{filteredCandidates.length} candidate(s) total</span>
-                )}
+              <span className="text-xs flex items-center gap-1.5" style={{ color: selectedForBulk.length > 0 ? 'var(--tk-accent-text)' : 'var(--tk-muted)' }}>
+                <CheckSquare className="w-4 h-4" />
+                {selectedForBulk.length > 0
+                  ? `${selectedForBulk.length} candidate(s) selected`
+                  : `${filteredCandidates.length} candidate(s) total`}
               </span>
 
               {/* Dual Compare slots */}
               {(dualCompareLeft || dualCompareRight) && (
-                <div className="flex gap-2 text-xs border-l border-border-main/50 pl-3">
-                  <span className="text-text-muted font-medium">Dual:</span>
+                <div className="flex gap-2 items-center text-xs ps-3" style={{ borderInlineStart: '1px solid var(--tk-border)' }}>
+                  <span style={{ color: 'var(--tk-muted)' }}>Dual:</span>
                   {dualCompareLeft && (
-                    <span className="bg-brand text-white px-2 py-0.5 rounded-full flex items-center gap-1 font-semibold">
+                    <span className="tk-pill is-active">
                       L: <Bidi>{dualCompareLeft.name}</Bidi>
-                      <button onClick={() => setDualCompareLeft(null)}><X className="w-3 h-3" /></button>
+                      <button onClick={() => setDualCompareLeft(null)} className="tk-focusable" aria-label="Clear left comparison"><X className="w-3 h-3" /></button>
                     </span>
                   )}
                   {dualCompareRight && (
-                    <span className="bg-brand text-white px-2 py-0.5 rounded-full flex items-center gap-1 font-semibold">
+                    <span className="tk-pill is-active">
                       R: <Bidi>{dualCompareRight.name}</Bidi>
-                      <button onClick={() => setDualCompareRight(null)}><X className="w-3 h-3" /></button>
+                      <button onClick={() => setDualCompareRight(null)} className="tk-focusable" aria-label="Clear right comparison"><X className="w-3 h-3" /></button>
                     </span>
                   )}
                 </div>
@@ -769,9 +760,13 @@ export const Results: React.FC = () => {
                     }
                   }}
                   defaultValue=""
-                  className="px-3 py-1.5 rounded-xl border border-brand/30 bg-brand/5 text-brand text-xs font-bold focus:outline-none cursor-pointer"
+                  className="tk-focusable"
+                  style={{
+                    height: 32, borderRadius: 10, paddingInline: 12, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
+                    background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)', border: '1px solid var(--tk-accent-line)'
+                  }}
                 >
-                  <option value="" disabled>Bulk Change Status...</option>
+                  <option value="" disabled>Bulk change status…</option>
                   <option value="Shortlisted">Set to Shortlisted</option>
                   <option value="Interviewing">Set to Interviewing</option>
                   <option value="Rejected">Set to Rejected</option>
@@ -783,20 +778,25 @@ export const Results: React.FC = () => {
               {selectedForBulk.length > 0 && canDelete && (
                 <button
                   onClick={handleBulkDelete}
-                  className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                  className="tk-focusable flex items-center gap-1"
+                  style={{
+                    height: 32, borderRadius: 10, paddingInline: 12, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
+                    background: 'rgba(239,68,68,.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,.2)'
+                  }}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete Selected</span>
+                  <span>Delete selected</span>
                 </button>
               )}
 
               {/* CSV Export Button (Phase 4.1) */}
               <button
                 onClick={handleExportCSV}
-                className="px-3.5 py-1.5 bg-bg-main border border-border-main hover:bg-bg-hover text-text-main text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                className="tk-btn-neutral tk-focusable"
+                style={{ height: 32, padding: '0 12px', fontSize: 11.5 }}
                 title={selectedForBulk.length > 0 ? 'Export selected candidates to CSV' : 'Export all filtered candidates to CSV'}
               >
-                <Download className="w-3.5 h-3.5 text-brand" />
+                <Download className="w-3.5 h-3.5" />
                 <span>{selectedForBulk.length > 0 ? `Export CSV (${selectedForBulk.length})` : 'Export CSV'}</span>
               </button>
 
@@ -804,7 +804,8 @@ export const Results: React.FC = () => {
               {selectedForBulk.length >= 2 && (
                 <button
                   onClick={() => setBulkCompareOpen(true)}
-                  className="px-3.5 py-1.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer"
+                  className="tk-btn-primary tk-focusable"
+                  style={{ height: 32, padding: '0 12px', fontSize: 11.5 }}
                 >
                   Compare ({selectedForBulk.length})
                 </button>
@@ -812,29 +813,30 @@ export const Results: React.FC = () => {
               {(dualCompareLeft && dualCompareRight) && (
                 <button
                   onClick={() => setBulkCompareOpen(true)}
-                  className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer"
+                  className="tk-btn-primary tk-focusable"
+                  style={{ height: 32, padding: '0 12px', fontSize: 11.5 }}
                 >
-                  Compare Side-by-Side
+                  Compare side-by-side
                 </button>
               )}
             </div>
           </div>
 
           {/* Table Container */}
-          <div className="bg-bg-card border border-border-main rounded-2xl overflow-hidden">
+          <div className="tk-panel" style={{ padding: 0, overflow: 'hidden' }}>
             {loading ? (
-              <div className="py-20 text-center text-text-muted">Loading leaderboard data...</div>
+              <div className="py-20 text-center" style={{ color: 'var(--tk-muted)' }}>Loading leaderboard data…</div>
             ) : filteredCandidates.length === 0 ? (
-              <div className="py-20 text-center text-text-muted">
+              <div className="py-20 text-center" style={{ color: 'var(--tk-muted)' }}>
                 No candidate records found matching current filters.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left">
+              <div style={{ overflowX: 'auto' }}>
+                <table className="w-full border-collapse text-start">
                   <thead>
-                    <tr className="border-b border-border-main/50 bg-bg-hover/50 text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                    <tr className="text-[10px] font-bold uppercase tracking-[.1em]" style={{ borderBottom: '1px solid var(--tk-border)', color: 'var(--tk-muted)' }}>
                       <th className="p-4 w-10 text-center">
-                        <button onClick={selectAllCandidates} className="text-text-muted hover:text-brand transition-colors">
+                        <button onClick={selectAllCandidates} className="tk-focusable" style={{ color: 'var(--tk-muted)' }} aria-label="Select all">
                           {selectedForBulk.length === filteredCandidates.length ? (
                             <CheckSquare className="w-4 h-4" />
                           ) : (
@@ -854,73 +856,69 @@ export const Results: React.FC = () => {
                       <th className="p-4 text-center">{t('actions')}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border-main/40 text-sm">
+                  <tbody className="text-sm">
                     {filteredCandidates.map((c, index) => {
                       const isSelected = selectedForBulk.includes(c.id);
                       const isDualCompare = dualCompareLeft?.id === c.id || dualCompareRight?.id === c.id;
                       const classification = getMatchClassification(c.matchScore);
+                      const isTopThree = index < 3;
 
                       return (
-                        <tr 
-                          key={c.id} 
-                          className={`hover:bg-bg-hover/20 transition-colors ${
-                            isSelected ? 'bg-brand/5' : isDualCompare ? 'bg-emerald-500/5' : ''
-                          }`}
+                        <tr
+                          key={c.id}
+                          style={{
+                            borderTop: '1px solid var(--tk-border)',
+                            background: isSelected || isDualCompare ? 'var(--tk-accent-soft)' : 'transparent'
+                          }}
                         >
                           <td className="p-4 text-center">
-                            <button 
+                            <button
                               onClick={() => toggleBulkSelect(c.id)}
-                              className="text-text-muted hover:text-brand transition-colors"
+                              className="tk-focusable"
+                              style={{ color: isSelected ? 'var(--tk-accent-text)' : 'var(--tk-muted)' }}
+                              aria-label={`Select ${c.name}`}
                             >
-                              {isSelected ? (
-                                <CheckSquare className="w-4 h-4 text-brand" />
-                              ) : (
-                                <Square className="w-4 h-4" />
-                              )}
+                              {isSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                             </button>
                           </td>
-                          <td className="p-4 font-bold text-text-muted text-center">{index + 1}</td>
-                          
+                          <td
+                            className="p-4 text-center"
+                            style={{ color: isTopThree ? 'var(--tk-accent-text)' : 'var(--tk-dim)', fontVariantNumeric: 'tabular-nums' }}
+                          >
+                            {String(index + 1).padStart(2, '0')}
+                          </td>
+
                           <td className="p-4">
-                            <div className="font-semibold text-text-main"><Bidi>{c.name}</Bidi></div>
-                            <div className="text-[10px] text-text-muted font-medium mt-0.5">{c.originalFilename}</div>
+                            <div style={{ color: 'var(--tk-text)' }}><Bidi>{c.name}</Bidi></div>
+                            <div className="text-[10px] mt-0.5 truncate" dir="ltr" style={{ color: 'var(--tk-dim)', maxWidth: 180 }}>
+                              {c.originalFilename}
+                            </div>
                           </td>
 
                           {(() => {
                             const ext = getExtractedCandidateDetails(c);
                             return (
                               <>
-                                {/* CHANGE 2: 1. Nationality */}
-                                <td className="p-4 text-xs font-semibold text-text-main">
-                                  {ext.nationality}
-                                </td>
-
-                                {/* CHANGE 2: 2. Education Level */}
-                                <td className="p-4 text-xs font-semibold text-text-main">
-                                  {ext.educationDegree}
-                                </td>
-
-                                {/* CHANGE 2: 3. Specialization */}
-                                <td className="p-4 text-xs font-semibold text-text-main">
-                                  {ext.specialization}
-                                </td>
-
-                                {/* CHANGE 2: 4. Years of Experience */}
-                                {/* TODO: Data-extraction note: The experience value source used here (totalExperienceYears / calculated timeline years) may be inconsistent with the candidate detail page presentation ("10+ سنوات") and should be reviewed separately. */}
-                                <td className="p-4 text-xs font-semibold text-text-main">
-                                  {ext.totalExp}
-                                </td>
+                                <td className="p-4 text-xs" style={{ color: 'var(--tk-soft)' }}>{ext.nationality}</td>
+                                <td className="p-4 text-xs" style={{ color: 'var(--tk-soft)' }}>{ext.educationDegree}</td>
+                                <td className="p-4 text-xs" style={{ color: 'var(--tk-soft)' }}>{ext.specialization}</td>
+                                <td className="p-4 text-xs" style={{ color: 'var(--tk-soft)', fontVariantNumeric: 'tabular-nums' }}>{ext.totalExp}</td>
                               </>
                             );
                           })()}
 
                           <td className="p-4">
                             <div className="flex items-center gap-3">
-                              <span className="font-extrabold text-text-main text-sm w-9">{c.matchScore}%</span>
-                              <div className="w-24 bg-bg-hover h-2 rounded-full overflow-hidden hidden sm:block">
-                                <div className="bg-brand h-full rounded-full" style={{ width: `${c.matchScore}%` }}></div>
+                              <span
+                                className="text-[13.5px]"
+                                style={{ width: 40, color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}
+                              >
+                                {c.matchScore}%
+                              </span>
+                              <div className="tk-progress-track hidden sm:block" style={{ width: 96, height: 4 }}>
+                                <div className="tk-progress-fill" style={{ width: `${c.matchScore}%` }} />
                               </div>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${classification.color}`}>
+                              <span className={`tk-pill ${classification.isStrong ? 'is-active' : ''}`}>
                                 {classification.label}
                               </span>
                             </div>
@@ -931,7 +929,8 @@ export const Results: React.FC = () => {
                               <select
                                 value={c.status}
                                 onChange={(e) => handleStatusChange(c.id, e.target.value)}
-                                className="px-2 py-1 bg-bg-main border border-border-main rounded-lg text-xs font-semibold text-text-main focus:outline-none focus:border-brand"
+                                className="tk-focusable"
+                                style={{ height: 30, borderRadius: 9, paddingInline: 10, fontSize: 11.5, background: 'var(--tk-inset)', color: 'var(--tk-text)', border: '1px solid var(--tk-border-strong)', cursor: 'pointer' }}
                               >
                                 <option value="Pending">Pending</option>
                                 <option value="Shortlisted">Shortlisted</option>
@@ -939,7 +938,7 @@ export const Results: React.FC = () => {
                                 <option value="Rejected">Rejected</option>
                               </select>
                             ) : (
-                              <span className="text-xs font-bold text-text-main">{c.status}</span>
+                              <span className="tk-pill">{c.status}</span>
                             )}
                           </td>
 
@@ -948,12 +947,10 @@ export const Results: React.FC = () => {
                               {/* Compare Slot toggle */}
                               <button
                                 onClick={() => setDualSelection(c)}
-                                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                                  isDualCompare
-                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
-                                    : 'bg-bg-hover border-border-main text-text-muted hover:text-text-main'
-                                }`}
+                                className="tk-icon-btn tk-focusable"
+                                style={isDualCompare ? { background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' } : undefined}
                                 title="Add to dual compare slots"
+                                aria-label="Add to dual compare slots"
                               >
                                 <Columns className="w-3.5 h-3.5" />
                               </button>
@@ -961,7 +958,7 @@ export const Results: React.FC = () => {
                               {/* Detailed Report */}
                               <button
                                 onClick={() => navigate(`/candidate/${c.id}`)}
-                                className="p-1.5 bg-bg-hover border border-border-main text-text-muted hover:text-brand rounded-lg transition-colors cursor-pointer"
+                                className="tk-icon-btn tk-focusable"
                                 title={t('report')}
                               >
                                 <FileText className="w-3.5 h-3.5" />
@@ -970,7 +967,7 @@ export const Results: React.FC = () => {
                               {/* Email Outreach */}
                               <button
                                 onClick={() => triggerOutreach(c, 'email')}
-                                className="p-1.5 bg-bg-hover border border-border-main text-text-muted hover:text-brand rounded-lg transition-colors cursor-pointer"
+                                className="tk-icon-btn tk-focusable"
                                 title="Outreach via Email"
                               >
                                 <Mail className="w-3.5 h-3.5" />
@@ -979,7 +976,7 @@ export const Results: React.FC = () => {
                               {/* WhatsApp Outreach */}
                               <button
                                 onClick={() => triggerOutreach(c, 'whatsapp')}
-                                className="p-1.5 bg-bg-hover border border-border-main text-text-muted hover:text-green-500 rounded-lg transition-colors cursor-pointer"
+                                className="tk-icon-btn tk-focusable"
                                 title="Outreach via WhatsApp"
                               >
                                 <MessageCircle className="w-3.5 h-3.5" />
@@ -988,7 +985,7 @@ export const Results: React.FC = () => {
                               {/* Download CV */}
                               <button
                                 onClick={() => handleDownload(c)}
-                                className="p-1.5 bg-bg-hover border border-border-main text-text-muted hover:text-text-main rounded-lg transition-colors cursor-pointer"
+                                className="tk-icon-btn tk-focusable"
                                 title="Download CV"
                               >
                                 <Download className="w-3.5 h-3.5" />
@@ -998,7 +995,7 @@ export const Results: React.FC = () => {
                               {canReanalyze && (
                                 <button
                                   onClick={() => handleReanalyze(c.id)}
-                                  className="p-1.5 bg-bg-hover border border-border-main text-text-muted hover:text-brand rounded-lg transition-colors cursor-pointer"
+                                  className="tk-icon-btn tk-focusable"
                                   title="Re-analyze CV"
                                 >
                                   <RefreshCw className="w-3.5 h-3.5" />
@@ -1009,7 +1006,8 @@ export const Results: React.FC = () => {
                               {canDelete && (
                                 <button
                                   onClick={() => handleDelete(c.id)}
-                                  className="p-1.5 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors cursor-pointer"
+                                  className="tk-icon-btn tk-focusable"
+                                  style={{ color: '#ef4444' }}
                                   title="Delete candidate record"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
@@ -1030,131 +1028,133 @@ export const Results: React.FC = () => {
       {/* Comparison Modal */}
       {bulkCompareOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-bg-card border border-border-main w-full max-w-5xl p-6 rounded-3xl shadow-2xl glass-panel relative max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+          <div className="tk-panel w-full relative" style={{ maxWidth: 1100, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 22px 50px rgba(0,0,0,.35)' }}>
             <button
               onClick={() => setBulkCompareOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-bg-hover text-text-muted hover:text-text-main transition-colors cursor-pointer"
+              className="tk-icon-btn tk-focusable absolute"
+              style={{ top: 14, insetInlineEnd: 14 }}
+              aria-label="Close comparison"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="text-lg font-black text-text-main mb-6">{t('compareTitle')}</h3>
+            <h3 className="text-[17px] font-medium mb-5" style={{ color: 'var(--tk-text)' }}>{t('compareTitle')}</h3>
 
             {/* Comparison Grid */}
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left text-sm">
                 <thead>
-                  <tr className="border-b border-border-main bg-bg-hover/40 text-[11px] font-bold text-text-muted uppercase">
+                  <tr className="text-[10px] font-bold uppercase tracking-[.1em]" style={{ borderBottom: '1px solid var(--tk-border)', color: 'var(--tk-muted)' }}>
                     <th className="p-4 min-w-[150px]">Attributes</th>
                     {/* Columns dynamically populated */}
                     {dualCompareLeft && dualCompareRight && !selectedForBulk.length ? (
                       <>
-                        <th className="p-4 text-brand font-black w-[40%] bg-brand/5 border-x border-border-main"><Bidi>{dualCompareLeft.name}</Bidi></th>
-                        <th className="p-4 text-emerald-500 font-black w-[40%] bg-emerald-500/5"><Bidi>{dualCompareRight.name}</Bidi></th>
+                        <th className="p-4" style={{ width: '40%', color: 'var(--tk-accent-text)', background: 'var(--tk-accent-soft)' }}><Bidi>{dualCompareLeft.name}</Bidi></th>
+                        <th className="p-4" style={{ width: '40%', color: 'var(--tk-accent-text)' }}><Bidi>{dualCompareRight.name}</Bidi></th>
                       </>
                     ) : (
                       selectedForBulk.map(bid => {
                         const cand = processedCandidates.find(c => c.id === bid);
                         return cand ? (
-                          <th key={bid} className="p-4 text-brand font-black border-x border-border-main"><Bidi>{cand.name}</Bidi></th>
+                          <th key={bid} className="p-4" style={{ color: 'var(--tk-accent-text)' }}><Bidi>{cand.name}</Bidi></th>
                         ) : null;
                       })
                     )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border-main/50">
+                <tbody>
                   {/* Row: Score */}
-                  <tr className="hover:bg-bg-hover/20">
-                    <td className="p-4 font-bold text-text-muted text-xs uppercase tracking-wider">Match Score</td>
+                  <tr style={{ borderTop: '1px solid var(--tk-border)' }}>
+                    <td className="p-4 text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>Match Score</td>
                     {dualCompareLeft && dualCompareRight && !selectedForBulk.length ? (
                       <>
-                        <td className="p-4 bg-brand/5 border-x border-border-main font-black text-base">{dualCompareLeft.matchScore}%</td>
-                        <td className="p-4 bg-emerald-500/5 font-black text-base">{dualCompareRight.matchScore}%</td>
+                        <td className="p-4 text-base" style={{ background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' }}>{dualCompareLeft.matchScore}%</td>
+                        <td className="p-4 text-base" style={{ color: 'var(--tk-accent-text)' }}>{dualCompareRight.matchScore}%</td>
                       </>
                     ) : (
                       selectedForBulk.map(bid => {
                         const cand = processedCandidates.find(c => c.id === bid);
-                        return <td key={bid} className="p-4 border-x border-border-main font-bold">{cand?.matchScore}%</td>;
+                        return <td key={bid} className="p-4" style={{ color: 'var(--tk-text)' }}>{cand?.matchScore}%</td>;
                       })
                     )}
                   </tr>
 
                   {/* Row: 3D Scores */}
-                  <tr className="hover:bg-bg-hover/20">
-                    <td className="p-4 font-bold text-text-muted text-xs uppercase tracking-wider">Tech / Exp / Culture</td>
+                  <tr style={{ borderTop: '1px solid var(--tk-border)' }}>
+                    <td className="p-4 text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>Tech / Exp / Culture</td>
                     {dualCompareLeft && dualCompareRight && !selectedForBulk.length ? (
                       <>
-                        <td className="p-4 bg-brand/5 border-x border-border-main text-xs">{dualCompareLeft.scoreTechnical} / {dualCompareLeft.scoreExperience} / {dualCompareLeft.scoreCultural}</td>
-                        <td className="p-4 bg-emerald-500/5 text-xs">{dualCompareRight.scoreTechnical} / {dualCompareRight.scoreExperience} / {dualCompareRight.scoreCultural}</td>
+                        <td className="p-4 text-xs" style={{ background: 'var(--tk-accent-soft)' }}>{dualCompareLeft.scoreTechnical} / {dualCompareLeft.scoreExperience} / {dualCompareLeft.scoreCultural}</td>
+                        <td className="p-4 text-xs">{dualCompareRight.scoreTechnical} / {dualCompareRight.scoreExperience} / {dualCompareRight.scoreCultural}</td>
                       </>
                     ) : (
                       selectedForBulk.map(bid => {
                         const cand = processedCandidates.find(c => c.id === bid);
-                        return <td key={bid} className="p-4 border-x border-border-main text-xs">{cand?.scoreTechnical} / {cand?.scoreExperience} / {cand?.scoreCultural}</td>;
+                        return <td key={bid} className="p-4 text-xs">{cand?.scoreTechnical} / {cand?.scoreExperience} / {cand?.scoreCultural}</td>;
                       })
                     )}
                   </tr>
 
                   {/* Row: Status */}
-                  <tr className="hover:bg-bg-hover/20">
-                    <td className="p-4 font-bold text-text-muted text-xs uppercase tracking-wider">Status</td>
+                  <tr style={{ borderTop: '1px solid var(--tk-border)' }}>
+                    <td className="p-4 text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>Status</td>
                     {dualCompareLeft && dualCompareRight && !selectedForBulk.length ? (
                       <>
-                        <td className="p-4 bg-brand/5 border-x border-border-main font-semibold">{dualCompareLeft.status}</td>
-                        <td className="p-4 bg-emerald-500/5 font-semibold">{dualCompareRight.status}</td>
+                        <td className="p-4" style={{ background: 'var(--tk-accent-soft)', color: 'var(--tk-text)' }}>{dualCompareLeft.status}</td>
+                        <td className="p-4" style={{ color: 'var(--tk-text)' }}>{dualCompareRight.status}</td>
                       </>
                     ) : (
                       selectedForBulk.map(bid => {
                         const cand = processedCandidates.find(c => c.id === bid);
-                        return <td key={bid} className="p-4 border-x border-border-main font-semibold">{cand?.status}</td>;
+                        return <td key={bid} className="p-4" style={{ color: 'var(--tk-text)' }}>{cand?.status}</td>;
                       })
                     )}
                   </tr>
 
                   {/* Row: Skills */}
-                  <tr className="hover:bg-bg-hover/20">
-                    <td className="p-4 font-bold text-text-muted text-xs uppercase tracking-wider">{t('skillsList')}</td>
+                  <tr style={{ borderTop: '1px solid var(--tk-border)' }}>
+                    <td className="p-4 text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>{t('skillsList')}</td>
                     {dualCompareLeft && dualCompareRight && !selectedForBulk.length ? (
                       <>
-                        <td className="p-4 bg-brand/5 border-x border-border-main text-xs leading-relaxed">{dualCompareLeft.skills?.join(', ') || 'None'}</td>
-                        <td className="p-4 bg-emerald-500/5 text-xs leading-relaxed">{dualCompareRight.skills?.join(', ') || 'None'}</td>
+                        <td className="p-4 text-xs leading-relaxed" style={{ background: 'var(--tk-accent-soft)', color: 'var(--tk-soft)' }}>{dualCompareLeft.skills?.join(', ') || 'None'}</td>
+                        <td className="p-4 text-xs leading-relaxed" style={{ color: 'var(--tk-soft)' }}>{dualCompareRight.skills?.join(', ') || 'None'}</td>
                       </>
                     ) : (
                       selectedForBulk.map(bid => {
                         const cand = processedCandidates.find(c => c.id === bid);
-                        return <td key={bid} className="p-4 border-x border-border-main text-xs leading-relaxed">{cand?.skills?.join(', ')}</td>;
+                        return <td key={bid} className="p-4 text-xs leading-relaxed" style={{ color: 'var(--tk-soft)' }}>{cand?.skills?.join(', ')}</td>;
                       })
                     )}
                   </tr>
 
                   {/* Row: Gaps */}
-                  <tr className="hover:bg-bg-hover/20">
-                    <td className="p-4 font-bold text-text-muted text-xs uppercase tracking-wider">{t('candidateGaps')}</td>
+                  <tr style={{ borderTop: '1px solid var(--tk-border)' }}>
+                    <td className="p-4 text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>{t('candidateGaps')}</td>
                     {dualCompareLeft && dualCompareRight && !selectedForBulk.length ? (
                       <>
-                        <td className="p-4 bg-brand/5 border-x border-border-main text-xs text-red-500 font-medium leading-relaxed">{dualCompareLeft.gaps?.join(', ') || 'None'}</td>
-                        <td className="p-4 bg-emerald-500/5 text-xs text-red-500 font-medium leading-relaxed">{dualCompareRight.gaps?.join(', ') || 'None'}</td>
+                        <td className="p-4 text-xs leading-relaxed" style={{ background: 'var(--tk-accent-soft)', color: 'var(--tk-soft)' }}>{dualCompareLeft.gaps?.join(', ') || 'None'}</td>
+                        <td className="p-4 text-xs leading-relaxed" style={{ color: 'var(--tk-soft)' }}>{dualCompareRight.gaps?.join(', ') || 'None'}</td>
                       </>
                     ) : (
                       selectedForBulk.map(bid => {
                         const cand = processedCandidates.find(c => c.id === bid);
-                        return <td key={bid} className="p-4 border-x border-border-main text-xs text-red-500 font-medium leading-relaxed">{cand?.gaps?.join(', ') || 'None'}</td>;
+                        return <td key={bid} className="p-4 text-xs leading-relaxed" style={{ color: 'var(--tk-soft)' }}>{cand?.gaps?.join(', ') || 'None'}</td>;
                       })
                     )}
                   </tr>
 
                   {/* Row: Certifications */}
-                  <tr className="hover:bg-bg-hover/20">
-                    <td className="p-4 font-bold text-text-muted text-xs uppercase tracking-wider">Certifications</td>
+                  <tr style={{ borderTop: '1px solid var(--tk-border)' }}>
+                    <td className="p-4 text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>Certifications</td>
                     {dualCompareLeft && dualCompareRight && !selectedForBulk.length ? (
                       <>
-                        <td className="p-4 bg-brand/5 border-x border-border-main text-xs leading-relaxed">{dualCompareLeft.certificationsList?.join(', ') || 'None'}</td>
-                        <td className="p-4 bg-emerald-500/5 text-xs leading-relaxed">{dualCompareRight.certificationsList?.join(', ') || 'None'}</td>
+                        <td className="p-4 text-xs leading-relaxed" style={{ background: 'var(--tk-accent-soft)', color: 'var(--tk-soft)' }}>{dualCompareLeft.certificationsList?.join(', ') || 'None'}</td>
+                        <td className="p-4 text-xs leading-relaxed" style={{ color: 'var(--tk-soft)' }}>{dualCompareRight.certificationsList?.join(', ') || 'None'}</td>
                       </>
                     ) : (
                       selectedForBulk.map(bid => {
                         const cand = processedCandidates.find(c => c.id === bid);
-                        return <td key={bid} className="p-4 border-x border-border-main text-xs leading-relaxed">{cand?.certificationsList?.join(', ') || 'None'}</td>;
+                        return <td key={bid} className="p-4 text-xs leading-relaxed" style={{ color: 'var(--tk-soft)' }}>{cand?.certificationsList?.join(', ') || 'None'}</td>;
                       })
                     )}
                   </tr>
@@ -1162,12 +1162,13 @@ export const Results: React.FC = () => {
               </table>
             </div>
 
-            <div className="flex justify-end mt-6 pt-4 border-t border-border-main/50">
+            <div className="flex justify-end mt-6 pt-4" style={{ borderTop: '1px solid var(--tk-border)' }}>
               <button
                 onClick={() => setBulkCompareOpen(false)}
-                className="px-5 py-2 bg-brand text-white rounded-xl font-bold text-xs cursor-pointer shadow-md shadow-brand/10"
+                className="tk-btn-primary tk-focusable"
+                style={{ height: 36, padding: '0 18px', fontSize: 12 }}
               >
-                Close Comparison
+                Close comparison
               </button>
             </div>
           </div>

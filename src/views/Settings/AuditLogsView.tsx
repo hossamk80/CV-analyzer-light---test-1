@@ -112,7 +112,7 @@ export const AuditLogsView: React.FC = () => {
         </button>
       </div>
 
-      <div className="bg-bg-card border border-border-main rounded-2xl overflow-hidden shadow-sm glass-panel">
+      <div className="tk-panel overflow-hidden">
         {logs.length === 0 ? (
           <div className="p-8 text-center text-text-muted text-sm">
             No audit logs recorded yet.
@@ -172,7 +172,7 @@ export const AuditLogsView: React.FC = () => {
       {/* Selected Log Inspector Modal */}
       {selectedLog && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-bg-card border border-border-main rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl glass-panel">
+          <div className="tk-panel max-w-lg w-full space-y-4 shadow-2xl">
             <div className="flex justify-between items-center border-b border-border-main/50 pb-3">
               <h3 className="text-base font-bold text-text-main flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-brand" />
@@ -227,7 +227,7 @@ export const AuditLogsView: React.FC = () => {
             <div className="pt-2 flex justify-end">
               <button
                 onClick={() => setSelectedLog(null)}
-                className="px-4 py-2 bg-brand hover:bg-brand-hover text-white rounded-xl font-bold text-xs shadow-md transition-colors cursor-pointer"
+                className="tk-btn-primary tk-focusable text-xs transition-colors cursor-pointer"
               >
                 Close
               </button>

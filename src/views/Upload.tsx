@@ -179,7 +179,7 @@ export const Upload: React.FC = () => {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14, alignItems: 'start' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 14, alignItems: 'start' }}>
       {/* Left column — drop zone + processing queue */}
       <LaserUploadZone
         files={files}
