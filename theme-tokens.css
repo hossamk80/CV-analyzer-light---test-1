@@ -1,0 +1,91 @@
+/* Theme Definitions */
+:root {
+  /* Default Primary Color: Sleek Blue */
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --primary-light: rgba(59, 130, 246, 0.1);
+  --primary-rgb: 59, 130, 246;
+
+  /* Theme: Light */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --border: #e5e7eb;
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(229, 231, 235, 0.5);
+  --glass-blur: 12px;
+}
+
+[data-theme='dark'] {
+  --bg-primary: #0b0f19;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1f2937;
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+  --border: #374151;
+  --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+  --glass-bg: rgba(17, 24, 39, 0.7);
+  --glass-border: rgba(55, 65, 81, 0.5);
+}
+
+[data-theme='midnight-yellow'] {
+  --bg-primary: #050508;
+  --bg-secondary: #0d0d15;
+  --bg-tertiary: #141424;
+  --text-primary: #fef08a; /* Yellow 200 */
+  --text-secondary: #eab308; /* Yellow 500 */
+  --border: #ca8a04; /* Yellow 600 */
+  --primary: #facc15; /* Yellow 400 */
+  --primary-hover: #eab308;
+  --primary-light: rgba(250, 204, 21, 0.15);
+  --primary-rgb: 250, 204, 21;
+  --card-shadow: 0 4px 25px -2px rgba(234, 179, 8, 0.1);
+  --glass-bg: rgba(13, 13, 21, 0.8);
+  --glass-border: rgba(202, 138, 4, 0.4);
+}
+
+/* Primary Color Picker Overrides */
+[data-primary='blue'] {
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --primary-light: rgba(59, 130, 246, 0.1);
+  --primary-rgb: 59, 130, 246;
+}
+
+[data-primary='green'] {
+  --primary: #10b981;
+  --primary-hover: #059669;
+  --primary-light: rgba(16, 185, 129, 0.1);
+  --primary-rgb: 16, 185, 129;
+}
+
+[data-primary='purple'] {
+  --primary: #8b5cf6;
+  --primary-hover: #7c3aed;
+  --primary-light: rgba(139, 92, 246, 0.1);
+  --primary-rgb: 139, 92, 246;
+}
+
+[data-primary='orange'] {
+  --primary: #f97316;
+  --primary-hover: #ea580c;
+  --primary-light: rgba(249, 115, 22, 0.1);
+  --primary-rgb: 249, 115, 22;
+}
+
+[data-primary='pink'] {
+  --primary: #ec4899;
+  --primary-hover: #db2777;
+  --primary-light: rgba(236, 72, 153, 0.1);
+  --primary-rgb: 236, 72, 153;
+}
+
+[data-primary='red'] {
+  --primary: #ef4444;
+  --primary-hover: #dc2626;
+  --primary-light: rgba(239, 68, 68, 0.1);
+  --primary-rgb: 239, 68, 68;
+}

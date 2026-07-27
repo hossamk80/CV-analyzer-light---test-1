@@ -1,0 +1,99 @@
+@import "tailwindcss";
+@import "./theme-tokens.css";
+
+@theme {
+  --color-brand: var(--primary);
+  --color-brand-hover: var(--primary-hover);
+  --color-brand-light: var(--primary-light);
+  
+  --color-bg-main: var(--bg-primary);
+  --color-bg-card: var(--bg-secondary);
+  --color-bg-hover: var(--bg-tertiary);
+  
+  --color-text-main: var(--text-primary);
+  --color-text-muted: var(--text-secondary);
+  
+  --color-border-main: var(--border);
+}
+
+/* Global Styles */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+/* Print Styles */
+@media print {
+  /* Hide interactive layouts like sidebar, navbar, buttons */
+  .no-print, 
+  button, 
+  nav, 
+  aside,
+  .print-hide {
+    display: none !important;
+  }
+  
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+  
+  /* Reset layout margins for print */
+  main, .print-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  /* Circular gauges should display nicely in print */
+  .gauge-circle {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+
+/* RTL Helpers */
+[dir='rtl'] .sidebar-item-icon {
+  margin-left: 0.75rem;
+  margin-right: 0;
+}
+[dir='ltr'] .sidebar-item-icon {
+  margin-right: 0.75rem;
+  margin-left: 0;
+}
