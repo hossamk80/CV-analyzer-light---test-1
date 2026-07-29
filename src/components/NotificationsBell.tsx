@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../utils/api.js';
+import { useI18n } from '../i18n/I18nContext.js';
 
 interface AppNotification {
   id: number;
@@ -18,6 +19,7 @@ const POLL_INTERVAL_MS = 60_000;
 
 /** Header bell surfacing in-app notifications (currently strong-match alerts from the upload pipeline). */
 export const NotificationsBell: React.FC = () => {
+  const { t, language } = useI18n();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<AppNotification[]>([]);
@@ -77,16 +79,16 @@ export const NotificationsBell: React.FC = () => {
       <button
         type="button"
         onClick={() => { setOpen(!open); if (!open) load(); }}
-        title="Notifications"
-        aria-label={unread > 0 ? `Notifications (${unread} unread)` : 'Notifications'}
+        title={t('notifications')}
+        aria-label={unread > 0 ? t('notificationsUnread', { count: String(unread) }) : t('notifications')}
         aria-expanded={open}
         className="tk-icon-btn tk-focusable"
         style={{
-          width: 36, height: 36, position: 'relative',
+          width: 32, height: 32, position: 'relative',
           ...(open ? { background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' } : {})
         }}
       >
-        <Bell className="w-4 h-4" />
+        <Bell className="w-3.5 h-3.5" />
         {unread > 0 && (
           <span
             style={{
@@ -101,10 +103,10 @@ export const NotificationsBell: React.FC = () => {
       {open && (
         <div
           role="dialog"
-          aria-label="Notifications"
+          aria-label={t('notifications')}
           className="tk-panel"
           style={{
-            position: 'absolute', top: 46, insetInlineEnd: 0, zIndex: 40,
+            position: 'absolute', top: 42, insetInlineEnd: 0, zIndex: 40,
             width: 'min(360px, 84vw)', borderRadius: 16,
             border: '1px solid var(--tk-border-strong)',
             boxShadow: '0 22px 50px rgba(0,0,0,.35)',
@@ -115,19 +117,19 @@ export const NotificationsBell: React.FC = () => {
             className="flex items-center justify-between gap-2"
             style={{ borderBottom: '1px solid var(--tk-border)', paddingBottom: 10, marginBottom: 10 }}
           >
-            <span className="text-[11px] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-accent-text)' }}>
-              Notifications
+            <span className="text-[10.5px] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-accent-text)' }}>
+              {t('notifications')}
             </span>
             {unread > 0 && (
               <button type="button" onClick={markAllRead} className="tk-btn-neutral tk-focusable" style={{ height: 26, padding: '0 10px', fontSize: 11 }}>
-                Mark all read
+                {t('markAllRead')}
               </button>
             )}
           </div>
 
           {items.length === 0 ? (
             <p className="text-xs py-6 text-center" style={{ color: 'var(--tk-muted)' }}>
-              No notifications yet.
+              {t('noNotifications')}
             </p>
           ) : (
             <div style={{ display: 'grid', gap: 6 }}>
@@ -145,8 +147,8 @@ export const NotificationsBell: React.FC = () => {
                 >
                   <p className="text-[12.5px] font-medium truncate" style={{ color: 'var(--tk-text)' }}>{n.title}</p>
                   <p className="text-[11px] leading-relaxed" style={{ color: 'var(--tk-muted)' }}>{n.body}</p>
-                  <p className="text-[10px] mt-1" style={{ color: 'var(--tk-dim)' }} dir="ltr">
-                    {new Date(n.createdAt).toLocaleString()}
+                  <p className="text-[10px] mt-1" style={{ color: 'var(--tk-dim)' }}>
+                    {new Date(n.createdAt).toLocaleString(language === 'ar' ? 'ar' : 'en')}
                   </p>
                 </button>
               ))}

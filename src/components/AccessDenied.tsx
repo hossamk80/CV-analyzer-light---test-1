@@ -8,7 +8,7 @@ interface AccessDeniedProps {
 }
 
 export const AccessDenied: React.FC<AccessDeniedProps> = ({ message, onRetry }) => {
-  const { language } = useI18n();
+  const { t } = useI18n();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[40vh] p-6 text-center">
@@ -17,19 +17,17 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({ message, onRetry }) 
           <ShieldAlert className="w-6 h-6" />
         </div>
         <h3 className="text-lg font-bold text-red-500 mb-1">
-          {language === 'ar' ? 'تم رفض الوصول (403)' : 'Access Denied (403)'}
+          {t('accessDeniedTitle')}
         </h3>
         <p className="text-text-muted text-xs leading-relaxed mb-4">
-          {message || (language === 'ar'
-            ? 'ليس لديك الصلاحيات الكافية للقيام بهذا الإجراء أو عرض هذه البيانات.'
-            : 'You do not have sufficient role clearances to access this resource.')}
+          {message || t('accessDeniedBody')}
         </p>
         {onRetry && (
           <button
             onClick={onRetry}
             className="px-4 py-2 bg-bg-card border border-border-main text-text-main rounded-xl text-xs font-semibold hover:bg-bg-hover transition-colors cursor-pointer"
           >
-            {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+            {t('retry')}
           </button>
         )}
       </div>

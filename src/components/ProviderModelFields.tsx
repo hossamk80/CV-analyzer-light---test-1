@@ -22,6 +22,7 @@ export const ProviderModelFields: React.FC<ProviderModelFieldsProps> = ({
   onChangeModel
 }) => {
   const { t } = useI18n();
+  const fieldLabel = 'block text-[10.5px] font-bold uppercase tracking-[.1em] mb-1.5 text-text-muted';
   const [modelOptions, setModelOptions] = useState<string[]>([]);
   const [fetchingModels, setFetchingModels] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -66,7 +67,7 @@ export const ProviderModelFields: React.FC<ProviderModelFieldsProps> = ({
       }
     } catch (err: any) {
       console.warn('[Live Model Fetch Error]', err);
-      setFetchError(err.message || 'Failed to fetch live models from provider API.');
+      setFetchError(err.message || t('connectionFailed'));
       // Keep cached / catalog options instead of clearing
     } finally {
       setFetchingModels(false);
@@ -100,13 +101,14 @@ export const ProviderModelFields: React.FC<ProviderModelFieldsProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div>
-        <label className="block text-sm font-medium text-text-muted mb-1">{t('providerName')}</label>
+        <label className={fieldLabel}>{t('providerName')}</label>
         <select
           value={selectedProvider}
           onChange={handleProviderChange}
-          className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-card text-text-main focus:outline-none focus:border-brand"
+          className="tk-field tk-focusable"
+          style={{ cursor: 'pointer' }}
         >
           {AI_PROVIDERS_CATALOG.map(p => (
             <option key={p.name} value={p.name}>
@@ -117,47 +119,49 @@ export const ProviderModelFields: React.FC<ProviderModelFieldsProps> = ({
       </div>
 
       <div>
-        <div className="flex justify-between items-center mb-1">
-          <label className="block text-sm font-medium text-text-muted">{t('modelName')}</label>
+        <div className="flex justify-between items-center gap-2 mb-1.5">
+          <label className={fieldLabel} style={{ marginBottom: 0 }}>{t('modelName')}</label>
           <button
             type="button"
             onClick={() => handleFetchLiveModels(selectedProvider, apiKey)}
             disabled={fetchingModels}
             className="flex items-center gap-1 text-[11px] font-bold text-brand hover:underline cursor-pointer disabled:opacity-50"
-            title="Fetch live models directly from provider API"
+            title={t('fetchModelsTitle')}
           >
             <RefreshCw className={`w-3 h-3 ${fetchingModels ? 'animate-spin' : ''}`} />
-            <span>{fetchingModels ? 'Fetching...' : 'Refresh Models'}</span>
+            <span>{fetchingModels ? t('fetchingModels') : t('refreshModels')}</span>
           </button>
         </div>
 
         <select
           value={showCustomModel ? 'Custom' : selectedModel}
           onChange={handleModelChange}
-          className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-card text-text-main focus:outline-none focus:border-brand text-sm"
+          className="tk-field tk-focusable"
+          style={{ cursor: 'pointer' }}
         >
           {modelOptions.map(m => (
             <option key={m} value={m}>
-              {m} (Live Verified)
+              {t('modelLiveVerified', { model: m })}
             </option>
           ))}
-          <option value="Custom">Custom (Unverified)</option>
+          <option value="Custom">{t('modelCustom')}</option>
         </select>
 
         {fetchError && (
           <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-amber-500 font-medium">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-            <span>{fetchError} (Showing cached options)</span>
+            <span>{t('showingCachedOptions', { error: fetchError })}</span>
           </div>
         )}
 
         {showCustomModel && (
           <input
             type="text"
-            placeholder="Enter custom model identifier (e.g. gemini-2.0-flash)"
+            placeholder={t('customModelPlaceholder')}
             value={customModelValue}
             onChange={handleCustomModelChange}
-            className="mt-2 w-full px-3 py-2 rounded-lg border border-border-main bg-bg-card text-text-main focus:outline-none focus:border-brand text-sm font-mono"
+            className="tk-field tk-focusable mt-2"
+            style={{ fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}
           />
         )}
       </div>

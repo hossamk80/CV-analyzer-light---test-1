@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check } from 'lucide-react';
 import { ThemeMode, ACCENT_SWATCHES, computeOnAccent } from '../utils/theme.js';
+import { useI18n } from '../i18n/I18nContext.js';
 
 interface AppearancePanelProps {
   themeMode: ThemeMode;
@@ -9,26 +10,30 @@ interface AppearancePanelProps {
   onAccentChange: (hex: string) => void;
 }
 
-const THEME_OPTIONS: { id: ThemeMode; label: string }[] = [
-  { id: 'light', label: 'Light Mode' },
-  { id: 'dark', label: 'Dark Mode' },
-  { id: 'midnight', label: 'Midnight Accent' },
-];
+const THEME_KEYS = ['light', 'dark', 'midnight'] as const;
+const THEME_LABEL_KEY = {
+  light: 'themeLight',
+  dark: 'themeDark',
+  midnight: 'themeMidnightYellow'
+} as const;
 
 /** Theme pills + accent swatches — des-2.txt §4.1, reused in the header popover and Settings → General. */
-export const AppearancePanel: React.FC<AppearancePanelProps> = ({ themeMode, accent, onThemeChange, onAccentChange }) => (
-  <div className="flex flex-wrap gap-7">
+export const AppearancePanel: React.FC<AppearancePanelProps> = ({ themeMode, accent, onThemeChange, onAccentChange }) => {
+  const { t } = useI18n();
+
+  return (
+  <div className="flex flex-wrap gap-6">
     <div>
-      <span className="block text-[11px] font-bold uppercase tracking-[.1em] mb-3" style={{ color: 'var(--tk-muted)' }}>
-        Theme selection
+      <span className="block text-[10.5px] font-bold uppercase tracking-[.1em] mb-2.5" style={{ color: 'var(--tk-muted)' }}>
+        {t('themeSelection')}
       </span>
-      <div className="flex flex-wrap gap-2.5">
-        {THEME_OPTIONS.map(({ id, label }) => (
+      <div className="flex flex-wrap gap-2">
+        {THEME_KEYS.map((id) => (
           <button
             key={id}
             type="button"
             onClick={() => onThemeChange(id)}
-            className="px-[15px] py-[9px] rounded-[10px] text-[12.5px] font-semibold cursor-pointer transition-all tk-focusable"
+            className="px-[13px] py-[7px] rounded-[9px] text-[12px] font-semibold cursor-pointer transition-all tk-focusable"
             style={
               themeMode === id
                 ? {
@@ -40,17 +45,17 @@ export const AppearancePanel: React.FC<AppearancePanelProps> = ({ themeMode, acc
                 : { background: 'transparent', color: 'var(--tk-soft)', border: '1px solid var(--tk-border-strong)' }
             }
           >
-            {label}
+            {t(THEME_LABEL_KEY[id])}
           </button>
         ))}
       </div>
     </div>
 
     <div>
-      <span className="block text-[11px] font-bold uppercase tracking-[.1em] mb-3" style={{ color: 'var(--tk-muted)' }}>
-        Primary color accent
+      <span className="block text-[10.5px] font-bold uppercase tracking-[.1em] mb-2.5" style={{ color: 'var(--tk-muted)' }}>
+        {t('primaryColor')}
       </span>
-      <div className="flex flex-wrap gap-2.5">
+      <div className="flex flex-wrap gap-2">
         {ACCENT_SWATCHES.map(({ name, hex }) => (
           <button
             key={hex}
@@ -59,7 +64,7 @@ export const AppearancePanel: React.FC<AppearancePanelProps> = ({ themeMode, acc
             title={name}
             aria-label={name}
             aria-pressed={accent === hex}
-            className="w-[30px] h-[30px] rounded-full transition-transform relative flex items-center justify-center cursor-pointer tk-focusable"
+            className="w-[26px] h-[26px] rounded-full transition-transform relative flex items-center justify-center cursor-pointer tk-focusable"
             style={{
               background: hex,
               boxShadow:
@@ -68,12 +73,13 @@ export const AppearancePanel: React.FC<AppearancePanelProps> = ({ themeMode, acc
                   : 'none'
             }}
           >
-            {accent === hex && <Check className="w-3.5 h-3.5" style={{ color: computeOnAccent(hex) }} />}
+            {accent === hex && <Check className="w-3 h-3" style={{ color: computeOnAccent(hex) }} />}
           </button>
         ))}
       </div>
     </div>
   </div>
-);
+  );
+};
 
 export default AppearancePanel;

@@ -88,7 +88,9 @@ export const Settings: React.FC = () => {
   const [editBaseUrl, setEditBaseUrl] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
-  const [healthWarning, setHealthWarning] = useState<string | null>(null);
+  // The server returns a stable `warningCode` (plus an English `warning` fallback) so the
+  // banner can be rendered in the active interface language.
+  const [health, setHealth] = useState<{ code?: string; text?: string; model?: string; provider?: string } | null>(null);
 
   useEffect(() => {
     fetchSettingsData();
@@ -113,17 +115,17 @@ export const Settings: React.FC = () => {
       // Requirement 6: Active AI Model Periodic Health Check
       try {
         const hc = await apiRequest('GET', '/api/ai-providers/health-check');
-        if (hc && hc.warning) {
-          setHealthWarning(hc.warning);
+        if (hc && (hc.warningCode || hc.warning)) {
+          setHealth({ code: hc.warningCode, text: hc.warning, model: hc.modelName, provider: hc.providerName });
         } else {
-          setHealthWarning(null);
+          setHealth(null);
         }
       } catch (hcErr) {
         console.warn('Health check query failed:', hcErr);
       }
     } catch (e: any) {
       console.error('Error fetching settings:', e);
-      setError(e.message || 'Failed to fetch settings');
+      setError(e.message || t('accessDeniedBody'));
     } finally {
       setLoading(false);
     }
@@ -132,7 +134,7 @@ export const Settings: React.FC = () => {
   const handleSaveGeneralSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (auditLogRetentionDays < 90) {
-      alert('Audit log retention period cannot be set below the 90-day minimum floor.');
+      alert(t('auditMinimumError'));
       return;
     }
     try {
@@ -144,17 +146,32 @@ export const Settings: React.FC = () => {
         gdprRetentionDays,
         auditLogRetentionDays
       });
-      alert('General settings & Retention policies saved successfully');
+      alert(t('settingsSaved'));
     } catch (e: any) {
-      alert('Failed to save settings: ' + e.message);
+      alert(t('settingsSaveFailed', { reason: e.message }));
+    }
+  };
+
+  // The token budget lives in the same settings row as the templates, but it belongs
+  // next to the meter it governs — so it gets its own save path.
+  const [quotaSaving, setQuotaSaving] = useState(false);
+  const handleSaveQuota = async () => {
+    setQuotaSaving(true);
+    try {
+      await apiRequest('PUT', '/api/settings', { tokenQuota: quota });
+      alert(t('tokenQuotaSaved'));
+    } catch (e: any) {
+      alert(t('settingsSaveFailed', { reason: e.message }));
+    } finally {
+      setQuotaSaving(false);
     }
   };
 
   const handleRunGdprPurge = () => {
     setPendingConfirm({
-      title: 'Run GDPR Retention Purge',
-      description: `Are you sure you want to run the GDPR retention purge now? All candidate PII & files older than ${gdprRetentionDays} days will be anonymized.`,
-      warningText: 'This action is irreversible.',
+      title: t('gdprPurgeTitle'),
+      description: t('gdprPurgeDesc', { days: String(gdprRetentionDays) }),
+      warningText: t('irreversibleAction'),
       confirmWord: 'PURGE',
       danger: true,
       onConfirm: async () => {
@@ -164,7 +181,7 @@ export const Settings: React.FC = () => {
           const res = await apiRequest('POST', '/api/gdpr/purge');
           alert(res.message);
         } catch (e: any) {
-          alert('GDPR purge failed: ' + e.message);
+          alert(t('purgeFailed', { reason: e.message }));
         } finally {
           setPurgeRunning(false);
         }
@@ -174,13 +191,13 @@ export const Settings: React.FC = () => {
 
   const handleRunAuditPurge = () => {
     if (auditLogRetentionDays < 90) {
-      alert('Audit log retention period cannot be set below the 90-day minimum floor.');
+      alert(t('auditMinimumError'));
       return;
     }
     setPendingConfirm({
-      title: 'Run Audit Log Retention Purge',
-      description: `Are you sure you want to run the audit log retention purge now? All audit entries older than ${auditLogRetentionDays} days will be permanently removed.`,
-      warningText: 'This action is irreversible.',
+      title: t('auditPurgeTitle'),
+      description: t('auditPurgeDesc', { days: String(auditLogRetentionDays) }),
+      warningText: t('irreversibleAction'),
       confirmWord: 'PURGE',
       danger: true,
       onConfirm: async () => {
@@ -192,7 +209,7 @@ export const Settings: React.FC = () => {
           setAuditPurgeResult(res.message || `Audit purge completed: deleted ${res.purgedCount} record(s).`);
           alert(res.message);
         } catch (e: any) {
-          alert('Audit log purge failed: ' + e.message);
+          alert(t('purgeFailed', { reason: e.message }));
         } finally {
           setAuditPurgeRunning(false);
         }
@@ -202,8 +219,8 @@ export const Settings: React.FC = () => {
 
   const handleResetTokenUsage = () => {
     setPendingConfirm({
-      title: 'Reset Token Counter',
-      description: 'Are you sure you want to reset the cumulative token counter to zero?',
+      title: t('resetTokenTitle'),
+      description: t('resetTokenDesc'),
       danger: false,
       onConfirm: async () => {
         setPendingConfirm(null);
@@ -232,7 +249,7 @@ export const Settings: React.FC = () => {
       setNewBaseUrl('');
       fetchSettingsData();
     } catch (e: any) {
-      alert('Failed adding provider: ' + e.message);
+      alert(t('addProviderFailed', { reason: e.message }));
     }
   };
 
@@ -241,7 +258,7 @@ export const Settings: React.FC = () => {
       await apiRequest('POST', `/api/ai-providers/${id}/activate`);
       fetchSettingsData();
     } catch (e: any) {
-      alert('Failed activating provider: ' + e.message);
+      alert(t('activateProviderFailed', { reason: e.message }));
     }
   };
 
@@ -272,7 +289,7 @@ export const Settings: React.FC = () => {
       setEditingProvider(null);
       fetchSettingsData();
     } catch (e: any) {
-      alert('Failed to save changes: ' + e.message);
+      alert(t('saveProviderFailed', { reason: e.message }));
     } finally {
       setEditSaving(false);
     }
@@ -280,8 +297,8 @@ export const Settings: React.FC = () => {
 
   const handleDeleteProvider = (id: number) => {
     setPendingConfirm({
-      title: 'Delete AI Provider',
-      description: 'Delete this AI provider configuration?',
+      title: t('deleteProviderTitle'),
+      description: t('deleteProviderDesc'),
       danger: true,
       onConfirm: async () => {
         setPendingConfirm(null);
@@ -289,7 +306,7 @@ export const Settings: React.FC = () => {
           await apiRequest('DELETE', `/api/ai-providers/${id}`);
           fetchSettingsData();
         } catch (e: any) {
-          alert('Failed to delete: ' + e.message);
+          alert(t('deleteProviderFailed', { reason: e.message }));
         }
       },
     });
@@ -297,7 +314,7 @@ export const Settings: React.FC = () => {
 
   const handleTestConnection = async (p: Provider) => {
     setTestingId(p.id);
-    setTestResult(prev => ({ ...prev, [p.id]: { success: false, message: 'Testing connection...' } }));
+    setTestResult(prev => ({ ...prev, [p.id]: { success: false, message: t('testingConnection') } }));
     
     try {
       const data = await apiRequest('POST', '/api/test-connection', {
@@ -309,12 +326,12 @@ export const Settings: React.FC = () => {
       
       setTestResult(prev => ({
         ...prev,
-        [p.id]: { success: data.success, message: data.message || 'Connection test successful' }
+        [p.id]: { success: data.success, message: data.message || t('connectionSuccess') }
       }));
     } catch (err: any) {
       setTestResult(prev => ({
         ...prev,
-        [p.id]: { success: false, message: err.message || 'Connection test failed' }
+        [p.id]: { success: false, message: err.message || t('connectionFailed') }
       }));
     } finally {
       setTestingId(null);
@@ -323,51 +340,41 @@ export const Settings: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'general' | 'audit' | 'rbac'>('general');
 
-  const tokenPercentage = Math.min(Math.round((tokensUsed / quota) * 100), 100);
+  const sectionHeading =
+    'text-[10.5px] font-bold uppercase tracking-[.14em] flex items-center gap-1.5 pb-2.5 text-brand border-b border-border-main/50';
+  const microLabel = 'block text-[10.5px] font-bold uppercase tracking-[.1em] mb-1.5 text-text-muted';
+
+  // Guard against a zero/unset budget producing NaN or Infinity in the meter.
+  const tokenPercentage = quota > 0 ? Math.min(Math.round((tokensUsed / quota) * 100), 100) : 0;
 
   if (error) {
     return <AccessDenied message={error} onRetry={fetchSettingsData} />;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Settings Sub-Navigation Tabs */}
-      <div className="flex border-b border-border-main/50 gap-2">
-        <button
-          onClick={() => setActiveTab('general')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
-            activeTab === 'general'
-              ? 'border-brand text-brand bg-brand/5 rounded-t-xl'
-              : 'border-transparent text-text-muted hover:text-text-main'
-          }`}
-        >
-          <SettingsIcon className="w-4 h-4" />
-          <span>General & AI Providers</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('rbac')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
-            activeTab === 'rbac'
-              ? 'border-brand text-brand bg-brand/5 rounded-t-xl'
-              : 'border-transparent text-text-muted hover:text-text-main'
-          }`}
-        >
-          <Shield className="w-4 h-4" />
-          <span>Role Capabilities (RBAC)</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('audit')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
-            activeTab === 'audit'
-              ? 'border-brand text-brand bg-brand/5 rounded-t-xl'
-              : 'border-transparent text-text-muted hover:text-text-main'
-          }`}
-        >
-          <ShieldCheck className="w-4 h-4" />
-          <span>Audit Trail Logs</span>
-        </button>
+      <div className="flex gap-2 flex-wrap" style={{ borderBottom: '1px solid var(--tk-border)' }}>
+        {([
+          { id: 'general' as const, label: t('tabGeneral'), Icon: SettingsIcon },
+          { id: 'rbac' as const, label: t('tabRbac'), Icon: Shield },
+          { id: 'audit' as const, label: t('tabAudit'), Icon: ShieldCheck }
+        ]).map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className="tk-focusable flex items-center gap-2 px-3 py-2 text-[11.5px] font-bold cursor-pointer"
+            style={{
+              borderBottom: `2px solid ${activeTab === id ? 'var(--tk-accent)' : 'transparent'}`,
+              color: activeTab === id ? 'var(--tk-accent-text)' : 'var(--tk-muted)',
+              background: activeTab === id ? 'var(--tk-accent-soft)' : 'transparent',
+              borderRadius: activeTab === id ? '9px 9px 0 0' : 0
+            }}
+          >
+            <Icon className="w-3.5 h-3.5" />
+            <span>{label}</span>
+          </button>
+        ))}
       </div>
 
       {activeTab === 'audit' ? (
@@ -375,80 +382,128 @@ export const Settings: React.FC = () => {
       ) : activeTab === 'rbac' ? (
         <RbacSettingsView />
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-4">
       {/* 1. Visual appearance (des-2.txt §4.1 / §10.1.1) */}
-      <div className="tk-panel space-y-6">
-        <h3 className="text-[11px] font-bold uppercase tracking-[.14em] flex items-center gap-1.5 border-b pb-3" style={{ color: 'var(--tk-accent-text)', borderColor: 'var(--tk-border)' }}>
-          <Palette className="w-4 h-4" />
-          Visual appearance
+      <div className="tk-panel space-y-4">
+        <h3 className={sectionHeading}>
+          <Palette className="w-3.5 h-3.5" />
+          {t('visualAppearance')}
         </h3>
         <AppearancePanel themeMode={themeMode} accent={accent} onThemeChange={setThemeMode} onAccentChange={setAccent} />
       </div>
 
       {/* 2. Token Consumption Meter */}
-      <div className="tk-panel space-y-4">
-        <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider flex items-center gap-1.5 border-b border-border-main/50 pb-3">
-          <TrendingUp className="w-4 h-4 text-brand" />
+      <div className="tk-panel space-y-3">
+        <h3 className={sectionHeading}>
+          <TrendingUp className="w-3.5 h-3.5" />
           {t('tokenUsageTitle')}
         </h3>
 
-        <div className="space-y-3">
-          <div className="flex justify-between items-center text-xs font-bold">
-            <span className="text-text-muted">Monthly Token Consumption</span>
-            <span className="text-text-main">{tokensUsed.toLocaleString()} / {quota.toLocaleString()} Tokens ({tokenPercentage}%)</span>
+        <div className="space-y-2.5">
+          <div className="flex justify-between items-center gap-3 flex-wrap text-[11.5px] font-semibold">
+            <span style={{ color: 'var(--tk-muted)' }}>{t('monthlyConsumption')}</span>
+            <span style={{ color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>
+              {t('tokenCounterOf', {
+                used: tokensUsed.toLocaleString(),
+                quota: quota.toLocaleString(),
+                percent: String(tokenPercentage)
+              })}
+            </span>
           </div>
 
           {/* Progress Bar */}
-          <div className="w-full bg-bg-hover h-3 rounded-full overflow-hidden">
-            <div 
-              className={`h-full rounded-full transition-all duration-500 ${
-                tokenPercentage > 85 ? 'bg-red-500' : tokenPercentage > 60 ? 'bg-amber-500' : 'bg-brand'
-              }`}
-              style={{ width: `${tokenPercentage}%` }}
-            ></div>
+          <div className="tk-progress-track" style={{ height: 8 }}>
+            <div
+              className="tk-progress-fill"
+              style={{
+                width: `${tokenPercentage}%`,
+                ...(tokenPercentage > 85
+                  ? { background: '#ef4444' }
+                  : tokenPercentage > 60
+                    ? { background: '#f59e0b' }
+                    : {})
+              }}
+            />
           </div>
 
-          <div className="flex justify-between items-center pt-2">
-            <p className="text-[10px] text-text-muted font-medium">Reset this counter at the start of each billing month cycle.</p>
+          {/* Editable budget — sits next to the meter it drives. */}
+          <div className="flex items-end gap-2 flex-wrap pt-1">
+            <div style={{ minWidth: 180 }}>
+              <label className={microLabel}>{t('tokenQuota')}</label>
+              <input
+                type="number"
+                min={0}
+                value={quota}
+                onChange={(e) => setQuota(parseInt(e.target.value) || 0)}
+                className="tk-field tk-focusable"
+                style={{ fontVariantNumeric: 'tabular-nums' }}
+              />
+            </div>
             <button
+              type="button"
+              onClick={handleSaveQuota}
+              disabled={quotaSaving}
+              className="tk-btn-primary tk-focusable"
+              style={{ opacity: quotaSaving ? 0.6 : 1 }}
+            >
+              {quotaSaving ? t('saving') : t('saveQuota')}
+            </button>
+            <button
+              type="button"
               onClick={handleResetTokenUsage}
-              className="flex items-center gap-1 text-xs text-brand hover:underline font-bold"
+              className="tk-btn-neutral tk-focusable"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>{t('resetUsage')}</span>
             </button>
           </div>
+          <p className="text-[11px]" style={{ color: 'var(--tk-dim)' }}>{t('resetUsageHint')}</p>
+
+          {/* What the counter actually measures, and what it does not. */}
+          <div style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
+            <p className="text-[10.5px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5 mb-1" style={{ color: 'var(--tk-accent-text)' }}>
+              <AlertTriangle className="w-3.5 h-3.5" />
+              {t('tokenHelpTitle')}
+            </p>
+            <p className="text-[11px] leading-relaxed" style={{ color: 'var(--tk-muted)' }}>
+              {t('tokenHelpBody')}
+            </p>
+          </div>
         </div>
       </div>
 
       {/* 3. AI Providers List */}
-      <div className="tk-panel space-y-6">
-        <div className="flex justify-between items-center border-b border-border-main/50 pb-3">
-          <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
-            <Database className="w-4 h-4 text-brand" />
+      <div className="tk-panel space-y-4">
+        <div className="flex justify-between items-center gap-3 flex-wrap pb-2.5" style={{ borderBottom: '1px solid var(--tk-border)' }}>
+          <h3 className="text-[10.5px] font-bold uppercase tracking-[.14em] flex items-center gap-1.5 text-brand">
+            <Database className="w-3.5 h-3.5" />
             {t('aiProvidersList')}
           </h3>
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="tk-btn-primary tk-focusable flex items-center gap-1.5 text-xs transition-colors cursor-pointer"
+            className="tk-btn-primary tk-focusable"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Add Provider</span>
+            <span>{t('addProvider')}</span>
           </button>
         </div>
 
         {/* Active Model Health Warning Banner (Requirement 6) */}
-        {healthWarning && (
-          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-2.5 text-xs text-amber-500 font-bold">
+        {health && (
+          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-2.5 text-[11.5px] text-amber-500 font-bold">
             <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>{healthWarning}</span>
+            <span>
+              {health.code
+                ? t(`health_${health.code}` as any, { model: health.model || '', provider: health.provider || '' })
+                : health.text}
+            </span>
           </div>
         )}
 
         {/* Add Provider Form */}
         {showAddForm && (
-          <form onSubmit={handleAddProvider} className="p-4 bg-bg-main/60 border border-border-main/50 rounded-xl space-y-4">
-            <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider">Configure New Service Provider</h4>
+          <form onSubmit={handleAddProvider} className="space-y-3" style={{ padding: 13, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
+            <h4 className={microLabel}>{t('configureNewProvider')}</h4>
             
             <ProviderModelFields
               selectedProvider={newProvName}
@@ -458,89 +513,84 @@ export const Settings: React.FC = () => {
               onChangeModel={setNewModelName}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-text-muted mb-1">{t('apiKey')}</label>
+                <label className={microLabel}>{t('apiKey')}</label>
                 <input
                   type="password"
                   required
                   value={newApiKey}
                   onChange={(e) => setNewApiKey(e.target.value)}
-                  placeholder="Enter API Secret Key"
-                  className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-card text-text-main focus:outline-none focus:border-brand text-sm"
+                  placeholder={t('apiKeyPlaceholder')}
+                  className="tk-field tk-focusable"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text-muted mb-1">{t('baseUrl')}</label>
+                <label className={microLabel}>{t('baseUrl')}</label>
                 <input
                   type="text"
                   value={newBaseUrl}
                   onChange={(e) => setNewBaseUrl(e.target.value)}
-                  placeholder="https://api.openai.com/v1"
-                  className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-card text-text-main focus:outline-none focus:border-brand text-sm"
+                  placeholder="https://…"
+                  className="tk-field tk-focusable"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => setShowAddForm(false)}
-                className="px-4 py-2 border border-border-main rounded-lg text-xs font-bold text-text-muted hover:text-text-main"
+                className="tk-btn-neutral tk-focusable"
               >
                 {t('cancel')}
               </button>
-              <button
-                type="submit"
-                className="px-5 py-2 bg-brand text-white rounded-lg font-bold text-xs shadow-md shadow-brand/10 transition-colors cursor-pointer"
-              >
-                Save Provider
+              <button type="submit" className="tk-btn-primary tk-focusable">
+                {t('saveProvider')}
               </button>
             </div>
           </form>
         )}
 
         {/* Providers Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="tk-table-scroll">
+          <table className="tk-table">
             <thead>
-              <tr className="bg-bg-hover/30 border-b border-border-main/50 font-bold text-text-muted uppercase">
-                <th className="p-3">Provider Name</th>
-                <th className="p-3">Model</th>
-                <th className="p-3">API Key</th>
-                <th className="p-3 text-center">Status</th>
-                <th className="p-3 text-center">Actions</th>
+              <tr>
+                <th>{t('providerName')}</th>
+                <th>{t('modelName')}</th>
+                <th>{t('apiKey')}</th>
+                <th style={{ textAlign: 'center' }}>{t('status')}</th>
+                <th style={{ textAlign: 'center' }}>{t('actions')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border-main/40 text-text-main font-medium">
+            <tbody>
               {providers.map(p => (
                 <React.Fragment key={p.id}>
-                  <tr className={`transition-colors ${
-                    editingProvider?.id === p.id
-                      ? 'bg-brand/5 border-l-2 border-brand'
-                      : 'hover:bg-bg-hover/10'
-                  }`}>
-                    <td className="p-3 font-semibold">{p.providerName}</td>
-                    <td className="p-3 text-text-muted">{p.modelName}</td>
-                    <td className="p-3 text-text-muted font-mono">{p.apiKey || <span className="text-text-muted/40 italic text-[10px]">not set</span>}</td>
-                    
-                    <td className="p-3 text-center">
+                  <tr style={{ background: editingProvider?.id === p.id ? 'var(--tk-accent-soft)' : 'transparent' }}>
+                    <td className="font-semibold" style={{ color: 'var(--tk-text)' }}>{p.providerName}</td>
+                    <td style={{ color: 'var(--tk-muted)' }} dir="ltr">{p.modelName}</td>
+                    <td className="font-mono" style={{ color: 'var(--tk-muted)' }} dir="ltr">
+                      {p.apiKey || <span className="italic text-[10px]" style={{ color: 'var(--tk-dim)' }}>{t('apiKeyNotSet')}</span>}
+                    </td>
+
+                    <td style={{ textAlign: 'center' }}>
                       {p.isActive === 1 ? (
-                        <span className="bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full border border-green-500/20 font-bold">
+                        <span className="bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full border border-green-500/20 font-bold text-[10.5px]">
                           {t('active')}
                         </span>
                       ) : (
                         <button
                           onClick={() => handleActivateProvider(p.id)}
-                          className="text-xs text-brand hover:underline font-bold cursor-pointer"
+                          className="text-[11.5px] text-brand hover:underline font-bold cursor-pointer"
                         >
-                          Activate
+                          {t('activate')}
                         </button>
                       )}
                     </td>
 
-                    <td className="p-3">
+                    <td>
                       <div className="flex items-center justify-center gap-2">
                         {/* Edit button */}
                         <button
@@ -552,7 +602,7 @@ export const Settings: React.FC = () => {
                               ? 'bg-brand/10 border-brand/30 text-brand'
                               : 'bg-bg-hover border-border-main text-text-muted hover:text-brand'
                           }`}
-                          title={editingProvider?.id === p.id ? 'Cancel edit' : 'Edit provider'}
+                          title={editingProvider?.id === p.id ? t('cancelEdit') : t('editProvider')}
                         >
                           {editingProvider?.id === p.id
                             ? <X className="w-3.5 h-3.5" />
@@ -571,7 +621,7 @@ export const Settings: React.FC = () => {
                           <button
                             onClick={() => handleDeleteProvider(p.id)}
                             className="p-1.5 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors cursor-pointer"
-                            title="Delete Provider"
+                            title={t('deleteProvider')}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -590,12 +640,12 @@ export const Settings: React.FC = () => {
 
                   {/* Inline Edit Form Row */}
                   {editingProvider?.id === p.id && (
-                    <tr className="bg-brand/5">
-                      <td colSpan={5} className="px-4 pb-4 pt-2">
+                    <tr style={{ background: 'var(--tk-accent-soft)' }}>
+                      <td colSpan={5} style={{ padding: '4px 10px 14px' }}>
                         <form onSubmit={handleSaveEdit} className="space-y-3">
                           <p className="text-[10px] font-bold text-brand uppercase tracking-wider flex items-center gap-1">
                             <Pencil className="w-3 h-3" />
-                            Editing: {p.providerName}
+                            {t('editingProvider', { name: p.providerName })}
                           </p>
                           
                           <ProviderModelFields
@@ -609,22 +659,22 @@ export const Settings: React.FC = () => {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">
-                                New API Key <span className="text-text-muted/50 normal-case font-medium">(leave empty to keep current)</span>
+                              <label className={microLabel}>
+                                {t('newApiKey')} <span className="normal-case font-medium" style={{ color: 'var(--tk-dim)' }}>{t('newApiKeyHint')}</span>
                               </label>
                               <input
                                 type="password"
-                                placeholder="Enter new key to replace..."
+                                placeholder={t('newApiKeyPlaceholder')}
                                 value={editApiKey}
                                 onChange={e => setEditApiKey(e.target.value)}
                                 className="tk-field tk-focusable"
                               />
                             </div>
                             <div>
-                              <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">Server URL (Optional)</label>
+                              <label className={microLabel}>{t('baseUrl')}</label>
                               <input
                                 type="url"
-                                placeholder="https://..."
+                                placeholder="https://…"
                                 value={editBaseUrl}
                                 onChange={e => setEditBaseUrl(e.target.value)}
                                 className="tk-field tk-focusable"
@@ -635,17 +685,17 @@ export const Settings: React.FC = () => {
                             <button
                               type="button"
                               onClick={handleCancelEdit}
-                              className="px-3 py-1.5 border border-border-main rounded-lg text-xs font-bold text-text-muted hover:text-text-main cursor-pointer"
+                              className="tk-btn-neutral tk-focusable"
                             >
-                              Cancel
+                              {t('cancel')}
                             </button>
                             <button
                               type="submit"
                               disabled={editSaving}
-                              className="tk-btn-primary tk-focusable flex items-center gap-1.5 text-xs transition-colors cursor-pointer disabled:opacity-60"
+                              className="tk-btn-primary tk-focusable disabled:opacity-60"
                             >
                               <Check className="w-3.5 h-3.5" />
-                              {editSaving ? 'Saving...' : 'Save Changes'}
+                              {editSaving ? t('saving') : t('saveChanges')}
                             </button>
                           </div>
                         </form>
@@ -660,83 +710,70 @@ export const Settings: React.FC = () => {
       </div>
 
       {/* 4. Outreach Message Templates */}
-      <form onSubmit={handleSaveGeneralSettings} className="tk-panel space-y-6">
-        <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider flex items-center gap-1.5 border-b border-border-main/50 pb-3">
-          <Mail className="w-4 h-4 text-brand" />
+      <form onSubmit={handleSaveGeneralSettings} className="tk-panel space-y-4">
+        <h3 className={sectionHeading}>
+          <Mail className="w-3.5 h-3.5" />
           {t('messageTemplates')}
         </h3>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">{t('tokenQuota')}</label>
-              <input
-                type="number"
-                required
-                value={quota}
-                onChange={(e) => setQuota(parseInt(e.target.value) || 0)}
-                className="tk-field tk-focusable"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">{t('emailSubject')}</label>
-              <input
-                type="text"
-                required
-                value={emailSubject}
-                onChange={(e) => setEmailSubject(e.target.value)}
-                className="tk-field tk-focusable"
-              />
-            </div>
+        <div className="space-y-3">
+          <div>
+            <label className={microLabel}>{t('emailSubject')}</label>
+            <input
+              type="text"
+              required
+              value={emailSubject}
+              onChange={(e) => setEmailSubject(e.target.value)}
+              className="tk-field tk-focusable"
+            />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">{t('emailBody')}</label>
+            <label className={microLabel}>{t('emailBody')}</label>
             <textarea
               required
               rows={4}
               value={emailBody}
               onChange={(e) => setEmailBody(e.target.value)}
               className="tk-field tk-focusable"
+              style={{ height: 'auto', paddingBlock: 9, lineHeight: 1.7, resize: 'vertical' }}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">{t('whatsappText')}</label>
+            <label className={microLabel}>{t('whatsappText')}</label>
             <textarea
               required
               rows={2}
               value={whatsappMessage}
               onChange={(e) => setWhatsappMessage(e.target.value)}
               className="tk-field tk-focusable"
+              style={{ height: 'auto', paddingBlock: 9, lineHeight: 1.7, resize: 'vertical' }}
             />
           </div>
 
           {/* Placeholders Help Notice */}
-          <div className="bg-bg-hover border border-border-main/50 p-4 rounded-xl space-y-1">
-            <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-brand" />
-              Supported Placeholder Tags
+          <div className="space-y-1" style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
+            <span className="text-[10px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-accent-text)' }}>
+              <AlertTriangle className="w-3.5 h-3.5" />
+              {t('placeholderTagsTitle')}
             </span>
-            <p className="text-[11px] text-text-muted leading-relaxed">
-              Use these placeholdertags to substitute per-candidate data: 
-              <span className="font-mono text-brand font-bold mx-1">{"{name}"}</span>, 
-              <span className="font-mono text-brand font-bold mx-1">{"{job}"}</span>, 
-              <span className="font-mono text-brand font-bold mx-1">{"{score}"}</span>, 
-              <span className="font-mono text-brand font-bold mx-1">{"{status}"}</span>, 
-              <span className="font-mono text-brand font-bold mx-1">{"{degree}"}</span>, 
-              <span className="font-mono text-brand font-bold mx-1">{"{experience}"}</span>.
+            <p className="text-[11px] leading-relaxed" style={{ color: 'var(--tk-muted)' }}>
+              {t('placeholderTagsBody')}
+              <span dir="ltr" className="font-mono text-brand font-bold mx-1">
+                {"{name}"} {"{job}"} {"{score}"} {"{status}"} {"{degree}"} {"{experience}"}
+              </span>
             </p>
           </div>
           {/* GDPR Data Retention Policy Card (Phase 4.5) */}
-          <div className="p-4 bg-bg-main/50 border border-border-main/60 rounded-xl space-y-3">
-            <div className="flex justify-between items-center">
-              <div>
-                <span className="text-xs font-bold text-text-main uppercase tracking-wider block">
-                  GDPR Candidate Data Retention Period (Days)
+          <div className="space-y-2.5" style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
+            <div className="flex justify-between items-start gap-3 flex-wrap">
+              <div style={{ minWidth: 0, flex: '1 1 240px' }}>
+                <span className="text-[11.5px] font-semibold block" style={{ color: 'var(--tk-text)' }}>
+                  {t('gdprRetentionTitle')}
                 </span>
-                <span className="text-[11px] text-text-muted">
-                  Candidates older than this threshold will have their raw CV files and PII contact data automatically purged.
+                <span className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>
+                  {t('gdprRetentionHint')}
                 </span>
               </div>
 
@@ -744,13 +781,14 @@ export const Settings: React.FC = () => {
                 type="button"
                 onClick={handleRunGdprPurge}
                 disabled={purgeRunning}
-                className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                className="tk-focusable shrink-0 disabled:opacity-50"
+                style={{ height: 30, borderRadius: 9, paddingInline: 11, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: 'rgba(239,68,68,.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,.2)' }}
               >
-                {purgeRunning ? 'Purging...' : 'Run Purge Now'}
+                {purgeRunning ? t('purging') : t('runPurgeNow')}
               </button>
             </div>
 
-            <div className="max-w-xs">
+            <div style={{ maxWidth: 200 }}>
               <input
                 type="number"
                 min={1}
@@ -758,20 +796,21 @@ export const Settings: React.FC = () => {
                 required
                 value={gdprRetentionDays}
                 onChange={(e) => setGdprRetentionDays(parseInt(e.target.value) || 90)}
-                className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-card text-text-main font-bold focus:outline-none focus:border-brand text-xs"
+                className="tk-field tk-focusable"
+                style={{ fontVariantNumeric: 'tabular-nums' }}
               />
             </div>
           </div>
 
           {/* Security Audit Log Retention Policy Card (Requirements 1 & 2) */}
-          <div className="p-4 bg-bg-main/50 border border-border-main/60 rounded-xl space-y-3">
-            <div className="flex justify-between items-center">
-              <div>
-                <span className="text-xs font-bold text-text-main uppercase tracking-wider block">
-                  Audit Log Retention Period (Days)
+          <div className="space-y-2.5" style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
+            <div className="flex justify-between items-start gap-3 flex-wrap">
+              <div style={{ minWidth: 0, flex: '1 1 240px' }}>
+                <span className="text-[11.5px] font-semibold block" style={{ color: 'var(--tk-text)' }}>
+                  {t('auditRetentionTitle')}
                 </span>
-                <span className="text-[11px] text-text-muted">
-                  Security audit trail records older than this threshold will be automatically purged. (Minimum floor: 90 days).
+                <span className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>
+                  {t('auditRetentionHint')}
                 </span>
               </div>
 
@@ -779,13 +818,14 @@ export const Settings: React.FC = () => {
                 type="button"
                 onClick={handleRunAuditPurge}
                 disabled={auditPurgeRunning}
-                className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                className="tk-focusable shrink-0 disabled:opacity-50"
+                style={{ height: 30, borderRadius: 9, paddingInline: 11, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: 'rgba(245,158,11,.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,.2)' }}
               >
-                {auditPurgeRunning ? 'Purging...' : 'Run Audit Purge Now'}
+                {auditPurgeRunning ? t('purging') : t('runAuditPurgeNow')}
               </button>
             </div>
 
-            <div className="max-w-xs space-y-1">
+            <div style={{ maxWidth: 200 }}>
               <input
                 type="number"
                 min={90}
@@ -793,20 +833,18 @@ export const Settings: React.FC = () => {
                 required
                 value={auditLogRetentionDays}
                 onChange={(e) => setAuditLogRetentionDays(parseInt(e.target.value) || 90)}
-                className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-card text-text-main font-bold focus:outline-none focus:border-brand text-xs"
+                className="tk-field tk-focusable"
+                style={{ fontVariantNumeric: 'tabular-nums' }}
               />
             </div>
             {auditPurgeResult && (
-              <p className="text-xs font-bold text-emerald-500">{auditPurgeResult}</p>
+              <p className="text-[11.5px] font-semibold text-emerald-500">{auditPurgeResult}</p>
             )}
           </div>
         </div>
 
-        <div className="flex justify-end pt-4 border-t border-border-main/50">
-          <button
-            type="submit"
-            className="tk-btn-primary tk-focusable text-xs transition-all cursor-pointer"
-          >
+        <div className="flex justify-end pt-3" style={{ borderTop: '1px solid var(--tk-border)' }}>
+          <button type="submit" className="tk-btn-primary tk-focusable">
             {t('saveSettings')}
           </button>
         </div>

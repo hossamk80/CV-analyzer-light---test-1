@@ -5,7 +5,7 @@ import { useRole } from '../context/RoleContext.js';
 import { apiRequest } from '../utils/api.js';
 import { hasPermission } from '../utils/rbac.js';
 import LaserUploadZone from '../components/LaserUploadZone.js';
-import { UploadCloud } from 'lucide-react';
+import { UploadCloud, CheckCircle2, ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface Job {
   id: number;
@@ -29,7 +29,7 @@ interface UploadFileState {
 }
 
 export const Upload: React.FC = () => {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
   const navigate = useNavigate();
   const { role, capabilities, gdprActive, toggleGdpr } = useRole();
   const canToggleGdpr = !!role && hasPermission(role, 'toggle_gdpr', capabilities);
@@ -140,7 +140,7 @@ export const Upload: React.FC = () => {
           const data = await response.json();
 
           if (!response.ok) {
-            throw new Error(data.error || 'Server error uploading file');
+            throw new Error(data.error || t('uploadFailed'));
           }
 
           const fileResult = data.results[0];
@@ -157,12 +157,12 @@ export const Upload: React.FC = () => {
           } else if (fileResult?.success) {
             setFiles(prev => prev.map(f => f.id === item.id ? { ...f, status: 'success', progress: 100 } : f));
           } else {
-            throw new Error(fileResult ? fileResult.error : 'AI processing failed');
+            throw new Error(fileResult ? fileResult.error : t('uploadFailed'));
           }
 
         } catch (err: any) {
           clearInterval(progressTimer);
-          setFiles(prev => prev.map(f => f.id === item.id ? { ...f, status: 'error', error: err.message || 'AI Parsing Failed' } : f));
+          setFiles(prev => prev.map(f => f.id === item.id ? { ...f, status: 'error', error: err.message || t('uploadFailed') } : f));
         }
       }
     };
@@ -179,22 +179,29 @@ export const Upload: React.FC = () => {
   const selectedJob = jobs.find(j => String(j.id) === selectedJobId);
   const jobIsPaused = selectedJob?.status === 'Paused';
 
+  // Once every queued file has settled and at least one was actually analyzed,
+  // the user needs an obvious way out of this screen — previously the flow just
+  // ended here with no route to the ranked results.
+  const analyzedCount = files.filter(f => f.status === 'success').length;
+  const settled = files.length > 0 && files.every(f => f.status === 'success' || f.status === 'error' || f.status === 'skipped');
+  const showResultsCta = settled && analyzedCount > 0;
+  const ForwardArrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
+
   if (loadingJobs) {
-    return <div className="text-center py-16" style={{ color: 'var(--tk-muted)' }}>Loading target jobs list…</div>;
+    return <div className="text-center py-16 text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>{t('loadingJobsList')}</div>;
   }
 
   if (jobs.length === 0) {
     return (
-      <div className="tk-panel text-center" style={{ padding: 40 }}>
-        <UploadCloud className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--tk-dim)' }} />
-        <p className="text-sm font-medium" style={{ color: 'var(--tk-text)' }}>
-          You must define a job position before uploading candidate CVs.
+      <div className="tk-panel text-center" style={{ padding: 32 }}>
+        <UploadCloud className="w-9 h-9 mx-auto mb-3" style={{ color: 'var(--tk-dim)' }} />
+        <p className="text-[13px] font-medium" style={{ color: 'var(--tk-text)' }}>
+          {t('needJobFirst')}
         </p>
         <button
           type="button"
           onClick={() => navigate('/jobs')}
           className="tk-btn-primary tk-focusable mt-4 mx-auto"
-          style={{ height: 36, padding: '0 16px', fontSize: 12.5 }}
         >
           {t('createJob')}
         </button>
@@ -203,7 +210,38 @@ export const Upload: React.FC = () => {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 14, alignItems: 'start' }}>
+    <div style={{ display: 'grid', gap: 10 }}>
+      {/* Completion banner — the exit route to the leaderboard. */}
+      {showResultsCta && (
+        <div
+          className="flex flex-wrap items-center justify-between gap-3"
+          style={{
+            padding: '11px 14px', borderRadius: 12,
+            background: 'var(--tk-accent-soft)', border: '1px solid var(--tk-accent-line)'
+          }}
+        >
+          <div className="flex items-center gap-2.5" style={{ minWidth: 0 }}>
+            <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: 'var(--tk-accent-text)' }} />
+            <div style={{ minWidth: 0 }}>
+              <p className="text-[12.5px] font-medium" style={{ color: 'var(--tk-text)' }}>
+                {t('uploadCompleteTitle', { count: String(analyzedCount) })}
+              </p>
+              <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>{t('uploadCompleteHint')}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate(`/results?job=${selectedJobId}`)}
+            className="tk-btn-primary tk-focusable shrink-0"
+            style={{ background: 'var(--tk-accent)', color: 'var(--tk-on-accent)', borderColor: 'transparent' }}
+          >
+            <span>{t('continueToResults')}</span>
+            <ForwardArrow className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 10, alignItems: 'start' }}>
       {/* Left column — drop zone + processing queue */}
       <LaserUploadZone
         files={files}
@@ -213,11 +251,11 @@ export const Upload: React.FC = () => {
       />
 
       {/* Right column — screening setup */}
-      <div className="tk-panel" style={{ display: 'grid', gap: 16 }}>
-        <h3 className="text-[15px] font-medium" style={{ color: 'var(--tk-text)' }}>Screening setup</h3>
+      <div className="tk-panel" style={{ display: 'grid', gap: 13 }}>
+        <h3 className="text-[14px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('screeningSetup')}</h3>
 
         <div>
-          <label className="block text-[11px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: 'var(--tk-muted)' }}>
+          <label className="block text-[10.5px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: 'var(--tk-muted)' }}>
             {t('selectJob')}
           </label>
           <select
@@ -228,13 +266,13 @@ export const Upload: React.FC = () => {
           >
             {jobs.map(j => (
               <option key={j.id} value={j.id} disabled={j.status === 'Paused'}>
-                {j.title} ({j.department}){j.status === 'Paused' ? ' — PAUSED' : ''}
+                {j.title} ({j.department}){j.status === 'Paused' ? ` — ${t('jobPausedSuffix')}` : ''}
               </option>
             ))}
           </select>
           {jobIsPaused && (
             <p className="text-[11px] mt-1.5" style={{ color: '#f5b301' }}>
-              This position is paused — uploads are rejected until it is reactivated.
+              {t('jobPausedNotice')}
             </p>
           )}
         </div>
@@ -245,12 +283,12 @@ export const Upload: React.FC = () => {
           <div className="flex items-center justify-between gap-2 mb-2">
             <label
               htmlFor="match-threshold"
-              className="text-[11px] font-bold uppercase tracking-[.1em]"
+              className="text-[10.5px] font-bold uppercase tracking-[.1em]"
               style={{ color: 'var(--tk-muted)' }}
             >
-              Match threshold
+              {t('matchThreshold')}
             </label>
-            <span className="text-[12.5px]" style={{ color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>
+            <span className="text-[12px]" style={{ color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>
               {matchThreshold}%
             </span>
           </div>
@@ -268,7 +306,7 @@ export const Upload: React.FC = () => {
             style={{ cursor: canChangeScreening ? 'pointer' : 'not-allowed', opacity: canChangeScreening ? 1 : 0.5 }}
           />
           <p className="text-[11px] mt-1.5" style={{ color: 'var(--tk-muted)' }}>
-            CVs scoring at or above this count as a strong match.
+            {t('matchThresholdHint')}
           </p>
         </div>
 
@@ -276,19 +314,19 @@ export const Upload: React.FC = () => {
             immediately), so it is shown as a locked-on state rather than a toggle that lies. */}
         <div className="flex items-start justify-between gap-3">
           <div style={{ minWidth: 0 }}>
-            <p className="text-[12.5px] font-medium" style={{ color: 'var(--tk-text)' }}>Auto-screen on upload</p>
-            <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>Score each CV as soon as it lands</p>
+            <p className="text-[12px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('autoScreenTitle')}</p>
+            <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>{t('autoScreenHint')}</p>
           </div>
-          <span className="tk-switch is-on" role="img" aria-label="Always on" title="Always on — analysis runs as soon as a CV is uploaded">
+          <span className="tk-switch is-on" role="img" aria-label={t('alwaysOn')} title={t('alwaysOnHint')}>
             <span className="tk-switch-knob" />
           </span>
         </div>
 
-        {/* Bound to the header GDPR toggle, per des-2.txt §7.3. */}
+        {/* Bound to the header anonymization toggle. */}
         <div className="flex items-start justify-between gap-3">
           <div style={{ minWidth: 0 }}>
-            <p className="text-[12.5px] font-medium" style={{ color: 'var(--tk-text)' }}>Anonymize personal data</p>
-            <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>Hide names, photos and contacts</p>
+            <p className="text-[12px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('anonymizeTitle')}</p>
+            <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>{t('anonymizeHint')}</p>
           </div>
           <button
             type="button"
@@ -296,7 +334,7 @@ export const Upload: React.FC = () => {
             disabled={!canToggleGdpr}
             role="switch"
             aria-checked={gdprActive}
-            aria-label="Anonymize personal data"
+            aria-label={t('anonymizeTitle')}
             className={`tk-switch tk-focusable ${gdprActive ? 'is-on' : ''}`}
             style={{ opacity: canToggleGdpr ? 1 : 0.5, cursor: canToggleGdpr ? 'pointer' : 'not-allowed' }}
           >
@@ -307,9 +345,9 @@ export const Upload: React.FC = () => {
         {/* Raises a real in-app notification (header bell) when a CV lands at/above the threshold. */}
         <div className="flex items-start justify-between gap-3">
           <div style={{ minWidth: 0 }}>
-            <p className="text-[12.5px] font-medium" style={{ color: 'var(--tk-text)' }}>Notify on strong match</p>
+            <p className="text-[12px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('notifyStrongTitle')}</p>
             <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>
-              Raise a notification when a CV reaches {matchThreshold}%
+              {t('notifyStrongHint', { threshold: String(matchThreshold) })}
             </p>
           </div>
           <button
@@ -323,7 +361,7 @@ export const Upload: React.FC = () => {
             disabled={!canChangeScreening}
             role="switch"
             aria-checked={notifyOnHighMatch}
-            aria-label="Notify on strong match"
+            aria-label={t('notifyStrongTitle')}
             className={`tk-switch tk-focusable ${notifyOnHighMatch ? 'is-on' : ''}`}
             style={{ opacity: canChangeScreening ? 1 : 0.5, cursor: canChangeScreening ? 'pointer' : 'not-allowed' }}
           >
@@ -331,12 +369,12 @@ export const Upload: React.FC = () => {
           </button>
         </div>
 
-        <div style={{ borderTop: '1px solid var(--tk-border)', paddingTop: 14 }}>
+        <div style={{ borderTop: '1px solid var(--tk-border)', paddingTop: 12 }}>
           <p className="text-[11px] leading-relaxed" style={{ color: 'var(--tk-dim)' }}>
-            Files are analyzed in parallel (3 at a time) against the selected position's ATS checklist
-            using the active AI provider.
+            {t('uploadFooterNote')}
           </p>
         </div>
+      </div>
       </div>
     </div>
   );

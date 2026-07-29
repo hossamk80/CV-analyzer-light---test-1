@@ -155,7 +155,7 @@ export const CandidateDetail: React.FC = () => {
       });
       setNotifyResult(res);
     } catch (err: any) {
-      setNotifyResult({ success: false, error: err.message || 'Notification dispatch failed' });
+      setNotifyResult({ success: false, error: err.message || t('notifyFailed') });
     } finally {
       setNotifySending(false);
     }
@@ -166,7 +166,7 @@ export const CandidateDetail: React.FC = () => {
   const [schedDate, setSchedDate] = useState(new Date().toISOString().split('T')[0]);
   const [schedStart, setSchedStart] = useState('10:00');
   const [schedEnd, setSchedEnd] = useState('11:00');
-  const [schedLocation, setSchedLocation] = useState('Online Google Meet / Office');
+  const [schedLocation, setSchedLocation] = useState('');
   const [schedNotes, setSchedNotes] = useState('');
   const [schedLoading, setSchedLoading] = useState(false);
   const [schedResult, setSchedResult] = useState<any | null>(null);
@@ -188,7 +188,7 @@ export const CandidateDetail: React.FC = () => {
       // Phase 2: Explicit confirmation step — do NOT auto-trigger browser download here.
       // User must click explicit "Download .ics File" button in event preview.
     } catch (err: any) {
-      setSchedResult({ success: false, error: err.message || 'Failed to schedule interview' });
+      setSchedResult({ success: false, error: err.message || t('scheduleFailed') });
     } finally {
       setSchedLoading(false);
     }
@@ -211,13 +211,13 @@ export const CandidateDetail: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="py-20 text-center text-text-muted">Loading AI detailed analysis...</div>;
+    return <div className="py-16 text-center text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>{t('loadingCandidateReport')}</div>;
   }
 
   if (!candidate) {
     return (
-      <div className="py-12 text-center text-text-muted">
-        Candidate detailed record not found.
+      <div className="py-12 text-center text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>
+        {t('candidateNotFound')}
       </div>
     );
   }
@@ -237,8 +237,8 @@ export const CandidateDetail: React.FC = () => {
           onClick={() => navigate(-1)}
           className="tk-focusable flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'var(--tk-accent-text)', background: 'transparent', border: 'none', cursor: 'pointer' }}
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Go Back</span>
+          <ArrowLeft className="w-4 h-4 rtl:scale-x-[-1]" />
+          <span>{t('goBack')}</span>
         </button>
 
         <div className="flex items-center gap-2">
@@ -247,15 +247,15 @@ export const CandidateDetail: React.FC = () => {
             className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20 rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
           >
             <Calendar className="w-4 h-4 text-emerald-500" />
-            <span>Schedule Interview</span>
+            <span>{t('scheduleInterview')}</span>
           </button>
 
           <button
             onClick={() => { setShowNotifyModal(true); setNotifyResult(null); }}
             className="tk-btn-neutral tk-focusable" style={{ height: 36, padding: '0 16px', fontSize: 12 }}
           >
-            <Send className="w-4 h-4 text-brand" />
-            <span>Send Notification</span>
+            <Send className="w-4 h-4" />
+            <span>{t('sendNotification')}</span>
           </button>
 
           <button
@@ -273,8 +273,8 @@ export const CandidateDetail: React.FC = () => {
         <div className="space-y-2">
           {/* Target Job Badge - Positioned clearly at top */}
           <div className="tk-pill is-active">
-            <span className="text-text-muted font-medium">الوظيفة المستهدفة للتحليل:</span>
-            <span className="font-extrabold">{job?.title || 'Target Job Position'}</span>
+            <span style={{ opacity: .8 }}>{t('targetJobLabel')}</span>
+            <span className="font-extrabold"><Bidi>{job?.title || t('targetJobFallback')}</Bidi></span>
           </div>
 
           <div className="flex items-center gap-4 pt-1">
@@ -293,33 +293,33 @@ export const CandidateDetail: React.FC = () => {
           {activeCand.nationality && (
             <div className="flex items-center gap-2 text-brand font-bold">
               <Globe className="w-4 h-4 text-brand shrink-0" />
-              <span>الجنسية: {activeCand.nationality}</span>
+              <span>{t('nationalityLabel', { value: activeCand.nationality })}</span>
             </div>
           )}
           <div className="flex items-center gap-2">
             <Mail className="w-4 h-4 text-text-muted/70 shrink-0" />
-            <span>{activeCand.contactEmail || 'No email parsed'}</span>
+            <span dir="ltr">{activeCand.contactEmail || t('noEmailParsed')}</span>
           </div>
           <div className="flex items-center gap-2">
             <Phone className="w-4 h-4 text-text-muted/70 shrink-0" />
-            <span>{activeCand.contactPhone || 'No phone parsed'}</span>
+            <span dir="ltr">{activeCand.contactPhone || t('noPhoneParsed')}</span>
           </div>
         </div>
       </div>
 
       {/* SVG Score Gauges */}
       <div className="tk-panel grid grid-cols-2 md:grid-cols-4 gap-6">
-        <CircularGauge percentage={activeCand.matchScore} label="Overall Match" color="stroke-brand" />
-        <CircularGauge percentage={activeCand.scoreTechnical} label="Technical Fit" color="stroke-emerald-500" />
-        <CircularGauge percentage={activeCand.scoreExperience} label="Experience Fit" color="stroke-violet-500" />
-        <CircularGauge percentage={activeCand.scoreCultural} label="Cultural Fit" color="stroke-amber-500" />
+        <CircularGauge percentage={activeCand.matchScore} label={t('overallMatch')} color="stroke-brand" />
+        <CircularGauge percentage={activeCand.scoreTechnical} label={t('technicalFit')} color="stroke-emerald-500" />
+        <CircularGauge percentage={activeCand.scoreExperience} label={t('experienceFit')} color="stroke-violet-500" />
+        <CircularGauge percentage={activeCand.scoreCultural} label={t('culturalFit')} color="stroke-amber-500" />
       </div>
 
       {/* Executive Summary & Recommendation */}
       <div className="tk-panel space-y-4">
         <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider">{t('executiveSummary')}</h3>
         <p className="text-[13px] leading-[1.75]" style={{ padding: 16, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)', color: 'var(--tk-text)', textWrap: 'pretty' }}>
-          {activeCand.recommendation || 'No executive summary outputted by the model.'}
+          {activeCand.recommendation || t('noExecutiveSummary')}
         </p>
 
         {/* Strengths and Gaps */}
@@ -332,10 +332,10 @@ export const CandidateDetail: React.FC = () => {
             </h4>
             <ul className="text-xs space-y-1.5 text-text-main list-disc pl-4 leading-relaxed font-medium">
               {activeCand.skills?.slice(0, 4).map((str, idx) => (
-                <li key={idx}>Expertise in {str}</li>
+                <li key={idx}>{t('strengthExpertise', { skill: str })}</li>
               ))}
               {activeCand.certificationsList?.map((c, idx) => (
-                <li key={idx}>Holds certification: {c}</li>
+                <li key={idx}>{t('strengthCertification', { name: c })}</li>
               ))}
             </ul>
           </div>
@@ -352,7 +352,7 @@ export const CandidateDetail: React.FC = () => {
                   <li key={idx}>{gap}</li>
                 ))
               ) : (
-                <li>No significant gaps identified.</li>
+                <li>{t('noSignificantGaps')}</li>
               )}
             </ul>
           </div>
@@ -366,7 +366,7 @@ export const CandidateDetail: React.FC = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-text-main flex items-center gap-2">
               <Award className="w-4 h-4 text-amber-500" />
-              <span>الشهادات المهنية المعتمدة (Certifications)</span>
+              <span>{t('certificationsCard')}</span>
             </h3>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -378,40 +378,40 @@ export const CandidateDetail: React.FC = () => {
                 </div>
               ))
             ) : (
-              <div className="col-span-2 text-xs text-text-muted italic py-2">لا توجد شهادات مهنية مذكورة.</div>
+              <div className="col-span-2 text-xs text-text-muted italic py-2">{t('noCertifications')}</div>
             )}
           </div>
         </div>
 
         {/* Education History (المؤهلات التعليمية والأكاديمية) */}
         {(() => {
-          const ext = resolveCandidateDetails(activeCand);
+          const ext = resolveCandidateDetails(activeCand, t as any);
           return (
             <div className="tk-panel space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-text-main flex items-center gap-2">
                   <GraduationCap className="w-4 h-4 text-purple-500" />
-                  <span>المؤهلات التعليمية والأكاديمية (Education History)</span>
+                  <span>{t('educationCard')}</span>
                 </h3>
               </div>
               <div className="space-y-3">
                 <div className="space-y-1" style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
-                  <span className="text-[10px] font-bold text-purple-500 uppercase tracking-wider block">المؤهل العلمي والتخصص</span>
+                  <span className="text-[10px] font-bold text-purple-500 uppercase tracking-wider block">{t('degreeAndField')}</span>
                   <p className="text-xs font-bold text-text-main">
                     {ext.educationDegree !== '—' ? (
                       `${ext.educationDegree}${ext.educationField !== '—' ? ` - ${ext.educationField}` : ''}`
                     ) : ext.educationField !== '—' ? (
                       ext.educationField
                     ) : (
-                      'غير محدد'
+                      t('notSpecified')
                     )}
                   </p>
                 </div>
 
                 <div className="space-y-1" style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
-                  <span className="text-[10px] font-bold text-purple-500 uppercase tracking-wider block">سنوات الخبرة الإجمالية</span>
+                  <span className="text-[10px] font-bold text-purple-500 uppercase tracking-wider block">{t('totalExperience')}</span>
                   <p className="text-xs font-bold text-text-main">
-                    {ext.totalExp !== '—' ? ext.totalExp : 'غير محدد'}
+                    {ext.totalExp !== '—' ? ext.totalExp : t('notSpecified')}
                   </p>
                 </div>
               </div>
@@ -431,7 +431,7 @@ export const CandidateDetail: React.FC = () => {
               </span>
             ))
           ) : (
-            <span className="text-xs text-text-muted">No specific skills parsed.</span>
+            <span className="text-xs text-text-muted">{t('noSkillsParsed')}</span>
           )}
         </div>
       </div>
@@ -447,7 +447,7 @@ export const CandidateDetail: React.FC = () => {
                 <div className="absolute -left-[30px] top-1.5 w-3 h-3 rounded-full bg-brand border border-white"></div>
                 <div className="flex items-center gap-1.5 text-xs text-brand font-bold uppercase tracking-wider mb-1">
                   <Calendar className="w-3.5 h-3.5" />
-                  <span>{item.yearStart} - {item.yearEnd || 'Present'}</span>
+                  <span dir="ltr">{item.yearStart} - {item.yearEnd || t('present')}</span>
                 </div>
                 <h4 className="text-sm font-bold text-text-main">{item.title}</h4>
                 <p className="text-xs font-semibold text-text-muted mt-0.5">{item.company}</p>
@@ -455,92 +455,76 @@ export const CandidateDetail: React.FC = () => {
               </div>
             ))
           ) : (
-            <p className="text-xs text-text-muted">No experience timeline available.</p>
+            <p className="text-xs text-text-muted">{t('noTimeline')}</p>
           )}
         </div>
       </div>
 
       {/* ATS Checklist Matching Table (Screenshot 3 - 5 Columns with Justification) */}
       <div className="tk-panel" style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="p-5 border-b border-border-main/50 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-text-main flex items-center gap-2">
+        <div className="flex items-center justify-between" style={{ padding: '13px 14px', borderBottom: '1px solid var(--tk-border)' }}>
+          <h3 className="text-[13px] font-semibold flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
             <CheckCircle2 className="w-4 h-4 text-purple-500" />
-            <span>جدول تحليل ومطابقة متطلبات الوظيفة بالتفصيل (Detailed ATS Matching Table)</span>
+            <span>{t('detailedAtsTable')}</span>
           </h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="tk-table-scroll">
+          <table className="tk-table">
             <thead>
-              <tr className="bg-bg-hover/30 border-b border-border-main/50 font-bold text-text-muted uppercase">
-                <th className="p-4 w-[25%]">وصف المتطلب</th>
-                <th className="p-4 w-24 text-center">الأهمية</th>
-                <th className="p-4 w-28 text-center">حالة المطابقة</th>
-                <th className="p-4 w-[25%]">التبرير والتوضيح</th>
-                <th className="p-4 w-[25%]">الدليل المستخرج من السيرة الذاتية</th>
+              <tr>
+                <th style={{ width: '25%' }}>{t('colRequirement')}</th>
+                <th style={{ width: 90, textAlign: 'center' }}>{t('colImportance')}</th>
+                <th style={{ width: 105, textAlign: 'center' }}>{t('colMatchStatus')}</th>
+                <th style={{ width: '25%' }}>{t('colJustification')}</th>
+                <th style={{ width: '25%' }}>{t('colEvidence')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border-main/40 text-text-main font-medium">
+            <tbody>
               {jobChecklist.map((reqItem: any) => {
                 const evalItem = checklistMatchMap.find(item => item.id === reqItem.id);
                 const isMatched = evalItem ? evalItem.matched : false;
 
-                // Format importance badge text & style
-                let importanceText = reqItem.importance || 'أساسي';
-                if (importanceText === 'Mandatory') importanceText = 'أساسي';
-                else if (importanceText === 'Important') importanceText = 'مهم';
-                else if (importanceText === 'Additional') importanceText = 'إضافي';
-
-                let importanceBg = 'bg-red-500/10 text-red-500 border-red-500/20';
-                if (importanceText === 'مهم') importanceBg = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
-                if (importanceText === 'إضافي') importanceBg = 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+                // Importance is stored in English on the job record; render the localized label.
+                const importanceKey = ['Mandatory', 'Important', 'Additional'].includes(reqItem.importance)
+                  ? reqItem.importance
+                  : 'Mandatory';
+                const importanceText = t(`importance_${importanceKey}` as any);
+                const importanceBg =
+                  importanceKey === 'Important'
+                    ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                    : importanceKey === 'Additional'
+                      ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                      : 'bg-red-500/10 text-red-500 border-red-500/20';
 
                 return (
-                  <tr key={reqItem.id} className="hover:bg-bg-hover/10">
-                    {/* 1. وصف المتطلب */}
-                    <td className="p-4 leading-relaxed font-bold">
+                  <tr key={reqItem.id}>
+                    <td className="leading-relaxed font-semibold" style={{ color: 'var(--tk-text)' }}>
                       {reqItem.requirement}
                     </td>
 
-                    {/* 2. الأهمية */}
-                    <td className="p-4 text-center">
-                      <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold border ${importanceBg}`}>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className={`px-2 py-1 rounded-md text-[10.5px] font-bold border ${importanceBg}`}>
                         {importanceText}
                       </span>
                     </td>
-                    
-                    {/* 3. حالة المطابقة */}
-                    <td className="p-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5 font-bold">
-                        {isMatched ? (
-                          <span className="px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[11px]">
-                            مطابق
-                          </span>
-                        ) : (
-                          <span className="tk-pill">
-                            غير مذكور
-                          </span>
-                        )}
-                      </div>
-                    </td>
 
-                    {/* 4. التبرير والتوضيح (Justification) */}
-                    <td className="p-4 leading-relaxed text-text-main text-[11px]">
-                      {evalItem?.justification ? (
-                        evalItem.justification
-                      ) : isMatched ? (
-                        `المرشح لديه خبرة معلنة في هذا المجال وتتوافق مع المتطلب.`
+                    <td style={{ textAlign: 'center' }}>
+                      {isMatched ? (
+                        <span className="px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10.5px] font-bold">
+                          {t('matched')}
+                        </span>
                       ) : (
-                        `السيرة الذاتية لا تحتوي على خبرة مباشرة صريحة لهذا المتطلب.`
+                        <span className="tk-pill">{t('notMentioned')}</span>
                       )}
                     </td>
 
-                    {/* 5. الدليل المستخرج من السيرة الذاتية */}
-                    <td className="p-4 leading-relaxed italic text-text-muted text-[11px]">
-                      {evalItem?.evidence ? (
-                        <span className="text-text-muted">{evalItem.evidence}</span>
-                      ) : (
-                        <span className="text-text-muted/60">لم يتم العثور على دليل مباشر.</span>
-                      )}
+                    <td className="leading-relaxed text-[11px]" style={{ color: 'var(--tk-text)' }}>
+                      {evalItem?.justification
+                        || (isMatched ? t('defaultJustificationMatched') : t('defaultJustificationUnmatched'))}
+                    </td>
+
+                    <td className="leading-relaxed italic text-[11px]" style={{ color: 'var(--tk-muted)' }}>
+                      {evalItem?.evidence || t('noDirectEvidence')}
                     </td>
                   </tr>
                 );
@@ -564,7 +548,7 @@ export const CandidateDetail: React.FC = () => {
               </li>
             ))
           ) : (
-            <li className="text-xs text-text-muted">No suggested interview questions generated.</li>
+            <li className="text-xs text-text-muted">{t('noInterviewQuestions')}</li>
           )}
         </ul>
       </div>
@@ -575,8 +559,8 @@ export const CandidateDetail: React.FC = () => {
           <div className="tk-panel max-w-lg w-full space-y-4" style={{ boxShadow: '0 22px 50px rgba(0,0,0,.35)' }}>
             <div className="flex justify-between items-center border-b border-border-main/50 pb-3">
               <h3 className="text-base font-bold text-text-main flex items-center gap-2">
-                <Send className="w-5 h-5 text-brand" />
-                Send Status Notification
+                <Send className="w-4 h-4" />
+                {t('sendStatusNotification')}
               </h3>
               <button 
                 onClick={() => setShowNotifyModal(false)}
@@ -590,7 +574,7 @@ export const CandidateDetail: React.FC = () => {
               {/* Channel Selector */}
               <div>
                 <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
-                  Select Delivery Channel
+                  {t('selectDeliveryChannel')}
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
@@ -602,7 +586,7 @@ export const CandidateDetail: React.FC = () => {
                     }`}
                   >
                     <Mail className="w-4 h-4" />
-                    <span>Email ({candidate.contactEmail || 'N/A'})</span>
+                    <span>{t('channelEmail')}</span>
                   </button>
 
                   <button
@@ -614,7 +598,7 @@ export const CandidateDetail: React.FC = () => {
                     }`}
                   >
                     <MessageSquare className="w-4 h-4" />
-                    <span>WhatsApp ({candidate.contactPhone || 'N/A'})</span>
+                    <span>{t('channelWhatsapp')}</span>
                   </button>
                 </div>
               </div>
@@ -622,14 +606,14 @@ export const CandidateDetail: React.FC = () => {
               {/* Optional Custom Message Override */}
               <div>
                 <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5">
-                  Custom Message Template (Optional)
+                  {t('customMessageTemplate')}
                 </label>
                 <textarea
                   rows={3}
                   value={customMsg}
                   onChange={(e) => setCustomMsg(e.target.value)}
-                  placeholder="Leave empty to use default system template with {name}, {job}, {score}, {status} placeholders..."
-                  className="tk-field tk-focusable" style={{ height: 'auto', minHeight: 38, paddingBlock: 10, fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}
+                  placeholder={t('customMessagePlaceholder')}
+                  className="tk-field tk-focusable" style={{ height: 'auto', minHeight: 34, paddingBlock: 9 }}
                 />
               </div>
 
@@ -642,7 +626,7 @@ export const CandidateDetail: React.FC = () => {
                   </div>
                   {notifyResult.body && (
                     <div className="text-[11px] whitespace-pre-wrap" style={{ padding: 10, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)', color: 'var(--tk-soft)', fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}>
-                      <p className="font-bold text-brand border-b border-border-main/40 pb-1 mb-1">Subject: {notifyResult.subject}</p>
+                      <p className="font-bold text-brand border-b border-border-main/40 pb-1 mb-1">{t('notifySubject', { subject: notifyResult.subject })}</p>
                       {notifyResult.body}
                     </div>
                   )}
@@ -653,17 +637,17 @@ export const CandidateDetail: React.FC = () => {
             <div className="pt-2 flex justify-end gap-2">
               <button
                 onClick={() => setShowNotifyModal(false)}
-                className="tk-btn-neutral tk-focusable" style={{ height: 36, padding: '0 16px', fontSize: 12 }}
+                className="tk-btn-neutral tk-focusable"
               >
-                Close
+                {t('close')}
               </button>
               <button
                 onClick={handleSendNotification}
                 disabled={notifySending}
-                className="tk-btn-primary tk-focusable" style={{ height: 36, padding: '0 16px', fontSize: 12 }}
+                className="tk-btn-primary tk-focusable"
               >
                 {notifySending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                <span>Dispatch Notification</span>
+                <span>{t('dispatchNotification')}</span>
               </button>
             </div>
           </div>
@@ -676,8 +660,8 @@ export const CandidateDetail: React.FC = () => {
           <div className="tk-panel max-w-lg w-full space-y-4" style={{ boxShadow: '0 22px 50px rgba(0,0,0,.35)' }}>
             <div className="flex justify-between items-center border-b border-border-main/50 pb-3">
               <h3 className="text-base font-bold text-text-main flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-emerald-500" />
-                Schedule Candidate Interview (.ics & iCal)
+                <Calendar className="w-4 h-4 text-emerald-500" />
+                {t('scheduleInterviewTitle')}
               </h3>
               <button 
                 onClick={() => setShowScheduleModal(false)}
@@ -691,7 +675,7 @@ export const CandidateDetail: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5">
-                    Interview Date
+                    {t('interviewDate')}
                   </label>
                   <input
                     type="date"
@@ -704,7 +688,7 @@ export const CandidateDetail: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5">
-                      Start
+                      {t('interviewStart')}
                     </label>
                     <input
                       type="time"
@@ -715,7 +699,7 @@ export const CandidateDetail: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5">
-                      End
+                      {t('interviewEnd')}
                     </label>
                     <input
                       type="time"
@@ -729,26 +713,27 @@ export const CandidateDetail: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5">
-                  Location / Meeting Link
+                  {t('interviewLocation')}
                 </label>
                 <input
                   type="text"
                   value={schedLocation}
                   onChange={(e) => setSchedLocation(e.target.value)}
+                  placeholder={t('interviewLocationDefault')}
                   className="tk-field tk-focusable"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5">
-                  Interview Agenda / Notes
+                  {t('interviewNotes')}
                 </label>
                 <textarea
                   rows={3}
                   value={schedNotes}
                   onChange={(e) => setSchedNotes(e.target.value)}
-                  placeholder="Technical assessment, team introduction, coding preview..."
-                  className="tk-field tk-focusable" style={{ height: 'auto', minHeight: 38, paddingBlock: 10 }}
+                  placeholder={t('interviewNotesPlaceholder')}
+                  className="tk-field tk-focusable" style={{ height: 'auto', minHeight: 34, paddingBlock: 9 }}
                 />
               </div>
 
@@ -763,23 +748,23 @@ export const CandidateDetail: React.FC = () => {
                   {schedResult.success && schedResult.icsContent && (
                     <div className="p-3 bg-bg-card/70 border border-emerald-500/30 rounded-lg text-xs space-y-2 text-text-main">
                       <p className="font-bold text-emerald-500 uppercase tracking-wider text-[10px]">
-                        Event Summary Preview
+                        {t('eventSummaryPreview')}
                       </p>
                       <div className="grid grid-cols-2 gap-2 text-[11px]">
                         <div>
-                          <span className="text-text-muted block font-medium">Candidate</span>
+                          <span className="text-text-muted block font-medium">{t('eventCandidate')}</span>
                           <span className="font-bold"><Bidi>{candidate?.name}</Bidi></span>
                         </div>
                         <div>
-                          <span className="text-text-muted block font-medium">Position</span>
-                          <span className="font-bold">{job?.title || 'Job Position'}</span>
+                          <span className="text-text-muted block font-medium">{t('eventPosition')}</span>
+                          <span className="font-bold"><Bidi>{job?.title || t('targetJobFallback')}</Bidi></span>
                         </div>
                         <div>
-                          <span className="text-text-muted block font-medium">Date & Time</span>
-                          <span className="font-semibold">{schedDate} ({schedStart} - {schedEnd})</span>
+                          <span className="text-text-muted block font-medium">{t('eventDateTime')}</span>
+                          <span className="font-semibold" dir="ltr">{schedDate} ({schedStart} - {schedEnd})</span>
                         </div>
                         <div>
-                          <span className="text-text-muted block font-medium">Location</span>
+                          <span className="text-text-muted block font-medium">{t('eventLocation')}</span>
                           <span className="font-semibold truncate block">{schedLocation}</span>
                         </div>
                       </div>
@@ -793,7 +778,7 @@ export const CandidateDetail: React.FC = () => {
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-bold text-xs shadow-sm transition-all cursor-pointer"
                         >
                           <Download className="w-3.5 h-3.5" />
-                          <span>Download .ics File</span>
+                          <span>{t('downloadIcs')}</span>
                         </button>
 
                         {schedResult.gcalUrl && (
@@ -804,7 +789,7 @@ export const CandidateDetail: React.FC = () => {
                             className="tk-btn-neutral tk-focusable" style={{ height: 32, padding: '0 12px', fontSize: 11.5 }}
                           >
                             <Calendar className="w-3.5 h-3.5 text-emerald-500" />
-                            <span>Open Google Calendar Event</span>
+                            <span>{t('openGoogleCalendar')}</span>
                           </a>
                         )}
                       </div>
@@ -817,17 +802,18 @@ export const CandidateDetail: React.FC = () => {
             <div className="pt-2 flex justify-end gap-2">
               <button
                 onClick={() => setShowScheduleModal(false)}
-                className="tk-btn-neutral tk-focusable" style={{ height: 36, padding: '0 16px', fontSize: 12 }}
+                className="tk-btn-neutral tk-focusable"
               >
-                Close
+                {t('close')}
               </button>
               <button
                 onClick={handleScheduleInterview}
                 disabled={schedLoading}
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs shadow-md flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                className="tk-focusable flex items-center gap-1.5 disabled:opacity-50"
+                style={{ height: 32, borderRadius: 9, paddingInline: 13, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: 'rgba(16,185,129,.12)', color: '#10b981', border: '1px solid rgba(16,185,129,.25)' }}
               >
                 {schedLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Calendar className="w-3.5 h-3.5" />}
-                <span>Generate Calendar Event (.ics)</span>
+                <span>{t('generateIcs')}</span>
               </button>
             </div>
           </div>

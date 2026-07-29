@@ -133,7 +133,7 @@ export const Results: React.FC = () => {
   };
 
   // Helper to resolve candidate details accurately across table & filters
-  const getExtractedCandidateDetails = (c: Candidate) => resolveCandidateDetails(c);
+  const getExtractedCandidateDetails = (c: Candidate) => resolveCandidateDetails(c, t as any);
 
   // CHANGE 1: Extract unique values from loaded candidates dynamically for filter options (no hardcoded arrays)
   const filterOptions = useMemo(() => {
@@ -202,7 +202,9 @@ export const Results: React.FC = () => {
       degrees: dedupeAndSort(degreesSet),
       certifications: dedupeAndSort(certsSet)
     };
-  }, [candidatesList]);
+    // `t` matters: inferred degree/nationality options are localized, so the
+    // dropdown contents have to be rebuilt when the language changes.
+  }, [candidatesList, t]);
 
   // Clean filters
   const handleClearFilters = () => {
@@ -354,7 +356,7 @@ export const Results: React.FC = () => {
       const updated = await apiRequest('POST', `/api/candidates/${id}/reanalyze`);
       setCandidatesList(prev => prev.map(c => c.id === id ? updated : c));
     } catch (e: any) {
-      alert('AI Re-analysis failed: ' + e.message);
+      alert(t('reanalyzeFailed', { reason: e.message }));
     } finally {
       setLoading(false);
     }
@@ -362,8 +364,8 @@ export const Results: React.FC = () => {
 
   const handleDelete = (id: number) => {
     setPendingConfirm({
-      title: 'Delete Candidate',
-      description: 'Are you sure you want to delete this candidate?',
+      title: t('deleteCandidateTitle'),
+      description: t('deleteCandidateDesc'),
       danger: true,
       onConfirm: async () => {
         setPendingConfirm(null);
@@ -380,7 +382,7 @@ export const Results: React.FC = () => {
 
   const handleDownload = (c: Candidate) => {
     if (gdprActive) {
-      alert('Downloads are blocked while GDPR anonymization mode is active.');
+      alert(t('downloadBlockedGdpr'));
       return;
     }
     window.open(`/api/candidates/${c.id}/download`, '_blank');
@@ -389,7 +391,7 @@ export const Results: React.FC = () => {
   // Outreach placeholders injection
   const triggerOutreach = (c: Candidate, type: 'email' | 'whatsapp') => {
     if (gdprActive) {
-      alert('Outreach disabled in GDPR anonymization mode.');
+      alert(t('outreachBlockedGdpr'));
       return;
     }
 
@@ -413,10 +415,10 @@ export const Results: React.FC = () => {
     });
 
     if (type === 'email') {
-      if (!c.contactEmail) return alert('No email address available for this candidate.');
+      if (!c.contactEmail) return alert(t('noEmailAvailable'));
       window.location.href = `mailto:${c.contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     } else {
-      if (!c.contactPhone) return alert('No phone number available for this candidate.');
+      if (!c.contactPhone) return alert(t('noPhoneAvailable'));
       // Clean phone number (leave digits)
       const phoneDigits = c.contactPhone.replace(/\D/g, '');
       window.open(`https://wa.me/${phoneDigits}?text=${encodeURIComponent(body)}`, '_blank');
@@ -441,9 +443,10 @@ export const Results: React.FC = () => {
   // Phase 4.1: Bulk Status Change (Respects change_status RBAC capability)
   const handleBulkStatusChange = (newStatus: string) => {
     if (!canEditStatus || selectedForBulk.length === 0) return;
+    const statusLabel = t(`status_${newStatus}` as any);
     setPendingConfirm({
-      title: 'Update Candidate Status',
-      description: `Are you sure you want to update status of ${selectedForBulk.length} candidate(s) to "${newStatus}"?`,
+      title: t('updateStatusTitle'),
+      description: t('updateStatusDesc', { count: String(selectedForBulk.length), status: statusLabel }),
       danger: false,
       onConfirm: async () => {
         setPendingConfirm(null);
@@ -454,9 +457,9 @@ export const Results: React.FC = () => {
           setCandidatesList(prev =>
             prev.map(c => (selectedForBulk.includes(c.id) ? { ...c, status: newStatus as any } : c))
           );
-          alert(`Successfully updated status of ${selectedForBulk.length} candidate(s) to "${newStatus}".`);
+          alert(t('bulkStatusDone', { count: String(selectedForBulk.length), status: statusLabel }));
         } catch (e: any) {
-          alert('Bulk status update failed: ' + e.message);
+          alert(t('bulkStatusFailed', { reason: e.message }));
         }
       },
     });
@@ -466,9 +469,9 @@ export const Results: React.FC = () => {
   const handleBulkDelete = () => {
     if (!canDelete || selectedForBulk.length === 0) return;
     setPendingConfirm({
-      title: 'Permanently Delete Candidates',
-      description: `Are you sure you want to PERMANENTLY DELETE ${selectedForBulk.length} candidate(s)? This action cannot be undone.`,
-      warningText: 'This action is irreversible.',
+      title: t('bulkDeleteTitle'),
+      description: t('bulkDeleteDesc', { count: String(selectedForBulk.length) }),
+      warningText: t('irreversibleAction'),
       confirmWord: 'DELETE',
       danger: true,
       onConfirm: async () => {
@@ -479,9 +482,9 @@ export const Results: React.FC = () => {
           );
           setCandidatesList(prev => prev.filter(c => !selectedForBulk.includes(c.id)));
           setSelectedForBulk([]);
-          alert(`Successfully deleted ${selectedForBulk.length} candidate record(s).`);
+          alert(t('bulkDeleteDone', { count: String(selectedForBulk.length) }));
         } catch (e: any) {
-          alert('Bulk delete failed: ' + e.message);
+          alert(t('bulkDeleteFailed', { reason: e.message }));
         }
       },
     });
@@ -494,7 +497,7 @@ export const Results: React.FC = () => {
       : filteredCandidates;
 
     if (listToExport.length === 0) {
-      alert('No candidate records available to export.');
+      alert(t('nothingToExport'));
       return;
     }
 
@@ -557,20 +560,43 @@ export const Results: React.FC = () => {
   };
 
   const getMatchClassification = (score: number) => {
-    if (score >= 80) return { label: 'Full match', isStrong: true };
-    if (score >= 50) return { label: 'Partial match', isStrong: false };
-    return { label: 'Unmatched', isStrong: false };
+    if (score >= 80) return { label: t('matchFull'), isStrong: true };
+    if (score >= 50) return { label: t('matchPartial'), isStrong: false };
+    return { label: t('matchNone'), isStrong: false };
   };
+
+  // Candidates shown in the comparison modal: the two side-by-side slots take
+  // precedence, otherwise the bulk selection.
+  const comparedCandidates = useMemo<Candidate[]>(() => {
+    if (dualCompareLeft && dualCompareRight && selectedForBulk.length === 0) {
+      return [dualCompareLeft, dualCompareRight];
+    }
+    return selectedForBulk
+      .map(bid => processedCandidates.find(c => c.id === bid))
+      .filter((c): c is Candidate => !!c);
+  }, [dualCompareLeft, dualCompareRight, selectedForBulk, processedCandidates]);
+
+  const comparisonRows: { label: string; render: (c: Candidate) => React.ReactNode }[] = [
+    { label: t('matchScore'), render: (c) => `${c.matchScore}%` },
+    {
+      label: t('techExpCulture'),
+      render: (c) => `${c.scoreTechnical ?? 0} / ${c.scoreExperience ?? 0} / ${c.scoreCultural ?? 0}`
+    },
+    { label: t('status'), render: (c) => t(`status_${c.status}` as any) },
+    { label: t('skillsList'), render: (c) => c.skills?.join('، ') || t('none') },
+    { label: t('candidateGaps'), render: (c) => c.gaps?.join('، ') || t('none') },
+    { label: t('candidateCertifications'), render: (c) => c.certificationsList?.join('، ') || t('none') }
+  ];
 
   const canEditStatus = role && hasPermission(role, 'change_status', capabilities);
   const canDelete = role && hasPermission(role, 'delete_data', capabilities);
   const canReanalyze = role && hasPermission(role, 'upload_cvs', capabilities);
 
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
-      {/* Filter bar — job select + export (des-2.txt §8) */}
+    <div style={{ display: 'grid', gap: 10, minWidth: 0 }}>
+      {/* Filter bar — job select */}
       <div className="flex items-center gap-2.5 flex-wrap">
-        <label className="text-[11px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>
+        <label className="text-[10.5px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>
           {t('selectJob')}
         </label>
         <select
@@ -582,9 +608,9 @@ export const Results: React.FC = () => {
             setDualCompareRight(null);
           }}
           className="tk-field tk-focusable"
-          style={{ width: 'auto', minWidth: 200, height: 36, cursor: 'pointer' }}
+          style={{ width: 'auto', minWidth: 180, maxWidth: '100%', cursor: 'pointer' }}
         >
-          <option value="">Select target job…</option>
+          <option value="">{t('selectJobPlaceholder')}</option>
           {jobs.map(j => (
             <option key={j.id} value={j.id}>
               {j.title}
@@ -595,44 +621,42 @@ export const Results: React.FC = () => {
 
       {/* Stats Summary row */}
       {selectedJobId && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 10 }}>
           {[
-            { label: 'Total CVs', value: String(statsSummary.totalCount) },
-            { label: 'Filtered set', value: String(statsSummary.filteredCount) },
-            { label: 'Avg. match score', value: `${statsSummary.averageScore}%` }
+            { label: t('totalCvs'), value: String(statsSummary.totalCount) },
+            { label: t('filteredSet'), value: String(statsSummary.filteredCount) },
+            { label: t('avgMatchScore'), value: `${statsSummary.averageScore}%` }
           ].map(({ label, value }) => (
             <div key={label} className="tk-tile">
-              <span className="text-[11px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>{label}</span>
-              <p style={{ fontSize: 'clamp(24px,2.6vw,32px)', fontWeight: 500, letterSpacing: '-.03em', color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>
-                {value}
-              </p>
+              <span className="text-[10.5px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>{label}</span>
+              <p className="tk-stat-value">{value}</p>
             </div>
           ))}
         </div>
       )}
 
       {/* Horizontal Advanced Filters Bar */}
-      <div className="tk-panel space-y-4">
+      <div className="tk-panel space-y-3">
         {/* Header row: Title, Global Search, Clear Button */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3" style={{ borderBottom: '1px solid var(--tk-border)' }}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-2.5" style={{ borderBottom: '1px solid var(--tk-border)' }}>
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
-            <h3 className="text-[11px] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-accent-text)' }}>Advanced filters</h3>
+            <Filter className="w-3.5 h-3.5" style={{ color: 'var(--tk-accent-text)' }} />
+            <h3 className="text-[10.5px] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-accent-text)' }}>{t('advancedFilters')}</h3>
           </div>
 
           {/* Global Search Input */}
-          <div className="relative flex-1" style={{ maxWidth: 420 }}>
+          <div className="relative flex-1" style={{ maxWidth: 380, minWidth: 0 }}>
             <Search
-              className="absolute w-4 h-4 pointer-events-none"
-              style={{ insetInlineStart: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--tk-muted)' }}
+              className="absolute w-3.5 h-3.5 pointer-events-none"
+              style={{ insetInlineStart: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--tk-muted)' }}
             />
             <input
               type="text"
-              placeholder="Global keyword search…"
+              placeholder={t('globalSearchPlaceholder')}
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
               className="tk-field tk-focusable"
-              style={{ height: 36, paddingInlineStart: 34 }}
+              style={{ paddingInlineStart: 30 }}
             />
           </div>
 
@@ -640,50 +664,50 @@ export const Results: React.FC = () => {
           <button
             onClick={handleClearFilters}
             className="tk-btn-neutral tk-focusable shrink-0"
-            style={{ height: 32, padding: '0 12px', fontSize: 11.5 }}
+            style={{ height: 30, padding: '0 11px', fontSize: 11 }}
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Clear all</span>
+            <span>{t('clearAllFilters')}</span>
           </button>
         </div>
 
         {/* 5 Dropdowns Grid Row: Location, Nationality, Skills, Degree, Certifications */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5">
           <MultiSelectFilter
-            label="Location/City"
-            placeholder="Search city..."
+            label={t('filterByCity')}
+            placeholder={t('phSearchCity')}
             options={filterOptions.cities}
             selectedValues={filterCities}
             onChange={setFilterCities}
           />
 
           <MultiSelectFilter
-            label="Nationality"
-            placeholder="Search nationality..."
+            label={t('filterByNationality')}
+            placeholder={t('phSearchNationality')}
             options={filterOptions.nationalities}
             selectedValues={filterNationalities}
             onChange={setFilterNationalities}
           />
 
           <MultiSelectFilter
-            label="Skills Required"
-            placeholder="Search skills..."
+            label={t('filterBySkills')}
+            placeholder={t('phSearchSkills')}
             options={filterOptions.skills}
             selectedValues={filterSkills}
             onChange={setFilterSkills}
           />
 
           <MultiSelectFilter
-            label="Degree Specialization"
-            placeholder="Search degrees..."
+            label={t('filterByDegree')}
+            placeholder={t('phSearchDegrees')}
             options={filterOptions.degrees}
             selectedValues={filterDegrees}
             onChange={setFilterDegrees}
           />
 
           <MultiSelectFilter
-            label="Certifications"
-            placeholder="Search certificates..."
+            label={t('filterByCertifications')}
+            placeholder={t('phSearchCertificates')}
             options={filterOptions.certifications}
             selectedValues={filterCerts}
             onChange={setFilterCerts}
@@ -691,13 +715,13 @@ export const Results: React.FC = () => {
         </div>
 
         {/* Sliders Row: Min Experience & Min Match Score */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-3" style={{ borderTop: '1px solid var(--tk-border)' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2.5" style={{ borderTop: '1px solid var(--tk-border)' }}>
           {[
-            { label: 'Min experience', value: minExp, set: setMinExp, max: 15, suffix: ' years' },
-            { label: 'Min match score', value: minScore, set: setMinScore, max: 100, suffix: '%' }
+            { label: t('minExperience'), value: minExp, set: setMinExp, max: 15, suffix: ` ${t('yearsShort')}` },
+            { label: t('minMatchScore'), value: minScore, set: setMinScore, max: 100, suffix: '%' }
           ].map(({ label, value, set, max, suffix }) => (
             <div key={label} className="space-y-1.5">
-              <div className="flex justify-between text-xs">
+              <div className="flex justify-between text-[11.5px]">
                 <span style={{ color: 'var(--tk-muted)' }}>{label}</span>
                 <span style={{ color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>{value}{suffix}</span>
               </div>
@@ -716,33 +740,33 @@ export const Results: React.FC = () => {
       </div>
 
       {/* Full Width Candidates Leaderboard Table */}
-      <div className="space-y-4">
-          
+      <div className="space-y-3" style={{ minWidth: 0 }}>
+
           {/* Compare & Bulk Actions Toolbar (Phase 4.1) */}
-          <div className="tk-panel flex flex-wrap justify-between items-center gap-3" style={{ padding: 14 }}>
+          <div className="tk-panel flex flex-wrap justify-between items-center gap-2.5" style={{ padding: 11 }}>
             <div className="flex items-center gap-3 flex-wrap">
               {/* Bulk Select count */}
-              <span className="text-xs flex items-center gap-1.5" style={{ color: selectedForBulk.length > 0 ? 'var(--tk-accent-text)' : 'var(--tk-muted)' }}>
-                <CheckSquare className="w-4 h-4" />
+              <span className="text-[11.5px] flex items-center gap-1.5" style={{ color: selectedForBulk.length > 0 ? 'var(--tk-accent-text)' : 'var(--tk-muted)' }}>
+                <CheckSquare className="w-3.5 h-3.5" />
                 {selectedForBulk.length > 0
-                  ? `${selectedForBulk.length} candidate(s) selected`
-                  : `${filteredCandidates.length} candidate(s) total`}
+                  ? t('candidatesSelected', { count: String(selectedForBulk.length) })
+                  : t('candidatesTotal', { count: String(filteredCandidates.length) })}
               </span>
 
               {/* Dual Compare slots */}
               {(dualCompareLeft || dualCompareRight) && (
-                <div className="flex gap-2 items-center text-xs ps-3" style={{ borderInlineStart: '1px solid var(--tk-border)' }}>
-                  <span style={{ color: 'var(--tk-muted)' }}>Dual:</span>
+                <div className="flex gap-2 items-center text-[11.5px] ps-3" style={{ borderInlineStart: '1px solid var(--tk-border)' }}>
+                  <span style={{ color: 'var(--tk-muted)' }}>{t('dualCompare')}</span>
                   {dualCompareLeft && (
                     <span className="tk-pill is-active">
-                      L: <Bidi>{dualCompareLeft.name}</Bidi>
-                      <button onClick={() => setDualCompareLeft(null)} className="tk-focusable" aria-label="Clear left comparison"><X className="w-3 h-3" /></button>
+                      {t('dualLeft')}: <Bidi>{dualCompareLeft.name}</Bidi>
+                      <button onClick={() => setDualCompareLeft(null)} className="tk-focusable" aria-label={t('clearLeftCompare')}><X className="w-3 h-3" /></button>
                     </span>
                   )}
                   {dualCompareRight && (
                     <span className="tk-pill is-active">
-                      R: <Bidi>{dualCompareRight.name}</Bidi>
-                      <button onClick={() => setDualCompareRight(null)} className="tk-focusable" aria-label="Clear right comparison"><X className="w-3 h-3" /></button>
+                      {t('dualRight')}: <Bidi>{dualCompareRight.name}</Bidi>
+                      <button onClick={() => setDualCompareRight(null)} className="tk-focusable" aria-label={t('clearRightCompare')}><X className="w-3 h-3" /></button>
                     </span>
                   )}
                 </div>
@@ -762,15 +786,15 @@ export const Results: React.FC = () => {
                   defaultValue=""
                   className="tk-focusable"
                   style={{
-                    height: 32, borderRadius: 10, paddingInline: 12, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
+                    height: 30, borderRadius: 9, paddingInline: 11, fontSize: 11, fontWeight: 600, cursor: 'pointer',
                     background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)', border: '1px solid var(--tk-accent-line)'
                   }}
                 >
-                  <option value="" disabled>Bulk change status…</option>
-                  <option value="Shortlisted">Set to Shortlisted</option>
-                  <option value="Interviewing">Set to Interviewing</option>
-                  <option value="Rejected">Set to Rejected</option>
-                  <option value="Pending">Set to Pending</option>
+                  <option value="" disabled>{t('bulkChangeStatus')}</option>
+                  <option value="Shortlisted">{t('setToShortlisted')}</option>
+                  <option value="Interviewing">{t('setToInterviewing')}</option>
+                  <option value="Rejected">{t('setToRejected')}</option>
+                  <option value="Pending">{t('setToPending')}</option>
                 </select>
               )}
 
@@ -780,12 +804,12 @@ export const Results: React.FC = () => {
                   onClick={handleBulkDelete}
                   className="tk-focusable flex items-center gap-1"
                   style={{
-                    height: 32, borderRadius: 10, paddingInline: 12, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
+                    height: 30, borderRadius: 9, paddingInline: 11, fontSize: 11, fontWeight: 600, cursor: 'pointer',
                     background: 'rgba(239,68,68,.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,.2)'
                   }}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete selected</span>
+                  <span>{t('deleteSelected')}</span>
                 </button>
               )}
 
@@ -793,11 +817,11 @@ export const Results: React.FC = () => {
               <button
                 onClick={handleExportCSV}
                 className="tk-btn-neutral tk-focusable"
-                style={{ height: 32, padding: '0 12px', fontSize: 11.5 }}
-                title={selectedForBulk.length > 0 ? 'Export selected candidates to CSV' : 'Export all filtered candidates to CSV'}
+                style={{ height: 30, padding: '0 11px', fontSize: 11 }}
+                title={selectedForBulk.length > 0 ? t('exportCsvSelectedTitle') : t('exportCsvAllTitle')}
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>{selectedForBulk.length > 0 ? `Export CSV (${selectedForBulk.length})` : 'Export CSV'}</span>
+                <span>{selectedForBulk.length > 0 ? t('exportCsvCount', { count: String(selectedForBulk.length) }) : t('exportCsv')}</span>
               </button>
 
               {/* Compare Buttons */}
@@ -805,18 +829,18 @@ export const Results: React.FC = () => {
                 <button
                   onClick={() => setBulkCompareOpen(true)}
                   className="tk-btn-primary tk-focusable"
-                  style={{ height: 32, padding: '0 12px', fontSize: 11.5 }}
+                  style={{ height: 30, padding: '0 11px', fontSize: 11 }}
                 >
-                  Compare ({selectedForBulk.length})
+                  {t('compareCount', { count: String(selectedForBulk.length) })}
                 </button>
               )}
               {(dualCompareLeft && dualCompareRight) && (
                 <button
                   onClick={() => setBulkCompareOpen(true)}
                   className="tk-btn-primary tk-focusable"
-                  style={{ height: 32, padding: '0 12px', fontSize: 11.5 }}
+                  style={{ height: 30, padding: '0 11px', fontSize: 11 }}
                 >
-                  Compare side-by-side
+                  {t('compareSideBySide')}
                 </button>
               )}
             </div>
@@ -825,38 +849,37 @@ export const Results: React.FC = () => {
           {/* Table Container */}
           <div className="tk-panel" style={{ padding: 0, overflow: 'hidden' }}>
             {loading ? (
-              <div className="py-20 text-center" style={{ color: 'var(--tk-muted)' }}>Loading leaderboard data…</div>
+              <div className="py-16 text-center text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>{t('loadingLeaderboard')}</div>
             ) : filteredCandidates.length === 0 ? (
-              <div className="py-20 text-center" style={{ color: 'var(--tk-muted)' }}>
-                No candidate records found matching current filters.
+              <div className="py-16 text-center text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>
+                {t('noCandidatesMatch')}
               </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table className="w-full border-collapse text-start">
+              <div className="tk-table-scroll">
+                <table className="tk-table">
                   <thead>
-                    <tr className="text-[10px] font-bold uppercase tracking-[.1em]" style={{ borderBottom: '1px solid var(--tk-border)', color: 'var(--tk-muted)' }}>
-                      <th className="p-4 w-10 text-center">
-                        <button onClick={selectAllCandidates} className="tk-focusable" style={{ color: 'var(--tk-muted)' }} aria-label="Select all">
+                    <tr>
+                      <th style={{ width: 34, textAlign: 'center' }}>
+                        <button onClick={selectAllCandidates} className="tk-focusable" style={{ color: 'var(--tk-muted)' }} aria-label={t('selectAll')}>
                           {selectedForBulk.length === filteredCandidates.length ? (
-                            <CheckSquare className="w-4 h-4" />
+                            <CheckSquare className="w-3.5 h-3.5" />
                           ) : (
-                            <Square className="w-4 h-4" />
+                            <Square className="w-3.5 h-3.5" />
                           )}
                         </button>
                       </th>
-                      <th className="p-4 w-12 text-center">{t('rank')}</th>
-                      <th className="p-4">{t('candidateName')}</th>
-                      {/* CHANGE 2: Add 4 new columns in exact order after Candidate column and before Match % */}
-                      <th className="p-4">{t('nationality')}</th>
-                      <th className="p-4">{t('educationLevel')}</th>
-                      <th className="p-4">{t('specialization')}</th>
-                      <th className="p-4">{t('yearsOfExperience')}</th>
-                      <th className="p-4">{t('matchScore')}</th>
-                      <th className="p-4">{t('status')}</th>
-                      <th className="p-4 text-center">{t('actions')}</th>
+                      <th style={{ width: 40, textAlign: 'center' }}>{t('rank')}</th>
+                      <th>{t('candidateName')}</th>
+                      <th>{t('nationality')}</th>
+                      <th>{t('educationLevel')}</th>
+                      <th>{t('specialization')}</th>
+                      <th>{t('yearsOfExperience')}</th>
+                      <th>{t('matchScore')}</th>
+                      <th>{t('status')}</th>
+                      <th style={{ textAlign: 'center' }}>{t('actions')}</th>
                     </tr>
                   </thead>
-                  <tbody className="text-sm">
+                  <tbody>
                     {filteredCandidates.map((c, index) => {
                       const isSelected = selectedForBulk.includes(c.id);
                       const isDualCompare = dualCompareLeft?.id === c.id || dualCompareRight?.id === c.id;
@@ -866,31 +889,27 @@ export const Results: React.FC = () => {
                       return (
                         <tr
                           key={c.id}
-                          style={{
-                            borderTop: '1px solid var(--tk-border)',
-                            background: isSelected || isDualCompare ? 'var(--tk-accent-soft)' : 'transparent'
-                          }}
+                          style={{ background: isSelected || isDualCompare ? 'var(--tk-accent-soft)' : 'transparent' }}
                         >
-                          <td className="p-4 text-center">
+                          <td style={{ textAlign: 'center' }}>
                             <button
                               onClick={() => toggleBulkSelect(c.id)}
                               className="tk-focusable"
                               style={{ color: isSelected ? 'var(--tk-accent-text)' : 'var(--tk-muted)' }}
-                              aria-label={`Select ${c.name}`}
+                              aria-label={t('selectCandidate', { name: c.name })}
                             >
-                              {isSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                              {isSelected ? <CheckSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
                             </button>
                           </td>
                           <td
-                            className="p-4 text-center"
-                            style={{ color: isTopThree ? 'var(--tk-accent-text)' : 'var(--tk-dim)', fontVariantNumeric: 'tabular-nums' }}
+                            style={{ textAlign: 'center', color: isTopThree ? 'var(--tk-accent-text)' : 'var(--tk-dim)', fontVariantNumeric: 'tabular-nums' }}
                           >
                             {String(index + 1).padStart(2, '0')}
                           </td>
 
-                          <td className="p-4">
+                          <td>
                             <div style={{ color: 'var(--tk-text)' }}><Bidi>{c.name}</Bidi></div>
-                            <div className="text-[10px] mt-0.5 truncate" dir="ltr" style={{ color: 'var(--tk-dim)', maxWidth: 180 }}>
+                            <div className="text-[9.5px] truncate" dir="ltr" style={{ color: 'var(--tk-dim)', maxWidth: 150 }}>
                               {c.originalFilename}
                             </div>
                           </td>
@@ -899,58 +918,60 @@ export const Results: React.FC = () => {
                             const ext = getExtractedCandidateDetails(c);
                             return (
                               <>
-                                <td className="p-4 text-xs" style={{ color: 'var(--tk-soft)' }}>{ext.nationality}</td>
-                                <td className="p-4 text-xs" style={{ color: 'var(--tk-soft)' }}>{ext.educationDegree}</td>
-                                <td className="p-4 text-xs" style={{ color: 'var(--tk-soft)' }}>{ext.specialization}</td>
-                                <td className="p-4 text-xs" style={{ color: 'var(--tk-soft)', fontVariantNumeric: 'tabular-nums' }}>{ext.totalExp}</td>
+                                <td className="text-[11.5px]" style={{ color: 'var(--tk-soft)' }}>{ext.nationality}</td>
+                                <td className="text-[11.5px]" style={{ color: 'var(--tk-soft)' }}>{ext.educationDegree}</td>
+                                <td className="text-[11.5px]" style={{ color: 'var(--tk-soft)' }}>{ext.specialization}</td>
+                                <td className="text-[11.5px]" style={{ color: 'var(--tk-soft)', fontVariantNumeric: 'tabular-nums' }}>{ext.totalExp}</td>
                               </>
                             );
                           })()}
 
-                          <td className="p-4">
-                            <div className="flex items-center gap-3">
+                          <td>
+                            <div className="flex items-center gap-2">
                               <span
-                                className="text-[13.5px]"
-                                style={{ width: 40, color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}
+                                className="text-[12.5px]"
+                                style={{ width: 36, color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}
                               >
                                 {c.matchScore}%
                               </span>
-                              <div className="tk-progress-track hidden sm:block" style={{ width: 96, height: 4 }}>
+                              {/* Bar and classification pill drop out first on narrow viewports —
+                                  the numeric score alone still ranks the row. */}
+                              <div className="tk-progress-track hidden lg:block" style={{ width: 70, height: 4 }}>
                                 <div className="tk-progress-fill" style={{ width: `${c.matchScore}%` }} />
                               </div>
-                              <span className={`tk-pill ${classification.isStrong ? 'is-active' : ''}`}>
+                              <span className={`tk-pill hidden xl:inline-flex ${classification.isStrong ? 'is-active' : ''}`}>
                                 {classification.label}
                               </span>
                             </div>
                           </td>
 
-                          <td className="p-4">
+                          <td>
                             {canEditStatus ? (
                               <select
                                 value={c.status}
                                 onChange={(e) => handleStatusChange(c.id, e.target.value)}
                                 className="tk-focusable"
-                                style={{ height: 30, borderRadius: 9, paddingInline: 10, fontSize: 11.5, background: 'var(--tk-inset)', color: 'var(--tk-text)', border: '1px solid var(--tk-border-strong)', cursor: 'pointer' }}
+                                style={{ height: 27, borderRadius: 8, paddingInline: 8, fontSize: 11, background: 'var(--tk-inset)', color: 'var(--tk-text)', border: '1px solid var(--tk-border-strong)', cursor: 'pointer' }}
                               >
-                                <option value="Pending">Pending</option>
-                                <option value="Shortlisted">Shortlisted</option>
-                                <option value="Interviewing">Interviewing</option>
-                                <option value="Rejected">Rejected</option>
+                                <option value="Pending">{t('status_Pending')}</option>
+                                <option value="Shortlisted">{t('status_Shortlisted')}</option>
+                                <option value="Interviewing">{t('status_Interviewing')}</option>
+                                <option value="Rejected">{t('status_Rejected')}</option>
                               </select>
                             ) : (
-                              <span className="tk-pill">{c.status}</span>
+                              <span className="tk-pill">{t(`status_${c.status}` as any)}</span>
                             )}
                           </td>
 
-                          <td className="p-4">
-                            <div className="flex items-center justify-center gap-2">
+                          <td>
+                            <div className="flex items-center justify-center gap-1">
                               {/* Compare Slot toggle */}
                               <button
                                 onClick={() => setDualSelection(c)}
                                 className="tk-icon-btn tk-focusable"
                                 style={isDualCompare ? { background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' } : undefined}
-                                title="Add to dual compare slots"
-                                aria-label="Add to dual compare slots"
+                                title={t('addToCompare')}
+                                aria-label={t('addToCompare')}
                               >
                                 <Columns className="w-3.5 h-3.5" />
                               </button>
@@ -960,6 +981,7 @@ export const Results: React.FC = () => {
                                 onClick={() => navigate(`/candidate/${c.id}`)}
                                 className="tk-icon-btn tk-focusable"
                                 title={t('report')}
+                                aria-label={t('report')}
                               >
                                 <FileText className="w-3.5 h-3.5" />
                               </button>
@@ -968,7 +990,8 @@ export const Results: React.FC = () => {
                               <button
                                 onClick={() => triggerOutreach(c, 'email')}
                                 className="tk-icon-btn tk-focusable"
-                                title="Outreach via Email"
+                                title={t('outreachEmail')}
+                                aria-label={t('outreachEmail')}
                               >
                                 <Mail className="w-3.5 h-3.5" />
                               </button>
@@ -977,7 +1000,8 @@ export const Results: React.FC = () => {
                               <button
                                 onClick={() => triggerOutreach(c, 'whatsapp')}
                                 className="tk-icon-btn tk-focusable"
-                                title="Outreach via WhatsApp"
+                                title={t('outreachWhatsapp')}
+                                aria-label={t('outreachWhatsapp')}
                               >
                                 <MessageCircle className="w-3.5 h-3.5" />
                               </button>
@@ -986,7 +1010,8 @@ export const Results: React.FC = () => {
                               <button
                                 onClick={() => handleDownload(c)}
                                 className="tk-icon-btn tk-focusable"
-                                title="Download CV"
+                                title={t('downloadCv')}
+                                aria-label={t('downloadCv')}
                               >
                                 <Download className="w-3.5 h-3.5" />
                               </button>
@@ -996,7 +1021,8 @@ export const Results: React.FC = () => {
                                 <button
                                   onClick={() => handleReanalyze(c.id)}
                                   className="tk-icon-btn tk-focusable"
-                                  title="Re-analyze CV"
+                                  title={t('reanalyze')}
+                                  aria-label={t('reanalyze')}
                                 >
                                   <RefreshCw className="w-3.5 h-3.5" />
                                 </button>
@@ -1008,7 +1034,8 @@ export const Results: React.FC = () => {
                                   onClick={() => handleDelete(c.id)}
                                   className="tk-icon-btn tk-focusable"
                                   style={{ color: '#ef4444' }}
-                                  title="Delete candidate record"
+                                  title={t('delete')}
+                                  aria-label={t('delete')}
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -1032,143 +1059,46 @@ export const Results: React.FC = () => {
             <button
               onClick={() => setBulkCompareOpen(false)}
               className="tk-icon-btn tk-focusable absolute"
-              style={{ top: 14, insetInlineEnd: 14 }}
-              aria-label="Close comparison"
+              style={{ top: 12, insetInlineEnd: 12 }}
+              aria-label={t('closeComparison')}
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
 
-            <h3 className="text-[17px] font-medium mb-5" style={{ color: 'var(--tk-text)' }}>{t('compareTitle')}</h3>
+            <h3 className="text-[15px] font-medium mb-4" style={{ color: 'var(--tk-text)' }}>{t('compareTitle')}</h3>
 
             {/* Comparison Grid */}
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left text-sm">
+            <div className="tk-table-scroll">
+              <table className="tk-table">
                 <thead>
-                  <tr className="text-[10px] font-bold uppercase tracking-[.1em]" style={{ borderBottom: '1px solid var(--tk-border)', color: 'var(--tk-muted)' }}>
-                    <th className="p-4 min-w-[150px]">Attributes</th>
-                    {/* Columns dynamically populated */}
-                    {dualCompareLeft && dualCompareRight && !selectedForBulk.length ? (
-                      <>
-                        <th className="p-4" style={{ width: '40%', color: 'var(--tk-accent-text)', background: 'var(--tk-accent-soft)' }}><Bidi>{dualCompareLeft.name}</Bidi></th>
-                        <th className="p-4" style={{ width: '40%', color: 'var(--tk-accent-text)' }}><Bidi>{dualCompareRight.name}</Bidi></th>
-                      </>
-                    ) : (
-                      selectedForBulk.map(bid => {
-                        const cand = processedCandidates.find(c => c.id === bid);
-                        return cand ? (
-                          <th key={bid} className="p-4" style={{ color: 'var(--tk-accent-text)' }}><Bidi>{cand.name}</Bidi></th>
-                        ) : null;
-                      })
-                    )}
+                  <tr>
+                    <th style={{ minWidth: 130 }}>{t('attributes')}</th>
+                    {comparedCandidates.map(cand => (
+                      <th key={cand.id} style={{ color: 'var(--tk-accent-text)' }}><Bidi>{cand.name}</Bidi></th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {/* Row: Score */}
-                  <tr style={{ borderTop: '1px solid var(--tk-border)' }}>
-                    <td className="p-4 text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>Match Score</td>
-                    {dualCompareLeft && dualCompareRight && !selectedForBulk.length ? (
-                      <>
-                        <td className="p-4 text-base" style={{ background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' }}>{dualCompareLeft.matchScore}%</td>
-                        <td className="p-4 text-base" style={{ color: 'var(--tk-accent-text)' }}>{dualCompareRight.matchScore}%</td>
-                      </>
-                    ) : (
-                      selectedForBulk.map(bid => {
-                        const cand = processedCandidates.find(c => c.id === bid);
-                        return <td key={bid} className="p-4" style={{ color: 'var(--tk-text)' }}>{cand?.matchScore}%</td>;
-                      })
-                    )}
-                  </tr>
-
-                  {/* Row: 3D Scores */}
-                  <tr style={{ borderTop: '1px solid var(--tk-border)' }}>
-                    <td className="p-4 text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>Tech / Exp / Culture</td>
-                    {dualCompareLeft && dualCompareRight && !selectedForBulk.length ? (
-                      <>
-                        <td className="p-4 text-xs" style={{ background: 'var(--tk-accent-soft)' }}>{dualCompareLeft.scoreTechnical} / {dualCompareLeft.scoreExperience} / {dualCompareLeft.scoreCultural}</td>
-                        <td className="p-4 text-xs">{dualCompareRight.scoreTechnical} / {dualCompareRight.scoreExperience} / {dualCompareRight.scoreCultural}</td>
-                      </>
-                    ) : (
-                      selectedForBulk.map(bid => {
-                        const cand = processedCandidates.find(c => c.id === bid);
-                        return <td key={bid} className="p-4 text-xs">{cand?.scoreTechnical} / {cand?.scoreExperience} / {cand?.scoreCultural}</td>;
-                      })
-                    )}
-                  </tr>
-
-                  {/* Row: Status */}
-                  <tr style={{ borderTop: '1px solid var(--tk-border)' }}>
-                    <td className="p-4 text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>Status</td>
-                    {dualCompareLeft && dualCompareRight && !selectedForBulk.length ? (
-                      <>
-                        <td className="p-4" style={{ background: 'var(--tk-accent-soft)', color: 'var(--tk-text)' }}>{dualCompareLeft.status}</td>
-                        <td className="p-4" style={{ color: 'var(--tk-text)' }}>{dualCompareRight.status}</td>
-                      </>
-                    ) : (
-                      selectedForBulk.map(bid => {
-                        const cand = processedCandidates.find(c => c.id === bid);
-                        return <td key={bid} className="p-4" style={{ color: 'var(--tk-text)' }}>{cand?.status}</td>;
-                      })
-                    )}
-                  </tr>
-
-                  {/* Row: Skills */}
-                  <tr style={{ borderTop: '1px solid var(--tk-border)' }}>
-                    <td className="p-4 text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>{t('skillsList')}</td>
-                    {dualCompareLeft && dualCompareRight && !selectedForBulk.length ? (
-                      <>
-                        <td className="p-4 text-xs leading-relaxed" style={{ background: 'var(--tk-accent-soft)', color: 'var(--tk-soft)' }}>{dualCompareLeft.skills?.join(', ') || 'None'}</td>
-                        <td className="p-4 text-xs leading-relaxed" style={{ color: 'var(--tk-soft)' }}>{dualCompareRight.skills?.join(', ') || 'None'}</td>
-                      </>
-                    ) : (
-                      selectedForBulk.map(bid => {
-                        const cand = processedCandidates.find(c => c.id === bid);
-                        return <td key={bid} className="p-4 text-xs leading-relaxed" style={{ color: 'var(--tk-soft)' }}>{cand?.skills?.join(', ')}</td>;
-                      })
-                    )}
-                  </tr>
-
-                  {/* Row: Gaps */}
-                  <tr style={{ borderTop: '1px solid var(--tk-border)' }}>
-                    <td className="p-4 text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>{t('candidateGaps')}</td>
-                    {dualCompareLeft && dualCompareRight && !selectedForBulk.length ? (
-                      <>
-                        <td className="p-4 text-xs leading-relaxed" style={{ background: 'var(--tk-accent-soft)', color: 'var(--tk-soft)' }}>{dualCompareLeft.gaps?.join(', ') || 'None'}</td>
-                        <td className="p-4 text-xs leading-relaxed" style={{ color: 'var(--tk-soft)' }}>{dualCompareRight.gaps?.join(', ') || 'None'}</td>
-                      </>
-                    ) : (
-                      selectedForBulk.map(bid => {
-                        const cand = processedCandidates.find(c => c.id === bid);
-                        return <td key={bid} className="p-4 text-xs leading-relaxed" style={{ color: 'var(--tk-soft)' }}>{cand?.gaps?.join(', ') || 'None'}</td>;
-                      })
-                    )}
-                  </tr>
-
-                  {/* Row: Certifications */}
-                  <tr style={{ borderTop: '1px solid var(--tk-border)' }}>
-                    <td className="p-4 text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>Certifications</td>
-                    {dualCompareLeft && dualCompareRight && !selectedForBulk.length ? (
-                      <>
-                        <td className="p-4 text-xs leading-relaxed" style={{ background: 'var(--tk-accent-soft)', color: 'var(--tk-soft)' }}>{dualCompareLeft.certificationsList?.join(', ') || 'None'}</td>
-                        <td className="p-4 text-xs leading-relaxed" style={{ color: 'var(--tk-soft)' }}>{dualCompareRight.certificationsList?.join(', ') || 'None'}</td>
-                      </>
-                    ) : (
-                      selectedForBulk.map(bid => {
-                        const cand = processedCandidates.find(c => c.id === bid);
-                        return <td key={bid} className="p-4 text-xs leading-relaxed" style={{ color: 'var(--tk-soft)' }}>{cand?.certificationsList?.join(', ') || 'None'}</td>;
-                      })
-                    )}
-                  </tr>
+                  {comparisonRows.map(({ label, render }) => (
+                    <tr key={label}>
+                      <td className="text-[9.5px] font-bold uppercase tracking-[.08em]" style={{ color: 'var(--tk-muted)' }}>{label}</td>
+                      {comparedCandidates.map(cand => (
+                        <td key={cand.id} className="text-[11.5px] leading-relaxed" style={{ color: 'var(--tk-soft)' }}>
+                          {render(cand)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="flex justify-end mt-6 pt-4" style={{ borderTop: '1px solid var(--tk-border)' }}>
+            <div className="flex justify-end mt-5 pt-3" style={{ borderTop: '1px solid var(--tk-border)' }}>
               <button
                 onClick={() => setBulkCompareOpen(false)}
                 className="tk-btn-primary tk-focusable"
-                style={{ height: 36, padding: '0 18px', fontSize: 12 }}
               >
-                Close comparison
+                {t('closeComparison')}
               </button>
             </div>
           </div>

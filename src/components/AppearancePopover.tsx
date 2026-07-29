@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Palette } from 'lucide-react';
 import { ThemeMode } from '../utils/theme.js';
 import AppearancePanel from './AppearancePanel.js';
+import { useI18n } from '../i18n/I18nContext.js';
 
 interface AppearancePopoverProps {
   open: boolean;
@@ -16,6 +17,7 @@ interface AppearancePopoverProps {
 export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
   open, onOpenChange, themeMode, accent, onThemeChange, onAccentChange
 }) => {
+  const { t } = useI18n();
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,26 +41,26 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
       <button
         type="button"
         onClick={() => onOpenChange(!open)}
-        title="Appearance"
-        aria-label="Appearance"
+        title={t('appearance')}
+        aria-label={t('appearance')}
         aria-expanded={open}
         className="tk-icon-btn tk-focusable"
         style={{
-          width: 36, height: 36,
+          width: 32, height: 32,
           ...(open ? { background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' } : {})
         }}
       >
-        <Palette className="w-4 h-4" />
+        <Palette className="w-3.5 h-3.5" />
       </button>
 
       {open && (
         <div
           role="dialog"
-          aria-label="Appearance settings"
+          aria-label={t('visualAppearance')}
           className="tk-panel"
           style={{
             position: 'absolute',
-            top: 46,
+            top: 42,
             insetInlineEnd: 0,
             zIndex: 40,
             width: 'min(360px, 84vw)',
@@ -73,8 +75,8 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
             style={{ borderBottom: '1px solid var(--tk-border)', paddingBottom: 10, marginBottom: 14 }}
           >
             <Palette className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
-            <span className="text-[11px] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-accent-text)' }}>
-              Visual appearance
+            <span className="text-[10.5px] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-accent-text)' }}>
+              {t('visualAppearance')}
             </span>
           </div>
           <AppearancePanel themeMode={themeMode} accent={accent} onThemeChange={onThemeChange} onAccentChange={onAccentChange} />

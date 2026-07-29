@@ -3,7 +3,10 @@ import { ar } from './ar.js';
 import { en } from './en.js';
 
 type Language = 'ar' | 'en';
-type Dictionary = typeof ar;
+// English is the source of truth for the key set; ar.ts is typed as `typeof en`,
+// so a missing or misspelled Arabic key is a compile error rather than a silent
+// English string leaking into the Arabic interface.
+type Dictionary = typeof en;
 type TranslationKey = keyof Dictionary;
 
 interface I18nContextType {

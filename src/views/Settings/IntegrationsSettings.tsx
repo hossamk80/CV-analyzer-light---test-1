@@ -36,7 +36,7 @@ export const IntegrationsSettings: React.FC = () => {
   const [liClientId, setLiClientId] = useState('');
   const [liClientSecret, setLiClientSecret] = useState('');
   const [liRedirectUri, setLiRedirectUri] = useState('');
-  const [liSyncDate, setLiSyncDate] = useState('Never synced');
+  const [liSyncDate, setLiSyncDate] = useState('');
 
   // Odoo State
   const [odActive, setOdActive] = useState(false);
@@ -44,17 +44,22 @@ export const IntegrationsSettings: React.FC = () => {
   const [odDb, setOdDb] = useState('');
   const [odEmail, setOdEmail] = useState('');
   const [odPassword, setOdPassword] = useState('');
-  const [odSyncDate, setOdSyncDate] = useState('Never synced');
+  const [odSyncDate, setOdSyncDate] = useState('');
 
   // Custom Webhook State
   const [custActive, setCustActive] = useState(false);
-  const [custPlatformName, setCustPlatformName] = useState('Custom Platform');
+  const [custPlatformName, setCustPlatformName] = useState('');
   const [custOriginalName, setCustOriginalName] = useState('Custom');
   const [custUrl, setCustUrl] = useState('');
   const [custAuthType, setCustAuthType] = useState('Bearer');
   const [custAuthValue, setCustAuthValue] = useState('');
   const [custPayload, setCustPayload] = useState('{\n  "name": "{name}",\n  "email": "{email}",\n  "score": "{score}"\n}');
-  const [custSyncDate, setCustSyncDate] = useState('Never synced');
+  const [custSyncDate, setCustSyncDate] = useState('');
+
+  // Older databases seeded these as the literal English strings 'Never synced' /
+  // 'Custom'; treat them as unset so the UI can render its own localized text.
+  const normalize = (value: string | null | undefined, legacy: string) =>
+    !value || value === legacy ? '' : value;
 
   useEffect(() => {
     fetchIntegrations();
@@ -72,7 +77,7 @@ export const IntegrationsSettings: React.FC = () => {
         setLiClientId(li.clientId || '');
         setLiClientSecret(li.clientSecret || '');
         setLiRedirectUri(li.endpointUrl || '');
-        setLiSyncDate(li.lastSyncDate || 'Never synced');
+        setLiSyncDate(normalize(li.lastSyncDate, 'Never synced'));
       }
 
       const od = data.find((i: any) => i.platformName === 'Odoo');
@@ -82,22 +87,22 @@ export const IntegrationsSettings: React.FC = () => {
         setOdDb(od.clientId || '');
         setOdEmail(od.clientSecret || '');
         setOdPassword(od.apiKey || '');
-        setOdSyncDate(od.lastSyncDate || 'Never synced');
+        setOdSyncDate(normalize(od.lastSyncDate, 'Never synced'));
       }
 
       const cust = data.find((i: any) => i.platformName !== 'LinkedIn' && i.platformName !== 'Odoo');
       if (cust) {
         setCustActive(cust.isActive === 1);
-        setCustPlatformName(cust.platformName || 'Custom');
+        setCustPlatformName(normalize(cust.platformName, 'Custom'));
         setCustOriginalName(cust.platformName);
         setCustUrl(cust.endpointUrl || '');
         setCustAuthType(cust.clientId || 'Bearer');
         setCustAuthValue(cust.apiKey || '');
         setCustPayload(cust.customHeaders || '{}');
-        setCustSyncDate(cust.lastSyncDate || 'Never synced');
+        setCustSyncDate(normalize(cust.lastSyncDate, 'Never synced'));
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load integrations settings');
+      setError(err.message || t('accessDeniedBody'));
     } finally {
       setLoading(false);
     }
@@ -122,7 +127,7 @@ export const IntegrationsSettings: React.FC = () => {
       else if (platform === 'Odoo') setOdActive(currentVal);
       else setCustActive(currentVal);
       
-      alert('Failed to update integration status: ' + err.message);
+      alert(t('integrationStatusFailed', { reason: err.message }));
     }
   };
 
@@ -199,7 +204,7 @@ export const IntegrationsSettings: React.FC = () => {
       }
       setSaveStatus(prev => ({
         ...prev,
-        [platform]: { success: true, message: t('saveIntegrationSuccess') || 'Saved connection configuration.' }
+        [platform]: { success: true, message: t('saveIntegrationSuccess') }
       }));
       // Clear message after 3 seconds
       setTimeout(() => {
@@ -208,7 +213,7 @@ export const IntegrationsSettings: React.FC = () => {
     } catch (err: any) {
       setSaveStatus(prev => ({
         ...prev,
-        [platform]: { success: false, message: err.message || t('saveIntegrationFailed') || 'Failed to save settings.' }
+        [platform]: { success: false, message: err.message || t('saveIntegrationFailed') }
       }));
     } finally {
       setSavingPlatform(null);
@@ -218,8 +223,8 @@ export const IntegrationsSettings: React.FC = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[300px] space-y-4">
-        <Loader2 className="w-8 h-8 text-brand animate-spin" />
-        <p className="text-sm text-text-muted">Loading integration settings...</p>
+        <Loader2 className="w-7 h-7 text-brand animate-spin" />
+        <p className="text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>{t('loadingIntegrations')}</p>
       </div>
     );
   }
@@ -229,38 +234,39 @@ export const IntegrationsSettings: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col space-y-1.5 border-b border-border-main/50 pb-4">
-        <h2 className="text-lg font-bold text-text-main flex items-center gap-2">
-          <Link2 className="w-5 h-5 text-brand" />
-          {t('integrationsTitle') || 'Integrations & API Connections'}
+    <div className="space-y-4">
+      <div className="flex flex-col space-y-1 pb-3" style={{ borderBottom: '1px solid var(--tk-border)' }}>
+        <h2 className="text-[15px] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
+          <Link2 className="w-4 h-4 text-brand" />
+          {t('integrationsTitle')}
         </h2>
-        <p className="text-xs text-text-muted">
-          {t('integrationsSub') || 'Manage third-party ERP, sourcing syncs, and custom webhook payloads.'}
+        <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>
+          {t('integrationsSub')}
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Module 1: LinkedIn AI Sourcing */}
         <div className="tk-panel overflow-hidden transition-all duration-300">
           <div 
-            className="p-5 flex items-center justify-between cursor-pointer hover:bg-bg-hover/30 transition-colors"
+            className="flex items-center justify-between gap-3 cursor-pointer hover:bg-bg-hover/30 transition-colors"
+            style={{ padding: 13 }}
             onClick={() => setExpandedPlatform(expandedPlatform === 'LinkedIn' ? null : 'LinkedIn')}
           >
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl">
-                <Linkedin className="w-6 h-6" />
+              <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-xl">
+                <Linkedin className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-text-main">{t('linkedInSourcing') || 'LinkedIn AI Sourcing'}</h3>
-                <p className="text-xs text-text-muted mt-0.5">{t('linkedInDesc') || 'Connect to LinkedIn Recruiter API to source candidates.'}</p>
+                <h3 className="text-[13px] font-semibold" style={{ color: 'var(--tk-text)' }}>{t('linkedInSourcing')}</h3>
+                <p className="text-[11px] mt-0.5" style={{ color: 'var(--tk-muted)' }}>{t('linkedInDesc')}</p>
               </div>
             </div>
             
             <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
               {/* Enable toggle switch */}
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-text-muted">{liActive ? t('enabled') : t('disabled')}</span>
+                <span className="text-[11px] font-bold text-text-muted">{liActive ? t('enabled') : t('disabled')}</span>
                 <button
                   onClick={() => handleToggleActive('LinkedIn', liActive)}
                   className={`tk-switch tk-focusable ${liActive ? 'is-on' : ''}`}
@@ -281,23 +287,23 @@ export const IntegrationsSettings: React.FC = () => {
           </div>
 
           {expandedPlatform === 'LinkedIn' && (
-            <div className="p-6 border-t border-border-main bg-bg-main/10 space-y-5">
+            <div className="space-y-4" style={{ padding: 14, borderTop: '1px solid var(--tk-border)' }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    {t('linkedInClientId') || 'Client ID'}
+                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                    {t('linkedInClientId')}
                   </label>
                   <input
                     type="text"
                     value={liClientId}
                     onChange={(e) => setLiClientId(e.target.value)}
-                    placeholder="Enter LinkedIn Client ID"
+                    placeholder={t('phLinkedInClientId')}
                     className="tk-field tk-focusable"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    {t('linkedInClientSecret') || 'Client Secret'}
+                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                    {t('linkedInClientSecret')}
                   </label>
                   <input
                     type="password"
@@ -308,8 +314,8 @@ export const IntegrationsSettings: React.FC = () => {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    {t('linkedInRedirectUri') || 'OAuth Redirect URI'}
+                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                    {t('linkedInRedirectUri')}
                   </label>
                   <input
                     type="text"
@@ -344,23 +350,23 @@ export const IntegrationsSettings: React.FC = () => {
               )}
 
               <div className="flex justify-between items-center pt-2 border-t border-border-main/50">
-                <span className="text-[10px] text-text-muted">Last sync: {liSyncDate}</span>
+                <span className="text-[10px]" style={{ color: 'var(--tk-muted)' }}>{t('lastSync', { date: liSyncDate || t('neverSynced') })}</span>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleTestConnection('LinkedIn')}
                     disabled={testingPlatform !== null || savingPlatform !== null}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-bg-hover hover:bg-bg-hover/80 border border-border-main text-text-main text-xs font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    className="tk-btn-neutral tk-focusable disabled:opacity-50"
                   >
                     {testingPlatform === 'LinkedIn' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                    <span>{t('testConnection') || 'Test Connection'}</span>
+                    <span>{t('testConnection')}</span>
                   </button>
                   <button
                     onClick={() => handleSaveSettings('LinkedIn')}
                     disabled={testingPlatform !== null || savingPlatform !== null}
-                    className="tk-btn-primary tk-focusable flex items-center gap-1.5 text-xs transition-colors cursor-pointer disabled:opacity-50"
+                    className="tk-btn-primary tk-focusable disabled:opacity-50"
                   >
                     {savingPlatform === 'LinkedIn' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                    <span>{t('saveSettings') || 'Save Connection'}</span>
+                    <span>{t('saveConnection')}</span>
                   </button>
                 </div>
               </div>
@@ -371,22 +377,23 @@ export const IntegrationsSettings: React.FC = () => {
         {/* Module 2: Odoo ERP Sync */}
         <div className="tk-panel overflow-hidden transition-all duration-300">
           <div 
-            className="p-5 flex items-center justify-between cursor-pointer hover:bg-bg-hover/30 transition-colors"
+            className="flex items-center justify-between gap-3 cursor-pointer hover:bg-bg-hover/30 transition-colors"
+            style={{ padding: 13 }}
             onClick={() => setExpandedPlatform(expandedPlatform === 'Odoo' ? null : 'Odoo')}
           >
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-500/10 text-purple-500 rounded-xl">
-                <Database className="w-6 h-6" />
+              <div className="p-2.5 bg-purple-500/10 text-purple-500 rounded-xl">
+                <Database className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-text-main">{t('odooErp') || 'Odoo ERP Sync'}</h3>
-                <p className="text-xs text-text-muted mt-0.5">{t('odooDesc') || 'Synchronize jobs and applicant details automatically.'}</p>
+                <h3 className="text-[13px] font-semibold" style={{ color: 'var(--tk-text)' }}>{t('odooErp')}</h3>
+                <p className="text-[11px] mt-0.5" style={{ color: 'var(--tk-muted)' }}>{t('odooDesc')}</p>
               </div>
             </div>
             
             <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-text-muted">{odActive ? t('enabled') : t('disabled')}</span>
+                <span className="text-[11px] font-bold text-text-muted">{odActive ? t('enabled') : t('disabled')}</span>
                 <button
                   onClick={() => handleToggleActive('Odoo', odActive)}
                   className={`tk-switch tk-focusable ${odActive ? 'is-on' : ''}`}
@@ -407,11 +414,11 @@ export const IntegrationsSettings: React.FC = () => {
           </div>
 
           {expandedPlatform === 'Odoo' && (
-            <div className="p-6 border-t border-border-main bg-bg-main/10 space-y-5">
+            <div className="space-y-4" style={{ padding: 14, borderTop: '1px solid var(--tk-border)' }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    {t('odooUrl') || 'Odoo Server URL'}
+                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                    {t('odooUrl')}
                   </label>
                   <input
                     type="text"
@@ -422,20 +429,20 @@ export const IntegrationsSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    {t('odooDb') || 'Database Name'}
+                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                    {t('odooDb')}
                   </label>
                   <input
                     type="text"
                     value={odDb}
                     onChange={(e) => setOdDb(e.target.value)}
-                    placeholder="Enter Odoo Database Name"
+                    placeholder={t('phOdooDb')}
                     className="tk-field tk-focusable"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    {t('odooEmail') || 'Admin Email'}
+                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                    {t('odooEmail')}
                   </label>
                   <input
                     type="email"
@@ -446,8 +453,8 @@ export const IntegrationsSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    {t('odooPassword') || 'API Key / Password'}
+                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                    {t('odooPassword')}
                   </label>
                   <input
                     type="password"
@@ -482,23 +489,23 @@ export const IntegrationsSettings: React.FC = () => {
               )}
 
               <div className="flex justify-between items-center pt-2 border-t border-border-main/50">
-                <span className="text-[10px] text-text-muted">Last sync: {odSyncDate}</span>
+                <span className="text-[10px]" style={{ color: 'var(--tk-muted)' }}>{t('lastSync', { date: odSyncDate || t('neverSynced') })}</span>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleTestConnection('Odoo')}
                     disabled={testingPlatform !== null || savingPlatform !== null}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-bg-hover hover:bg-bg-hover/80 border border-border-main text-text-main text-xs font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    className="tk-btn-neutral tk-focusable disabled:opacity-50"
                   >
                     {testingPlatform === 'Odoo' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                    <span>{t('testConnection') || 'Test Connection'}</span>
+                    <span>{t('testConnection')}</span>
                   </button>
                   <button
                     onClick={() => handleSaveSettings('Odoo')}
                     disabled={testingPlatform !== null || savingPlatform !== null}
-                    className="tk-btn-primary tk-focusable flex items-center gap-1.5 text-xs transition-colors cursor-pointer disabled:opacity-50"
+                    className="tk-btn-primary tk-focusable disabled:opacity-50"
                   >
                     {savingPlatform === 'Odoo' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                    <span>{t('saveSettings') || 'Save Connection'}</span>
+                    <span>{t('saveConnection')}</span>
                   </button>
                 </div>
               </div>
@@ -509,22 +516,23 @@ export const IntegrationsSettings: React.FC = () => {
         {/* Module 3: Custom Webhook / API */}
         <div className="tk-panel overflow-hidden transition-all duration-300">
           <div 
-            className="p-5 flex items-center justify-between cursor-pointer hover:bg-bg-hover/30 transition-colors"
+            className="flex items-center justify-between gap-3 cursor-pointer hover:bg-bg-hover/30 transition-colors"
+            style={{ padding: 13 }}
             onClick={() => setExpandedPlatform(expandedPlatform === 'Custom' ? null : 'Custom')}
           >
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-amber-500/10 text-amber-500 rounded-xl">
-                <Webhook className="w-6 h-6" />
+              <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-xl">
+                <Webhook className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-text-main">{custPlatformName}</h3>
-                <p className="text-xs text-text-muted mt-0.5">{t('customDesc') || 'Configure an arbitrary custom API endpoint and payload mapping schemas.'}</p>
+                <h3 className="text-[13px] font-semibold" style={{ color: 'var(--tk-text)' }}>{custPlatformName || t('customPlatform')}</h3>
+                <p className="text-[11px] mt-0.5" style={{ color: 'var(--tk-muted)' }}>{t('customDesc')}</p>
               </div>
             </div>
             
             <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-text-muted">{custActive ? t('enabled') : t('disabled')}</span>
+                <span className="text-[11px] font-bold text-text-muted">{custActive ? t('enabled') : t('disabled')}</span>
                 <button
                   onClick={() => handleToggleActive('Custom', custActive)}
                   className={`tk-switch tk-focusable ${custActive ? 'is-on' : ''}`}
@@ -545,23 +553,23 @@ export const IntegrationsSettings: React.FC = () => {
           </div>
 
           {expandedPlatform === 'Custom' && (
-            <div className="p-6 border-t border-border-main bg-bg-main/10 space-y-5">
+            <div className="space-y-4" style={{ padding: 14, borderTop: '1px solid var(--tk-border)' }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    {t('customPlatformName') || 'Platform Name'}
+                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                    {t('customPlatformName')}
                   </label>
                   <input
                     type="text"
                     value={custPlatformName}
                     onChange={(e) => setCustPlatformName(e.target.value)}
-                    placeholder="e.g. Local HR Webhook"
+                    placeholder={t('phCustomPlatform')}
                     className="tk-field tk-focusable"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    {t('customBaseUrl') || 'Base API URL'}
+                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                    {t('customBaseUrl')}
                   </label>
                   <input
                     type="text"
@@ -572,40 +580,40 @@ export const IntegrationsSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    {t('customAuthType') || 'Authentication Type'}
+                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                    {t('customAuthType')}
                   </label>
                   <select
                     value={custAuthType}
                     onChange={(e) => setCustAuthType(e.target.value)}
                     className="tk-field tk-focusable"
                   >
-                    <option value="Bearer">Bearer Token</option>
-                    <option value="ApiKey">API Key Header</option>
-                    <option value="Basic">Basic Auth</option>
+                    <option value="Bearer">{t('authBearer')}</option>
+                    <option value="ApiKey">{t('authApiKey')}</option>
+                    <option value="Basic">{t('authBasic')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    {t('customAuthValue') || 'Auth Value'}
+                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                    {t('customAuthValue')}
                   </label>
                   <input
                     type="text"
                     value={custAuthValue}
                     onChange={(e) => setCustAuthValue(e.target.value)}
-                    placeholder="Enter security token / key value"
+                    placeholder={t('phCustomAuthValue')}
                     className="tk-field tk-focusable"
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    {t('customPayloadMapping') || 'JSON Payload Mapping Schema'}
+                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                    {t('customPayloadMapping')}
                   </label>
                   <textarea
                     rows={4}
                     value={custPayload}
                     onChange={(e) => setCustPayload(e.target.value)}
-                    placeholder="Define template field mapping structure in JSON"
+                    placeholder={t('phCustomPayload')}
                     className="tk-field tk-focusable"
                   />
                 </div>
@@ -634,23 +642,23 @@ export const IntegrationsSettings: React.FC = () => {
               )}
 
               <div className="flex justify-between items-center pt-2 border-t border-border-main/50">
-                <span className="text-[10px] text-text-muted">Last sync: {custSyncDate}</span>
+                <span className="text-[10px]" style={{ color: 'var(--tk-muted)' }}>{t('lastSync', { date: custSyncDate || t('neverSynced') })}</span>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleTestConnection('Custom')}
                     disabled={testingPlatform !== null || savingPlatform !== null}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-bg-hover hover:bg-bg-hover/80 border border-border-main text-text-main text-xs font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    className="tk-btn-neutral tk-focusable disabled:opacity-50"
                   >
                     {testingPlatform === 'Custom' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                    <span>{t('testConnection') || 'Test Connection'}</span>
+                    <span>{t('testConnection')}</span>
                   </button>
                   <button
                     onClick={() => handleSaveSettings('Custom')}
                     disabled={testingPlatform !== null || savingPlatform !== null}
-                    className="tk-btn-primary tk-focusable flex items-center gap-1.5 text-xs transition-colors cursor-pointer disabled:opacity-50"
+                    className="tk-btn-primary tk-focusable disabled:opacity-50"
                   >
                     {savingPlatform === 'Custom' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                    <span>{t('saveSettings') || 'Save Connection'}</span>
+                    <span>{t('saveConnection')}</span>
                   </button>
                 </div>
               </div>

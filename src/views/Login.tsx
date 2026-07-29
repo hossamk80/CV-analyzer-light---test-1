@@ -49,20 +49,21 @@ export const Login: React.FC = () => {
       {/* Floating Language Switcher */}
       <button
         onClick={handleLanguageToggle}
-        className="absolute top-6 right-6 flex items-center gap-1.5 p-2 rounded-xl bg-bg-card border border-border-main text-text-muted hover:text-text-main text-xs font-semibold hover:shadow-sm transition-all cursor-pointer"
+        className="tk-btn-neutral tk-focusable absolute"
+        style={{ top: 20, insetInlineEnd: 20 }}
       >
-        <Globe className="w-4 h-4" />
+        <Globe className="w-3.5 h-3.5" />
         <span>{language === 'ar' ? 'English' : 'العربية'}</span>
       </button>
 
       {/* Login Card */}
-      <div className="tk-panel w-full max-w-md p-8 shadow-xl">
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 bg-brand/10 rounded-2xl flex items-center justify-center border border-brand/20 mb-3.5 shadow-inner">
-            <BrainCircuit className="w-8 h-8 text-brand animate-pulse" />
+      <div className="tk-panel w-full max-w-md" style={{ padding: 26, boxShadow: '0 22px 50px rgba(0,0,0,.25)' }}>
+        <div className="flex flex-col items-center mb-6">
+          <div className="flex items-center justify-center mb-3" style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--tk-accent-soft)', border: '1px solid var(--tk-accent-line)', color: 'var(--tk-accent-text)' }}>
+            <BrainCircuit className="w-6 h-6" />
           </div>
-          <h2 className="text-2xl font-black text-text-main tracking-tight text-center">{t('appName')}</h2>
-          <p className="text-xs text-text-muted mt-1">{t('cvAnalyzer')}</p>
+          <h2 className="text-[20px] font-medium tracking-tight text-center" style={{ color: 'var(--tk-text)' }}>{t('appName')}</h2>
+          <p className="text-[11.5px] mt-1" style={{ color: 'var(--tk-muted)' }}>{t('cvAnalyzer')}</p>
         </div>
 
         {error && (
@@ -72,9 +73,9 @@ export const Login: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
+            <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
               {t('username')}
             </label>
             <input
@@ -82,13 +83,14 @@ export const Login: React.FC = () => {
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. recruiter"
+              placeholder={t('usernamePlaceholder')}
               className="tk-field tk-focusable"
+              dir="ltr"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
+            <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
               {t('password')}
             </label>
             <input
@@ -98,6 +100,7 @@ export const Login: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               className="tk-field tk-focusable"
+              dir="ltr"
             />
           </div>
 
@@ -105,7 +108,7 @@ export const Login: React.FC = () => {
             type="submit"
             disabled={loading}
             className="tk-btn-primary tk-focusable w-full mt-4 disabled:opacity-50 disabled:pointer-events-none"
-            style={{ height: 40, fontSize: 13 }}
+            style={{ height: 36, fontSize: 12.5 }}
           >
             {loading ? (
               <div
@@ -120,19 +123,19 @@ export const Login: React.FC = () => {
         {/* Demo Credentials Reminder - Gated by VITE_SHOW_DEMO_CREDENTIALS */}
         {(import.meta as any).env?.VITE_SHOW_DEMO_CREDENTIALS === 'true' && (
           <div className="mt-8 pt-6 border-t border-border-main/50 text-center">
-            <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">Demo Accounts / الحسابات التجريبية</p>
+            <p className="text-[10px] font-bold text-text-muted uppercase tracking-[.1em] mb-2">{t('demoAccounts')}</p>
             <div className="grid grid-cols-3 gap-1 text-[11px] font-medium text-text-muted/80">
               <div>
-                <p className="font-bold text-brand">Admin</p>
-                <p>admin / admin123</p>
+                <p className="font-bold text-brand">{t('admin')}</p>
+                <p dir="ltr">admin / admin123</p>
               </div>
               <div>
-                <p className="font-bold text-brand">Recruiter</p>
-                <p>recruiter / recruiter123</p>
+                <p className="font-bold text-brand">{t('recruiter')}</p>
+                <p dir="ltr">recruiter / recruiter123</p>
               </div>
               <div>
-                <p className="font-bold text-brand">Manager</p>
-                <p>manager / manager123</p>
+                <p className="font-bold text-brand">{t('manager')}</p>
+                <p dir="ltr">manager / manager123</p>
               </div>
             </div>
           </div>

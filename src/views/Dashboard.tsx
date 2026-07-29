@@ -160,7 +160,7 @@ export const Dashboard: React.FC = () => {
       await apiRequest('PUT', endpoint);
       fetchDashboardData();
     } catch (e: any) {
-      alert(e.message || 'Failed to update job status');
+      alert(e.message || t('jobStatusUpdateFailed'));
     }
   };
 
@@ -191,7 +191,7 @@ export const Dashboard: React.FC = () => {
       setDeletingJob(null);
       fetchDashboardData();
     } catch (e: any) {
-      alert(e.message || 'Failed to delete job');
+      alert(e.message || t('deleteJobFailed'));
     } finally {
       setDeletingInProgress(false);
     }
@@ -287,7 +287,7 @@ export const Dashboard: React.FC = () => {
       setEditingJob(null);
       fetchDashboardData();
     } catch (e: any) {
-      alert(e.message || 'Failed to save job updates');
+      alert(e.message || t('saveJobFailed'));
     }
   };
 
@@ -298,6 +298,9 @@ export const Dashboard: React.FC = () => {
   const todayCount = stats.trend7d[stats.trend7d.length - 1]?.cvCount ?? 0;
   const strongMatches = stats.topCandidates.filter(c => c.matchScore >= 90).length;
 
+  // Shared micro-label styling for the modal forms.
+  const modalLabel = 'block text-[10.5px] font-bold uppercase tracking-[.1em] mb-1.5 text-text-muted';
+
   const kpiTiles = [
     { label: t('kpiTotalCvs'), value: String(stats.totalCvs), series: cvSeries, icon: FileText },
     { label: t('kpiActiveJobs'), value: String(stats.activeJobs), series: jobSeries, icon: Briefcase },
@@ -306,24 +309,22 @@ export const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* KPI row — des-2.txt §5 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(165px, 100%), 1fr))', gap: 10 }}>
         {kpiTiles.map(({ label, value, series, icon: Icon }) => (
           <div key={label} className="tk-tile tk-focusable" style={{ transition: 'border-color 180ms ease' }}>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
+              <span className="text-[10.5px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
                 <Icon className="w-3.5 h-3.5" />
                 {label}
               </span>
             </div>
-            <div className="flex items-end justify-between gap-2 mt-2">
-              <h3 style={{ fontSize: 'clamp(24px,2.6vw,32px)', fontWeight: 500, letterSpacing: '-.03em', color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>
-                {value}
-              </h3>
+            <div className="flex items-end justify-between gap-2 mt-1.5">
+              <h3 className="tk-stat-value">{value}</h3>
               {series.length > 1 && (
-                <svg viewBox="0 0 90 34" width="90" height="34" style={{ maxWidth: '40%' }}>
-                  <polyline points={sparklinePoints(series)} fill="none" stroke="var(--tk-accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                <svg viewBox="0 0 90 34" width="70" height="26" style={{ maxWidth: '38%' }}>
+                  <polyline points={sparklinePoints(series)} fill="none" stroke="var(--tk-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
             </div>
@@ -332,11 +333,11 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* AI Assistant hero panel + Top candidates — des-2.txt §5 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(330px, 100%), 1fr))', gap: 14 }}>
-        <div className="tk-hero p-5" style={{ flex: '1 1 0' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 10 }}>
+        <div className="tk-hero" style={{ flex: '1 1 0', padding: 'clamp(12px,1.15vw,16px)' }}>
           <div
             style={{
-              position: 'absolute', top: -60, insetInlineEnd: -60, width: 200, height: 200, borderRadius: '50%',
+              position: 'absolute', top: -60, insetInlineEnd: -60, width: 180, height: 180, borderRadius: '50%',
               background: 'radial-gradient(circle, var(--tk-accent-mid), transparent 65%)'
             }}
           />
@@ -350,8 +351,8 @@ export const Dashboard: React.FC = () => {
                 returned a usable structured result. Named "reliability", not "accuracy":
                 the system has no ground truth to score its own judgement against. */}
             <div className="flex items-center justify-center py-1">
-              <div style={{ position: 'relative', width: 104, height: 104 }}>
-                <svg viewBox="0 0 120 120" width="104" height="104">
+              <div style={{ position: 'relative', width: 88, height: 88 }}>
+                <svg viewBox="0 0 120 120" width="88" height="88">
                   <g transform="rotate(-90 60 60)">
                     <circle cx="60" cy="60" r="50" fill="none" stroke="var(--tk-track)" strokeWidth="9" />
                     {reliability?.hasData && (
@@ -368,19 +369,19 @@ export const Dashboard: React.FC = () => {
                   className="absolute inset-0 flex flex-col items-center justify-center"
                   style={{ color: 'var(--tk-text)' }}
                 >
-                  <span style={{ fontSize: 23, fontWeight: 500, letterSpacing: '-.03em', fontVariantNumeric: 'tabular-nums' }}>
+                  <span style={{ fontSize: 20, fontWeight: 500, letterSpacing: '-.03em', fontVariantNumeric: 'tabular-nums' }}>
                     {reliability?.hasData ? `${reliability.successRate}%` : '—'}
                   </span>
                   <span className="text-[9px] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-muted)' }}>
-                    Reliability
+                    {t('reliability')}
                   </span>
                 </div>
               </div>
             </div>
             <p className="text-[11px] text-center" style={{ color: 'var(--tk-dim)' }}>
               {reliability?.hasData
-                ? `${reliability.successRuns}/${reliability.totalRuns} AI runs succeeded (30d)`
-                : 'No AI runs recorded yet'}
+                ? t('reliabilityRuns', { success: String(reliability.successRuns), total: String(reliability.totalRuns) })
+                : t('reliabilityNoRuns')}
             </p>
 
             <p className="text-xs leading-relaxed flex items-center gap-2 flex-wrap" style={{ color: 'var(--tk-muted)' }}>
@@ -388,23 +389,23 @@ export const Dashboard: React.FC = () => {
               <span>·</span>
               <span><strong style={{ color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>{strongMatches}</strong> {t('atOrAbove90')}</span>
             </p>
-            <p className="text-sm font-medium leading-relaxed" style={{ color: 'var(--tk-text)' }}>
+            <p className="text-[12.5px] font-medium leading-relaxed" style={{ color: 'var(--tk-text)' }}>
               {role === 'admin' ? t('assistant_admin') : role === 'manager' ? t('assistant_manager') : t('assistant_recruiter')}
             </p>
 
             {stats.topCandidates.slice(0, 3).map(c => {
-              const displayName = c.gdprAnonymized ? `Candidate #${c.id}` : c.name;
+              const displayName = c.gdprAnonymized ? t('candidateAnonymous', { id: String(c.id) }) : c.name;
               return (
                 <div key={c.id} className="flex items-center gap-2.5">
                   <span
-                    className="flex items-center justify-center shrink-0 font-bold text-xs"
-                    style={{ width: 30, height: 30, borderRadius: 10, background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' }}
+                    className="flex items-center justify-center shrink-0 font-bold text-[11px]"
+                    style={{ width: 27, height: 27, borderRadius: 9, background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' }}
                   >
                     {c.matchScore}
                   </span>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <p className="text-xs font-semibold truncate" style={{ color: 'var(--tk-text)' }}><Bidi>{displayName}</Bidi></p>
-                    <p className="text-[11px] truncate" style={{ color: 'var(--tk-muted)', maxWidth: '40%' }}><Bidi>{c.jobTitle}</Bidi></p>
+                    <p className="text-[11.5px] font-semibold truncate" style={{ color: 'var(--tk-text)' }}><Bidi>{displayName}</Bidi></p>
+                    <p className="text-[11px] truncate" style={{ color: 'var(--tk-muted)' }}><Bidi>{c.jobTitle}</Bidi></p>
                   </div>
                 </div>
               );
@@ -414,7 +415,7 @@ export const Dashboard: React.FC = () => {
               type="button"
               onClick={() => setSummaryModalOpen(true)}
               className="tk-btn-primary tk-focusable"
-              style={{ width: '100%', height: 38, fontSize: 12.5 }}
+              style={{ width: '100%' }}
             >
               <Sparkles className="w-3.5 h-3.5" />
               {t('aiStrategicSummary')}
@@ -423,41 +424,41 @@ export const Dashboard: React.FC = () => {
         </div>
 
         <div className="tk-panel" style={{ flex: '1.6 1 0' }}>
-          <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center justify-between gap-2 mb-2.5">
             <div>
-              <h4 className="text-[15px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('navResults')}</h4>
-              <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>ranked by match score</p>
+              <h4 className="text-[14px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('navResults')}</h4>
+              <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>{t('rankedByMatch')}</p>
             </div>
-            <Link to="/results" className="text-xs font-semibold tk-focusable" style={{ color: 'var(--tk-accent-text)' }}>
-              {t('viewResults')} →
+            <Link to="/results" className="text-[11.5px] font-semibold tk-focusable" style={{ color: 'var(--tk-accent-text)' }}>
+              {t('viewResults')}
             </Link>
           </div>
 
           {stats.topCandidates.length === 0 ? (
-            <p className="text-xs py-6 text-center" style={{ color: 'var(--tk-muted)' }}>{t('noCandidatesYet')}</p>
+            <p className="text-[12px] py-6 text-center" style={{ color: 'var(--tk-muted)' }}>{t('noCandidatesYet')}</p>
           ) : (
             <div className="tk-row-list">
               {stats.topCandidates.map((c, idx) => {
-                const displayName = c.gdprAnonymized ? `Candidate #${c.id}` : c.name;
+                const displayName = c.gdprAnonymized ? t('candidateAnonymous', { id: String(c.id) }) : c.name;
                 return (
-                  <div key={c.id} className="flex items-center gap-3 flex-wrap">
-                    <span className="text-sm font-bold" style={{ width: 20, color: 'var(--tk-dim)' }}>{String(idx + 1).padStart(2, '0')}</span>
+                  <div key={c.id} className="flex items-center gap-2.5 flex-wrap">
+                    <span className="text-[12px] font-bold" style={{ width: 18, color: 'var(--tk-dim)' }}>{String(idx + 1).padStart(2, '0')}</span>
                     <span
-                      className="flex items-center justify-center shrink-0 rounded-full font-bold text-xs"
-                      style={{ width: 34, height: 34, background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' }}
+                      className="flex items-center justify-center shrink-0 rounded-full font-bold text-[11px]"
+                      style={{ width: 28, height: 28, background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' }}
                     >
                       {displayName.charAt(0).toUpperCase()}
                     </span>
-                    <div style={{ flex: '1 1 150px', minWidth: 0 }}>
-                      <p className="text-xs font-semibold truncate" style={{ color: 'var(--tk-text)' }}><Bidi>{displayName}</Bidi></p>
+                    <div style={{ flex: '1 1 140px', minWidth: 0 }}>
+                      <p className="text-[11.5px] font-semibold truncate" style={{ color: 'var(--tk-text)' }}><Bidi>{displayName}</Bidi></p>
                       <p className="text-[11px] truncate" style={{ color: 'var(--tk-muted)' }}><Bidi>{c.jobTitle}</Bidi></p>
                     </div>
-                    <div className="tk-progress-track" style={{ flex: '1 1 90px' }}>
+                    <div className="tk-progress-track" style={{ flex: '1 1 80px' }}>
                       <div className="tk-progress-fill" style={{ width: `${c.matchScore}%` }} />
                     </div>
-                    <span className="text-sm font-bold text-end" style={{ width: 48, color: 'var(--tk-accent-text)' }}>{c.matchScore}%</span>
-                    <Link to={`/candidate/${c.id}`} className="tk-btn-primary tk-focusable" style={{ height: 30, padding: '0 12px', fontSize: 11 }}>
-                      {t('viewResults') === 'View Results' ? 'Open' : t('viewResults')}
+                    <span className="text-[12px] font-bold text-end" style={{ width: 42, color: 'var(--tk-accent-text)' }}>{c.matchScore}%</span>
+                    <Link to={`/candidate/${c.id}`} className="tk-btn-primary tk-focusable" style={{ height: 27, padding: '0 10px', fontSize: 11 }}>
+                      {t('openReport')}
                     </Link>
                   </div>
                 );
@@ -468,31 +469,30 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Actions and Jobs Table Section */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex justify-between items-center gap-4">
-          <h3 className="text-[15px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('activeJobsList')}</h3>
+          <h3 className="text-[14px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('activeJobsList')}</h3>
 
           {canEditJobs && (
             <button
               onClick={() => navigate('/jobs')}
               className="tk-btn-primary tk-focusable"
-              style={{ height: 36, padding: '0 16px', fontSize: 12.5 }}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
               <span>{t('createJob')}</span>
             </button>
           )}
         </div>
 
         {loading ? (
-          <div className="py-20 text-center" style={{ color: 'var(--tk-muted)' }}>Loading dashboard...</div>
+          <div className="py-16 text-center text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>{t('loadingDashboard')}</div>
         ) : jobsList.length === 0 ? (
-          <div className="tk-panel text-center" style={{ padding: 48 }}>
-            <Briefcase className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tk-dim)' }} />
-            <p className="text-sm font-semibold" style={{ color: 'var(--tk-muted)' }}>{t('noJobsYet')}</p>
+          <div className="tk-panel text-center" style={{ padding: 36 }}>
+            <Briefcase className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--tk-dim)' }} />
+            <p className="text-[12.5px] font-semibold" style={{ color: 'var(--tk-muted)' }}>{t('noJobsYet')}</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 10 }}>
             {jobsList.map(job => {
               const checklistItems = job.checklist ? JSON.parse(job.checklist) : [];
               return (
@@ -503,21 +503,23 @@ export const Dashboard: React.FC = () => {
                       {job.status === 'Paused' && (
                         <span className="tk-pill">
                           <Pause className="w-3 h-3" />
-                          Paused
+                          {t('jobPausedPill')}
                         </span>
                       )}
                     </div>
-                    <h4 className="text-[15.5px] font-medium mt-3" style={{ color: 'var(--tk-text)', lineHeight: 1.35 }} title={job.title}>
+                    <h4 className="text-[14px] font-medium mt-2.5" style={{ color: 'var(--tk-text)', lineHeight: 1.35 }} title={job.title}>
                       <Bidi>{job.title}</Bidi>
                     </h4>
-                    <p className="text-[11.5px] mt-1" style={{ color: 'var(--tk-muted)' }}>{job.location} • {job.experience} years exp.</p>
+                    <p className="text-[11px] mt-1" style={{ color: 'var(--tk-muted)' }}>
+                      {job.location} • {t('experienceYearsShort', { years: String(job.experience) })}
+                    </p>
 
-                    <div className="mt-4 pt-4 space-y-2" style={{ borderTop: '1px solid var(--tk-border)' }}>
-                      <p className="text-[11px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
+                    <div className="mt-3 pt-3 space-y-1.5" style={{ borderTop: '1px solid var(--tk-border)' }}>
+                      <p className="text-[10.5px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
                         <ListTodo className="w-3.5 h-3.5" />
-                        ATS Checklist Preview ({checklistItems.length})
+                        {t('checklistPreview', { count: String(checklistItems.length) })}
                       </p>
-                      <ul className="text-xs space-y-1 max-h-[85px] overflow-y-auto pr-1" style={{ color: 'var(--tk-text)' }}>
+                      <ul className="text-[11.5px] space-y-1 max-h-[75px] overflow-y-auto" style={{ color: 'var(--tk-text)' }}>
                         {checklistItems.slice(0, 3).map((item: any) => (
                           <li key={item.id} className="truncate flex items-center gap-1">
                             <span className="w-1 h-1 rounded-full shrink-0" style={{ background: 'var(--tk-accent)' }}></span>
@@ -526,18 +528,18 @@ export const Dashboard: React.FC = () => {
                         ))}
                         {checklistItems.length > 3 && (
                           <li className="text-[10px] font-semibold italic" style={{ color: 'var(--tk-muted)' }}>
-                            + {checklistItems.length - 3} more items...
+                            {t('moreItems', { count: String(checklistItems.length - 3) })}
                           </li>
                         )}
                       </ul>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-5 pt-4" style={{ borderTop: '1px solid var(--tk-border)' }}>
+                  <div className="flex items-center gap-1.5 mt-4 pt-3" style={{ borderTop: '1px solid var(--tk-border)' }}>
                     <button
                       onClick={() => navigate(`/results?job=${job.id}`)}
                       className="tk-btn-neutral tk-focusable"
-                      style={{ flex: 1, height: 34, fontSize: 11.5 }}
+                      style={{ flex: 1, height: 30, fontSize: 11 }}
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>{t('viewResults')}</span>
@@ -547,8 +549,9 @@ export const Dashboard: React.FC = () => {
                       <button
                         onClick={() => handleOpenEdit(job)}
                         className="tk-icon-btn tk-focusable"
-                        style={{ width: 34, height: 34 }}
+                        style={{ width: 30, height: 30 }}
                         title={t('editJob')}
+                        aria-label={t('editJob')}
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
@@ -558,8 +561,9 @@ export const Dashboard: React.FC = () => {
                       <button
                         onClick={() => handleTogglePause(job)}
                         className="tk-icon-btn tk-focusable"
-                        style={{ width: 34, height: 34 }}
-                        title={job.status === 'Paused' ? 'Activate Job Position' : 'Pause Job Position'}
+                        style={{ width: 30, height: 30 }}
+                        title={job.status === 'Paused' ? t('activateJob') : t('pauseJob')}
+                        aria-label={job.status === 'Paused' ? t('activateJob') : t('pauseJob')}
                       >
                         {job.status === 'Paused' ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                       </button>
@@ -570,10 +574,11 @@ export const Dashboard: React.FC = () => {
                         onClick={() => handleDeleteJobClick(job)}
                         className="tk-focusable"
                         style={{
-                          width: 34, height: 34, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
                           background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.2)', color: '#ef4444', cursor: 'pointer'
                         }}
-                        title="Delete Job Position"
+                        title={t('deleteJobTitle')}
+                        aria-label={t('deleteJobTitle')}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -589,236 +594,150 @@ export const Dashboard: React.FC = () => {
       {/* Edit Job Modal */}
       {editModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-bg-card border border-border-main w-full max-w-2xl p-6 rounded-3xl shadow-2xl glass-panel max-h-[90vh] overflow-y-auto relative animate-in fade-in zoom-in-95 duration-200">
+          <div className="tk-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto relative" style={{ boxShadow: '0 22px 50px rgba(0,0,0,.35)' }}>
             <button
               onClick={() => setEditModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-bg-hover text-text-muted hover:text-text-main transition-colors cursor-pointer"
+              className="tk-icon-btn tk-focusable absolute"
+              style={{ top: 12, insetInlineEnd: 12 }}
+              aria-label={t('close')}
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
 
-            <h3 className="text-lg font-black text-text-main mb-4">{t('editJob')}</h3>
+            <h3 className="text-[15px] font-medium mb-4" style={{ color: 'var(--tk-text)' }}>{t('editJob')}</h3>
 
-            <form onSubmit={handleSaveJobEdit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSaveJobEdit} className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">{t('jobTitle')}</label>
+                  <label className={modalLabel}>{t('jobTitle')}</label>
                   <input
                     type="text"
                     required
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                    className="tk-field tk-focusable"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">{t('department')}</label>
+                  <label className={modalLabel}>{t('department')}</label>
                   <input
                     type="text"
                     required
                     value={editDept}
                     onChange={(e) => setEditDept(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                    className="tk-field tk-focusable"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">{t('location')}</label>
+                  <label className={modalLabel}>{t('location')}</label>
                   <input
                     type="text"
                     required
                     value={editLoc}
                     onChange={(e) => setEditLoc(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                    className="tk-field tk-focusable"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">{t('experienceYears')}</label>
+                  <label className={modalLabel}>{t('experienceYears')}</label>
                   <input
                     type="number"
                     required
+                    min={0}
                     value={editExp}
                     onChange={(e) => setEditExp(parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                    className="tk-field tk-focusable"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">{t('degreeRequired')}</label>
+                <label className={modalLabel}>{t('degreeRequired')}</label>
                 <input
                   type="text"
                   required
                   value={editDegree}
                   onChange={(e) => setEditDegree(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                  className="tk-field tk-focusable"
                 />
               </div>
 
-              {/* 1. Target Core Skills (المهارات الأساسية المستهدفة) */}
+              {/* 1. Target core skills */}
               <div>
-                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                  Target Core Skills (Comma-separated)
-                </label>
+                <label className={modalLabel}>{t('targetCoreSkills')}</label>
                 <input
                   type="text"
                   value={editSkills}
                   onChange={(e) => setEditSkills(e.target.value)}
-                  placeholder="React, TypeScript, Node.js, REST APIs"
-                  className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                  placeholder={t('phCoreSkills')}
+                  className="tk-field tk-focusable"
                 />
               </div>
 
-              {/* Section 2: Technical Details & Deep Requirements (الخصائص 2 إلى 10) */}
-              <div className="pt-3 border-t border-border-main/50 space-y-4">
-                <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider">التفاصيل الفنية والمتطلبات المعمقة</h4>
-                
-                {/* 2. Required Specialization & 3. Required Technical Skills */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                      التخصص الدقيق المطلوب
-                    </label>
-                    <input
-                      type="text"
-                      value={editSpecialization}
-                      onChange={(e) => setEditSpecialization(e.target.value)}
-                      placeholder="مثال: هندسة شبكات وأنظمة"
-                      className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+              {/* Section 2: technical details & in-depth requirements (fields 2–10) */}
+              <div className="pt-3 space-y-3" style={{ borderTop: '1px solid var(--tk-border)' }}>
+                <h4 className={modalLabel}>{t('technicalDetailsSection')}</h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[
+                    { label: t('specializationRequired'), value: editSpecialization, set: setEditSpecialization, placeholder: t('phSpecialization') },
+                    { label: t('technicalSkillsRequired'), value: editTechnicalSkills, set: setEditTechnicalSkills, placeholder: t('phTechnicalSkills') },
+                    { label: t('nationalityRequired'), value: editNationality, set: setEditNationality, placeholder: t('phNationality') },
+                    { label: t('languagesRequired'), value: editLanguages, set: setEditLanguages, placeholder: t('phLanguages') },
+                    { label: t('softSkillsRequired'), value: editSoftSkills, set: setEditSoftSkills, placeholder: t('phSoftSkills') },
+                    { label: t('certificationsRequired'), value: editRequiredCerts, set: setEditRequiredCerts, placeholder: t('phCertifications') }
+                  ].map(({ label, value, set, placeholder }) => (
+                    <div key={label}>
+                      <label className={modalLabel}>{label}</label>
+                      <input
+                        type="text"
+                        value={value}
+                        onChange={(e) => set(e.target.value)}
+                        placeholder={placeholder}
+                        className="tk-field tk-focusable"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {[
+                  { label: t('jobDescriptionField'), value: editJobDescription, set: setEditJobDescription, placeholder: t('phJobDescription') },
+                  { label: t('coreResponsibilitiesField'), value: editCoreResponsibilities, set: setEditCoreResponsibilities, placeholder: t('phCoreResponsibilities') },
+                  { label: t('additionalRequirementsField'), value: editAdditionalRequirements, set: setEditAdditionalRequirements, placeholder: t('phAdditionalRequirements') }
+                ].map(({ label, value, set, placeholder }) => (
+                  <div key={label}>
+                    <label className={modalLabel}>{label}</label>
+                    <textarea
+                      value={value}
+                      onChange={(e) => set(e.target.value)}
+                      placeholder={placeholder}
+                      rows={3}
+                      className="tk-field tk-focusable"
+                      style={{ height: 'auto', minHeight: 34, paddingBlock: 9, lineHeight: 1.7, resize: 'vertical' }}
                     />
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                      المهارات الفنية المطلوبة (تفصل بفاصلة)
-                    </label>
-                    <input
-                      type="text"
-                      value={editTechnicalSkills}
-                      onChange={(e) => setEditTechnicalSkills(e.target.value)}
-                      placeholder="Cisco, Azure, Windows Server"
-                      className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
-                    />
-                  </div>
-                </div>
-
-                {/* 4. Required Nationality & 5. Required Languages */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                      الجنسية المطلوبة
-                    </label>
-                    <input
-                      type="text"
-                      value={editNationality}
-                      onChange={(e) => setEditNationality(e.target.value)}
-                      placeholder="مثال: سعودي أو إقامة قابلة للنقل الكفالة"
-                      className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                      اللغات المطلوبة
-                    </label>
-                    <input
-                      type="text"
-                      value={editLanguages}
-                      onChange={(e) => setEditLanguages(e.target.value)}
-                      placeholder="مثال: العربية والإنجليزية"
-                      className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
-                    />
-                  </div>
-                </div>
-
-                {/* 6. Soft / Behavioral Skills */}
-                <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    المهارات السلوكية والشخصية (تفصل بفاصلة)
-                  </label>
-                  <input
-                    type="text"
-                    value={editSoftSkills}
-                    onChange={(e) => setEditSoftSkills(e.target.value)}
-                    placeholder="حل المشكلات, العمل الجماعي, التواصل"
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
-                  />
-                </div>
-
-                {/* 7. Required Professional Certifications */}
-                <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    الشهادات المهنية المطلوبة
-                  </label>
-                  <input
-                    type="text"
-                    value={editRequiredCerts}
-                    onChange={(e) => setEditRequiredCerts(e.target.value)}
-                    placeholder="CCNA, PMP, AZ-900"
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
-                  />
-                </div>
-
-                {/* 8. General Job Description */}
-                <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    الوصف العام للوظيفة
-                  </label>
-                  <textarea
-                    value={editJobDescription}
-                    onChange={(e) => setEditJobDescription(e.target.value)}
-                    placeholder="أدخل وصفاً عاماً للوظيفة والبيئة الوظيفية"
-                    rows={3}
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm resize-none"
-                  />
-                </div>
-
-                {/* 9. Core Responsibilities */}
-                <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    المسؤوليات الأساسية
-                  </label>
-                  <textarea
-                    value={editCoreResponsibilities}
-                    onChange={(e) => setEditCoreResponsibilities(e.target.value)}
-                    placeholder="أدخل الواجبات والمسؤوليات اليومية بالتفصيل"
-                    rows={3}
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm resize-none"
-                  />
-                </div>
-
-                {/* 10. Additional Requirements */}
-                <div>
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">
-                    متطلبات إضافية
-                  </label>
-                  <textarea
-                    value={editAdditionalRequirements}
-                    onChange={(e) => setEditAdditionalRequirements(e.target.value)}
-                    placeholder="شروط إضافية مثل رخصة القيادة أو برامج محددة"
-                    rows={3}
-                    className="w-full px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm resize-none"
-                  />
-                </div>
+                ))}
               </div>
 
               {/* Checklist Editor */}
-              <div className="space-y-2 pt-2 border-t border-border-main/50">
-                <div className="flex justify-between items-center">
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-wider px-1">{t('checklistTitle')}</label>
+              <div className="space-y-2 pt-3" style={{ borderTop: '1px solid var(--tk-border)' }}>
+                <div className="flex justify-between items-center gap-2">
+                  <label className={modalLabel} style={{ marginBottom: 0 }}>{t('checklistTitle')}</label>
                   <button
                     type="button"
                     onClick={handleAddChecklistItem}
-                    className="flex items-center gap-1 text-xs text-brand hover:underline font-bold"
+                    className="tk-btn-primary tk-focusable"
+                    style={{ height: 28, padding: '0 10px', fontSize: 11 }}
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>{t('addChecklistItem')}</span>
                   </button>
                 </div>
 
-                <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-[210px] overflow-y-auto">
                   {editChecklist.map((item, idx) => (
                     <div key={item.id} className="flex gap-2 items-center">
                       <input
@@ -827,44 +746,46 @@ export const Dashboard: React.FC = () => {
                         value={item.requirement}
                         onChange={(e) => handleChecklistTextChange(item.id, e.target.value)}
                         placeholder={t('requirementDescription')}
-                        className="flex-1 px-3 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-sm"
+                        className="tk-field tk-focusable"
+                        style={{ flex: 1 }}
                       />
-                      
+
                       <select
                         value={item.importance}
                         onChange={(e) => handleChecklistImportanceChange(item.id, e.target.value)}
-                        className="w-32 px-2 py-2 rounded-lg border border-border-main bg-bg-main/50 text-text-main focus:outline-none focus:border-brand text-xs"
+                        className="tk-field tk-focusable"
+                        style={{ width: 118, flex: 'none', cursor: 'pointer' }}
                       >
-                        <option value="Mandatory">Mandatory</option>
-                        <option value="Important">Important</option>
-                        <option value="Additional">Additional</option>
+                        <option value="Mandatory">{t('importance_Mandatory')}</option>
+                        <option value="Important">{t('importance_Important')}</option>
+                        <option value="Additional">{t('importance_Additional')}</option>
                       </select>
 
                       <button
                         type="button"
                         onClick={() => handleRemoveChecklistItem(item.id)}
-                        className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors"
+                        className="tk-icon-btn tk-focusable"
+                        style={{ color: '#ef4444' }}
+                        title={t('removeItemN', { n: String(idx + 1) })}
+                        aria-label={t('removeItemN', { n: String(idx + 1) })}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-border-main/50">
+              <div className="flex justify-end gap-2 pt-3" style={{ borderTop: '1px solid var(--tk-border)' }}>
                 <button
                   type="button"
                   onClick={() => setEditModalOpen(false)}
-                  className="px-4 py-2 border border-border-main rounded-lg text-sm text-text-muted hover:text-text-main"
+                  className="tk-btn-neutral tk-focusable"
                 >
                   {t('cancel')}
                 </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-brand hover:bg-brand-hover text-white rounded-lg font-bold text-sm shadow-md shadow-brand/10 transition-all cursor-pointer"
-                >
-                  Save Changes
+                <button type="submit" className="tk-btn-primary tk-focusable">
+                  {t('saveChanges')}
                 </button>
               </div>
             </form>
@@ -875,50 +796,50 @@ export const Dashboard: React.FC = () => {
       {/* AI Strategic Summary Modal */}
       {summaryModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-bg-card border border-border-main w-full max-w-xl p-6 rounded-3xl shadow-2xl glass-panel relative animate-in fade-in zoom-in-95 duration-200">
+          <div className="tk-panel w-full max-w-xl relative" style={{ boxShadow: '0 22px 50px rgba(0,0,0,.35)' }}>
             <button
               onClick={() => setSummaryModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-bg-hover text-text-muted hover:text-text-main transition-colors cursor-pointer"
+              className="tk-icon-btn tk-focusable absolute"
+              style={{ top: 12, insetInlineEnd: 12 }}
+              aria-label={t('close')}
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
 
-            <h3 className="text-lg font-black text-brand mb-4 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-brand animate-bounce" />
+            <h3 className="text-[15px] font-medium mb-4 flex items-center gap-2" style={{ color: 'var(--tk-accent-text)' }}>
+              <Sparkles className="w-4 h-4" />
               <span>{t('aiStrategicSummary')}</span>
             </h3>
 
-            <div className="space-y-4 text-sm leading-relaxed text-text-main">
+            <div className="space-y-3.5 text-[12.5px] leading-relaxed">
               <div>
-                <h5 className="font-bold text-brand uppercase tracking-wider text-xs mb-1">Recruitment Campaign Health</h5>
-                <p className="text-text-muted">
-                  Overall match health is stable at an average match rating of {stats.averageMatch || 75}%. We have identified {stats.excellentMatches || 0} top-tier candidate profiles (matching ≥ 80%) who are ready for interviews.
+                <h5 className={modalLabel}>{t('summaryHealthTitle')}</h5>
+                <p style={{ color: 'var(--tk-muted)' }}>
+                  {t('summaryHealthBody', {
+                    avg: String(stats.averageMatch || 0),
+                    excellent: String(stats.excellentMatches || 0)
+                  })}
                 </p>
               </div>
 
               <div>
-                <h5 className="font-bold text-brand uppercase tracking-wider text-xs mb-1">Talent Pool Gaps</h5>
-                <p className="text-text-muted">
-                  Across active openings, candidates commonly fall short in advanced Cloud Architecture (AWS/Azure) and Microservices orchestration. Technical alignment is generally high (avg. 80%), but experience relevance averages slightly lower (72%).
-                </p>
+                <h5 className={modalLabel}>{t('summaryGapsTitle')}</h5>
+                <p style={{ color: 'var(--tk-muted)' }}>{t('summaryGapsBody')}</p>
               </div>
 
               <div>
-                <h5 className="font-bold text-brand uppercase tracking-wider text-xs mb-1">Strategic Recommendations</h5>
-                <ul className="list-disc pl-4 space-y-1 text-text-muted">
-                  <li>Prioritize interview scheduling for {stats.excellentMatches} excellent matches to avoid drop-off.</li>
-                  <li>Loosen cloud requirements slightly for recruiters to source stronger local candidates.</li>
-                  <li>Utilize candidate outreach templates to keep matches updated.</li>
+                <h5 className={modalLabel}>{t('summaryRecommendationsTitle')}</h5>
+                <ul className="list-disc space-y-1 ps-5" style={{ color: 'var(--tk-muted)' }}>
+                  <li>{t('summaryRec1', { count: String(stats.excellentMatches) })}</li>
+                  <li>{t('summaryRec2')}</li>
+                  <li>{t('summaryRec3')}</li>
                 </ul>
               </div>
             </div>
 
-            <div className="flex justify-end pt-5 mt-4 border-t border-border-main/50">
-              <button
-                onClick={() => setSummaryModalOpen(false)}
-                className="px-5 py-2 bg-brand text-white rounded-lg font-bold text-xs cursor-pointer"
-              >
-                Close Summary
+            <div className="flex justify-end pt-3 mt-4" style={{ borderTop: '1px solid var(--tk-border)' }}>
+              <button onClick={() => setSummaryModalOpen(false)} className="tk-btn-primary tk-focusable">
+                {t('closeSummary')}
               </button>
             </div>
           </div>
@@ -927,51 +848,55 @@ export const Dashboard: React.FC = () => {
 
       {/* Job Deletion Confirmation Modal (Phase 1) */}
       {deleteModalOpen && deletingJob && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-bg-card border border-border-main rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl shrink-0">
-                <Trash2 className="w-6 h-6" />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="tk-panel max-w-md w-full space-y-4" style={{ boxShadow: '0 22px 50px rgba(0,0,0,.35)' }}>
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 flex items-center justify-center" style={{ width: 38, height: 38, borderRadius: 11, background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.2)', color: '#ef4444' }}>
+                <Trash2 className="w-5 h-5" />
               </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-bold text-text-main">
-                  Delete Job Position?
+              <div className="space-y-1" style={{ minWidth: 0 }}>
+                <h3 className="text-[14px] font-semibold" style={{ color: 'var(--tk-text)' }}>
+                  {t('deleteJobTitle')}
                 </h3>
-                <p className="text-xs text-text-muted leading-relaxed">
-                  Are you sure you want to permanently delete <strong className="text-text-main font-semibold">"<Bidi>{deletingJob.title}</Bidi>"</strong> ({deletingJob.department})?
+                <p className="text-[11.5px] leading-relaxed" style={{ color: 'var(--tk-muted)' }}>
+                  {t('deleteJobConfirm', { title: deletingJob.title, department: deletingJob.department })}
                 </p>
               </div>
             </div>
 
-            <div className="p-3.5 bg-red-500/5 border border-red-500/20 rounded-xl space-y-1 text-xs">
-              <div className="flex items-center gap-1.5 text-red-500 font-bold">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>Irreversible Action & Data Loss Notice</span>
+            <div className="space-y-1" style={{ padding: 12, borderRadius: 11, background: 'rgba(239,68,68,.05)', border: '1px solid rgba(239,68,68,.2)' }}>
+              <div className="flex items-center gap-1.5 text-[11.5px] font-bold" style={{ color: '#ef4444' }}>
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>{t('deleteJobDataLoss')}</span>
               </div>
-              <p className="text-[11px] text-text-muted leading-relaxed pl-5">
-                This job deletion is permanent. <strong className="text-red-500 font-bold">{deletingCandidateCount} candidate(s)</strong> currently linked to this position will be cascade-deleted along with their CV files and records.
+              <p className="text-[11px] leading-relaxed ps-5" style={{ color: 'var(--tk-muted)' }}>
+                {t('deleteJobCascade', { count: String(deletingCandidateCount) })}
               </p>
             </div>
 
-            <div className="flex justify-end gap-3 pt-2 border-t border-border-main/50">
+            <div className="flex justify-end gap-2 pt-3" style={{ borderTop: '1px solid var(--tk-border)' }}>
               <button
                 type="button"
                 id="cancel-delete-job-btn"
                 onClick={handleCancelDeleteJob}
                 disabled={deletingInProgress}
-                className="px-4 py-2 border border-border-main rounded-xl text-xs font-bold text-text-muted hover:text-text-main hover:bg-bg-hover transition-all cursor-pointer"
+                className="tk-btn-neutral tk-focusable"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 type="button"
                 id="confirm-delete-job-btn"
                 onClick={handleConfirmDeleteJob}
                 disabled={deletingInProgress}
-                className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-bold shadow-md shadow-red-500/20 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                className="tk-focusable flex items-center gap-1.5 disabled:opacity-50"
+                style={{
+                  height: 32, borderRadius: 9, paddingInline: 13, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  background: 'rgba(239,68,68,.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,.2)'
+                }}
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>{deletingInProgress ? 'Deleting...' : 'Delete Job'}</span>
+                <span>{deletingInProgress ? t('deleting') : t('delete')}</span>
               </button>
             </div>
           </div>

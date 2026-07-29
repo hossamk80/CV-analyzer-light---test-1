@@ -88,9 +88,12 @@
 
 /* ---- Shared component recipes (des-2.txt §4.2) ---- */
 
+/* Density note: panels/tiles/controls were dialled down one step from the
+   original spec sizes — the screens read as cramped-free but noticeably less
+   bulky, and the leaderboard fits without a page-level horizontal scrollbar. */
 .tk-panel {
-  padding: clamp(15px, 1.6vw, 22px);
-  border-radius: 18px;
+  padding: clamp(12px, 1.15vw, 16px);
+  border-radius: 14px;
   border: 1px solid var(--tk-border);
   background: var(--tk-panel);
   box-shadow: var(--tk-shadow);
@@ -99,8 +102,8 @@
 
 .tk-tile {
   position: relative;
-  padding: clamp(15px, 1.6vw, 22px);
-  border-radius: 16px;
+  padding: clamp(11px, 1vw, 14px);
+  border-radius: 12px;
   border: 1px solid var(--tk-border);
   background: var(--tk-tile);
   box-shadow: var(--tk-shadow);
@@ -116,7 +119,7 @@
 }
 
 .tk-hero {
-  border-radius: 18px;
+  border-radius: 14px;
   border: 1px solid var(--tk-accent-line);
   background: var(--tk-hero);
   box-shadow: var(--tk-shadow);
@@ -129,17 +132,16 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  /* Default size — callers override height/padding inline where the spec asks for a
-     specific one (40/38/36/32/30px). Without these defaults a converted button
-     would collapse to bare text. */
-  height: 36px;
-  padding-inline: 16px;
-  font-size: 12.5px;
+  /* Default size — callers override height/padding inline where a specific one is
+     needed. Without these defaults a converted button would collapse to bare text. */
+  height: 32px;
+  padding-inline: 13px;
+  font-size: 12px;
   white-space: nowrap;
   background: transparent;
   border: 1px solid var(--tk-accent-line);
   color: var(--tk-accent-text);
-  border-radius: 11px;
+  border-radius: 9px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 180ms ease, box-shadow 180ms ease;
@@ -153,14 +155,14 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 36px;
-  padding-inline: 16px;
-  font-size: 12.5px;
+  height: 32px;
+  padding-inline: 13px;
+  font-size: 12px;
   white-space: nowrap;
   background: transparent;
   border: 1px solid var(--tk-border-strong);
   color: var(--tk-soft);
-  border-radius: 11px;
+  border-radius: 9px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 180ms ease, color 180ms ease;
@@ -174,9 +176,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 31px;
-  height: 31px;
-  border-radius: 9px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   color: var(--tk-muted);
   background: transparent;
   border: none;
@@ -254,13 +256,14 @@
 
 .tk-field {
   width: 100%;
-  height: 38px;
-  border-radius: 11px;
+  max-width: 100%;
+  height: 34px;
+  border-radius: 9px;
   background: var(--tk-inset);
   border: 1px solid var(--tk-border-strong);
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--tk-text);
-  padding-inline: 12px;
+  padding-inline: 10px;
 }
 .tk-field:focus-visible,
 .tk-focusable:focus-visible {
@@ -270,7 +273,7 @@
 
 .tk-row-list > * {
   border-top: 1px solid var(--tk-border);
-  padding: 12px 4px;
+  padding: 9px 4px;
 }
 .tk-row-list > *:hover {
   background: var(--tk-hover);
@@ -312,12 +315,59 @@ input[type='range']::-moz-range-track {
   background: var(--tk-track);
 }
 
-/* Page canvas — layered accent glow over the flat theme background. */
+/* Page canvas — layered accent glow over the flat theme background.
+   `overflow-x: clip` keeps the document itself from ever scrolling sideways:
+   wide content (the leaderboard table) scrolls inside its own container instead.
+   `clip` rather than `hidden` on purpose — it does not create a scroll container,
+   so the sticky navigation rail keeps working. */
 .tk-page {
   min-height: 100vh;
   background-image: var(--tk-bg-glow);
   background-color: var(--tk-page-solid);
   color: var(--tk-text);
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+/* Shared numeric display for KPI / stat tiles — one place to tune the size. */
+.tk-stat-value {
+  font-size: clamp(20px, 1.9vw, 26px);
+  font-weight: 500;
+  letter-spacing: -.03em;
+  color: var(--tk-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+/* Compact data table used by the leaderboard, providers, audit log and RBAC
+   matrix. Keeps rows readable while shaving ~35% off the table's natural width. */
+.tk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.tk-table th,
+.tk-table td {
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+.tk-table thead th {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--tk-muted);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--tk-border);
+  text-align: start;
+}
+.tk-table tbody tr {
+  border-top: 1px solid var(--tk-border);
+}
+/* Horizontal scroll lives here, never on the page. */
+.tk-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 /* ------------------------------------------------------------

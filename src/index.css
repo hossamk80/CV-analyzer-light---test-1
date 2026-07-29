@@ -17,6 +17,13 @@
 }
 
 /* Global Styles */
+html,
+body {
+  /* Nothing may push the document sideways — wide content scrolls in its own box. */
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
