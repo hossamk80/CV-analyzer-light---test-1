@@ -20,6 +20,10 @@ export const settings = sqliteTable('settings', {
   auditLogRetentionDays: integer('audit_log_retention_days').notNull().default(90),
   matchThreshold: integer('match_threshold').notNull().default(80),        // score at/above which a CV counts as a strong match
   notifyOnHighMatch: integer('notify_on_high_match').notNull().default(0), // raise an in-app notification when one lands
+  // How much of the screening the AI does: 'ai' (model does everything),
+  // 'hybrid' (local extraction feeds the model — fewer tokens, same output),
+  // 'local' (deterministic matching only, zero tokens).
+  analysisMode: text('analysis_mode').notNull().default('hybrid'),
 });
 
 export const jobs = sqliteTable('jobs', {

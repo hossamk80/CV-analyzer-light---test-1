@@ -17,6 +17,25 @@ import { db, sqlite } from './src/db/index.js';
 import { users, settings, jobs, candidates, aiProviders, aiPrompts, integrationsSettings, auditLogs, roleCapabilities, aiRuns, notifications } from './src/db/schema.js';
 import { eq, and, ne, desc, sql } from 'drizzle-orm';
 import { DEFAULT_ANALYSIS_PROMPT, DEFAULT_REANALYSIS_PROMPT } from './src/prompts.js';
+import { classifyAiError } from './src/utils/aiErrors.js';
+import { analyzeLocally, extractLocalFacts, extractTotalYears, extractEmail, extractPhone, matchTerms } from './src/utils/localAnalysis.js';
+import { en } from './src/i18n/en.js';
+import { ar } from './src/i18n/ar.js';
+
+/** Server-side translator — the locally generated report text is stored in the
+ *  language the uploader was using, sent as `lang` with the request. */
+function serverT(lang: string | undefined) {
+  const dict: Record<string, string> = (lang === 'en' ? en : ar) as any;
+  return (key: string, params?: Record<string, string>) => {
+    let value = dict[key] ?? (en as any)[key] ?? key;
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        value = value.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
+      }
+    }
+    return value;
+  };
+}
 
 // Setup directories
 const __filename = fileURLToPath(import.meta.url);
@@ -278,6 +297,9 @@ function initDbSchema() {
   try { sqlite.exec(`ALTER TABLE settings ADD COLUMN audit_log_retention_days INTEGER DEFAULT 90;`); } catch {}
   try { sqlite.exec(`ALTER TABLE settings ADD COLUMN match_threshold INTEGER DEFAULT 80;`); } catch {}
   try { sqlite.exec(`ALTER TABLE settings ADD COLUMN notify_on_high_match INTEGER DEFAULT 0;`); } catch {}
+  // 'ai' = model does everything, 'hybrid' = local extraction feeds the model,
+  // 'local' = deterministic matching only and no tokens at all.
+  try { sqlite.exec(`ALTER TABLE settings ADD COLUMN analysis_mode TEXT DEFAULT 'hybrid';`); } catch {}
   // Jobs table new optional fields
   try { sqlite.exec(`ALTER TABLE jobs ADD COLUMN specialization TEXT;`); } catch {}
   try { sqlite.exec(`ALTER TABLE jobs ADD COLUMN technical_skills TEXT;`); } catch {}
@@ -2091,6 +2113,86 @@ async function callGeminiWithRetry(
   }
 }
 
+/** Below this many characters a PDF is treated as scanned (image-only) and the
+ *  raw file is sent to a vision model instead of the empty text layer. */
+const MIN_PDF_TEXT_CHARS = 260;
+
+/** Upper bound on CV text sent to a model. ~24k chars is far beyond any real CV
+ *  and keeps a runaway document from blowing the context window (and the bill). */
+const MAX_CV_TEXT_CHARS = 24000;
+
+/** Collapses the whitespace soup that PDF/DOCX extraction produces. Purely a
+ *  token saving — blank lines and runs of spaces are billed like any other text. */
+function condenseCvText(raw: string): string {
+  const cleaned = (raw || '')
+    .replace(/\r/g, '')
+    .replace(/[ \t\u00a0]+/g, ' ')
+    .replace(/ *\n */g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  return cleaned.length > MAX_CV_TEXT_CHARS ? cleaned.slice(0, MAX_CV_TEXT_CHARS) : cleaned;
+}
+
+export interface PreparedCv {
+  text?: string;
+  buffer?: Buffer;
+  mimeType?: string;
+  /** Plain text for the local analysis pass — empty for scanned PDFs/images. */
+  plainText: string;
+  /** True when the raw file had to be shipped to the model (scanned or image CV). */
+  sentAsFile: boolean;
+}
+
+/**
+ * Turns an uploaded file into what the model should actually receive.
+ *
+ * Text-layer PDFs used to be shipped as base64 to the model, where every page is
+ * billed as an image on top of its text. Extracting the text locally first sends
+ * a fraction of the tokens for the same information. Scanned PDFs and images have
+ * no text layer, so those still go to the model as files.
+ */
+async function prepareCvContent(opts: {
+  buffer?: Buffer;
+  filePath: string;
+  mimeType: string;
+  originalName: string;
+}): Promise<PreparedCv> {
+  const { filePath, mimeType, originalName } = opts;
+  const isPdf = mimeType === 'application/pdf' || originalName.toLowerCase().endsWith('.pdf');
+  const isImage = mimeType.startsWith('image/');
+  const isDocx =
+    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    originalName.toLowerCase().endsWith('.docx');
+
+  if (isImage) {
+    const buffer = opts.buffer ?? fs.readFileSync(filePath);
+    return { buffer, mimeType, plainText: '', sentAsFile: true };
+  }
+
+  if (isPdf) {
+    const buffer = opts.buffer ?? fs.readFileSync(filePath);
+    try {
+      const text = condenseCvText(await extractPdfText(buffer));
+      if (text.length >= MIN_PDF_TEXT_CHARS) {
+        return { text, plainText: text, sentAsFile: false };
+      }
+      console.log(`[CV Parse] '${originalName}' has a thin text layer (${text.length} chars) — sending the file to the model instead.`);
+    } catch (e: any) {
+      console.warn(`[CV Parse] Local PDF text extraction failed for '${originalName}': ${e.message} — falling back to sending the file.`);
+    }
+    return { buffer, mimeType: 'application/pdf', plainText: '', sentAsFile: true };
+  }
+
+  if (isDocx) {
+    const docResult = await mammoth.extractRawText({ path: filePath });
+    const text = condenseCvText(docResult.value);
+    return { text, plainText: text, sentAsFile: false };
+  }
+
+  const text = condenseCvText(fs.readFileSync(filePath, 'utf8'));
+  return { text, plainText: text, sentAsFile: false };
+}
+
 /** Extract plain text from a PDF buffer — used as a fallback for providers without native PDF input support. */
 async function extractPdfText(buffer: Buffer): Promise<string> {
   const pdfParseModule: any = await import('pdf-parse');
@@ -2439,6 +2541,116 @@ async function runModelAnalysisWithFailover(
   }
 }
 
+export type AnalysisMode = 'ai' | 'hybrid' | 'local';
+
+/** The slice of a job definition the analysis actually needs. Kept tight: every
+ *  field here is re-sent with each CV, so unused columns are wasted tokens. */
+function buildJobData(job: any) {
+  const parseList = (v: any): string[] => {
+    if (!v) return [];
+    try {
+      const parsed = JSON.parse(v);
+      return Array.isArray(parsed) ? parsed : String(v).split(/[,،;]/).map((x: string) => x.trim()).filter(Boolean);
+    } catch {
+      return String(v).split(/[,،;]/).map((x: string) => x.trim()).filter(Boolean);
+    }
+  };
+  const data: Record<string, any> = {
+    title: job.title,
+    experience: job.experience,
+    degree: job.degree,
+    specialization: job.specialization || '',
+    skills: parseList(job.skills),
+    technicalSkills: parseList(job.technicalSkills),
+    softSkills: parseList(job.softSkills),
+    requiredCerts: job.requiredCerts || '',
+    languages: job.languages || '',
+    checklist: job.checklist ? JSON.parse(job.checklist) : []
+  };
+  // Empty keys still cost tokens once this is stringified into the prompt.
+  for (const [k, v] of Object.entries(data)) {
+    if (v === '' || v === null || v === undefined || (Array.isArray(v) && v.length === 0)) delete data[k];
+  }
+  return data;
+}
+
+/** An analysis failure carrying a stable code the UI can translate. */
+class AnalysisError extends Error {
+  code: string;
+  detail: string;
+  constructor(code: string, detail: string) {
+    super(detail || code);
+    this.code = code;
+    this.detail = detail;
+  }
+}
+
+/**
+ * Single entry point for "analyze this CV against this job", dispatching on the
+ * configured analysis mode.
+ *
+ *  local  — deterministic text matching only. Zero tokens. Needs a text layer.
+ *  hybrid — the local pass runs first and its findings are handed to the model,
+ *           so the prompt no longer has to re-derive contacts, years, skills or
+ *           certificates; anything the model omits is backfilled locally.
+ *  ai     — the model does everything (the original behaviour).
+ */
+async function analyzeCv(opts: {
+  mode: AnalysisMode;
+  prepared: PreparedCv;
+  jobData: any;
+  systemPrompt: string;
+  activeProv: any;
+  req?: AuthRequest;
+  kind?: 'upload' | 'reanalyze';
+  lang?: string;
+}): Promise<{ result: any; tokensUsed: number; usedAi: boolean }> {
+  const { mode, prepared, jobData, systemPrompt, activeProv, req, kind = 'upload', lang } = opts;
+  const t = serverT(lang);
+
+  if (mode === 'local') {
+    if (!prepared.plainText) {
+      throw new AnalysisError('local_no_text', 'Local analysis needs a CV with a text layer.');
+    }
+    return { result: analyzeLocally(prepared.plainText, jobData, t), tokensUsed: 0, usedAi: false };
+  }
+
+  if (!activeProv || !activeProv.apiKey) {
+    throw new AnalysisError('no_provider', 'No active AI provider is configured.');
+  }
+
+  // Hybrid: give the model the facts we already resolved for free.
+  let payload = jobData;
+  if (mode === 'hybrid' && prepared.plainText) {
+    payload = { ...jobData, already_extracted: extractLocalFacts(prepared.plainText, jobData) };
+  }
+
+  const cvContent = { text: prepared.text, buffer: prepared.buffer, mimeType: prepared.mimeType };
+
+  let out: { result: any; tokensUsed: number };
+  try {
+    out = await runModelAnalysisWithFailover(activeProv, systemPrompt, cvContent, payload, req, kind);
+  } catch (err: any) {
+    const { code, detail } = classifyAiError(err);
+    throw new AnalysisError(code, detail);
+  }
+
+  // Backfill anything the model left empty from the local pass — cheaper and
+  // more reliable than a second round-trip.
+  if (mode === 'hybrid' && prepared.plainText) {
+    const r = out.result || {};
+    if (!r.contact_email) r.contact_email = extractEmail(prepared.plainText);
+    if (!r.contact_phone) r.contact_phone = extractPhone(prepared.plainText);
+    if (r.total_experience_years == null) r.total_experience_years = extractTotalYears(prepared.plainText);
+    if (!Array.isArray(r.skills) || r.skills.length === 0) {
+      r.skills = matchTerms(prepared.plainText, [...(jobData.skills || []), ...(jobData.technicalSkills || [])]);
+    }
+    out.result = r;
+  }
+
+  return { ...out, usedAi: true };
+}
+
 /** Raises an in-app notification when a freshly analyzed CV lands at/above the configured threshold. */
 function maybeNotifyHighMatch(candidateId: number, candidateName: string, matchScore: number, job: any) {
   try {
@@ -2503,18 +2715,17 @@ app.post('/api/upload', authenticateToken, requireCapability('upload_cvs'), uplo
   const activeProv = db.select().from(aiProviders).where(eq(aiProviders.isActive, 1)).get();
   const activePrompt = db.select().from(aiPrompts).where(eq(aiPrompts.isActive, 1)).get();
 
-  if (!activeProv || !activeProv.apiKey) {
-    return res.status(400).json({ error: 'No active AI Provider configured. Please configure an API Key in Settings.' });
+  const appSettings = db.select().from(settings).where(eq(settings.id, 1)).get() as any;
+  const analysisMode: AnalysisMode = (appSettings?.analysisMode as AnalysisMode) || 'hybrid';
+  const lang = typeof req.body.lang === 'string' ? req.body.lang : undefined;
+
+  // Local mode needs no provider at all; the other two do.
+  if (analysisMode !== 'local' && (!activeProv || !activeProv.apiKey)) {
+    return res.status(400).json({ error: 'No active AI Provider configured. Please configure an API Key in Settings.', errorCode: 'no_provider' });
   }
 
   const systemPrompt = activePrompt ? activePrompt.analysisPrompt : DEFAULT_ANALYSIS_PROMPT;
-  const jobData = {
-    title: job.title,
-    experience: job.experience,
-    degree: job.degree,
-    skills: job.skills ? JSON.parse(job.skills) : [],
-    checklist: job.checklist ? JSON.parse(job.checklist) : []
-  };
+  const jobData = buildJobData(job);
 
   const results: any[] = [];
   
@@ -2531,6 +2742,8 @@ app.post('/api/upload', authenticateToken, requireCapability('upload_cvs'), uplo
         filename: file.originalname,
         success: false,
         error: null,
+        errorCode: null,
+        errorDetail: null,
         candidateId: null
       };
 
@@ -2603,23 +2816,16 @@ app.post('/api/upload', authenticateToken, requireCapability('upload_cvs'), uplo
             fs.unlinkSync(file.path);
 
             // Run analysis using the original file
-            let cvContent: { text?: string; buffer?: Buffer; mimeType?: string } = {};
             const reusedAbsPath = path.join(__dirname, reusedFilePath);
+            const prepared = await prepareCvContent({
+              filePath: reusedAbsPath,
+              mimeType: file.mimetype,
+              originalName: file.originalname
+            });
 
-            if (file.mimetype === 'application/pdf' || file.mimetype.startsWith('image/')) {
-              cvContent.buffer = fs.readFileSync(reusedAbsPath);
-              cvContent.mimeType = file.mimetype;
-            } else if (
-              file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-              file.originalname.endsWith('.docx')
-            ) {
-              const docResult = await mammoth.extractRawText({ path: reusedAbsPath });
-              cvContent.text = docResult.value;
-            } else {
-              cvContent.text = fs.readFileSync(reusedAbsPath, 'utf8');
-            }
-
-            const { result, tokensUsed } = await runModelAnalysisWithFailover(activeProv, systemPrompt, cvContent, jobData, req);
+            const { result, tokensUsed } = await analyzeCv({
+              mode: analysisMode, prepared, jobData, systemPrompt, activeProv, req, kind: 'upload', lang
+            });
 
             const dbResult = db.insert(candidates).values({
               jobId,
@@ -2696,26 +2902,16 @@ app.post('/api/upload', authenticateToken, requireCapability('upload_cvs'), uplo
         }
 
         // ── Step 3: Brand-new file — normal flow ──────────────────────────────
-        let cvContent: { text?: string; buffer?: Buffer; mimeType?: string } = {};
+        const prepared = await prepareCvContent({
+          buffer: fileBuffer,
+          filePath: file.path,
+          mimeType: file.mimetype,
+          originalName: file.originalname
+        });
 
-        // Parse file types
-        if (file.mimetype === 'application/pdf' || file.mimetype.startsWith('image/')) {
-          cvContent.buffer = fileBuffer; // reuse already-read buffer
-          cvContent.mimeType = file.mimetype;
-        } else if (
-          file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-          file.originalname.endsWith('.docx')
-        ) {
-          // Extract DOCX text using mammoth
-          const docResult = await mammoth.extractRawText({ path: file.path });
-          cvContent.text = docResult.value;
-        } else {
-          // Try reading as raw text for simple text files
-          cvContent.text = fs.readFileSync(file.path, 'utf8');
-        }
-
-        // Run analysis with failover (Phase 3.4)
-        const { result, tokensUsed } = await runModelAnalysisWithFailover(activeProv, systemPrompt, cvContent, jobData, req);
+        const { result, tokensUsed } = await analyzeCv({
+          mode: analysisMode, prepared, jobData, systemPrompt, activeProv, req, kind: 'upload', lang
+        });
 
         // Save Candidate to database
         const dbResult = db.insert(candidates).values({
@@ -2794,7 +2990,14 @@ app.post('/api/upload', authenticateToken, requireCapability('upload_cvs'), uplo
 
       } catch (err: any) {
         console.error('Failed processing file:', file.originalname, err);
-        fileResult.error = err.message || 'AI Parsing Failed';
+        // Give the client a stable code it can turn into a clear sentence, plus
+        // the raw provider text as a technical detail.
+        const classified = err instanceof AnalysisError
+          ? { code: err.code, detail: err.detail }
+          : classifyAiError(err);
+        fileResult.errorCode = classified.code;
+        fileResult.errorDetail = classified.detail;
+        fileResult.error = classified.detail || classified.code;
         // Cleanup file on error
         try { fs.unlinkSync(file.path); } catch (e) {}
       }
@@ -2823,37 +3026,34 @@ app.post('/api/candidates/:id/reanalyze', authenticateToken, requireRole(['admin
   const activeProv = db.select().from(aiProviders).where(eq(aiProviders.isActive, 1)).get();
   const activePrompt = db.select().from(aiPrompts).where(eq(aiPrompts.isActive, 1)).get();
 
-  if (!activeProv || !activeProv.apiKey) {
-    return res.status(400).json({ error: 'No active AI Provider configured' });
+  const appSettings = db.select().from(settings).where(eq(settings.id, 1)).get() as any;
+  const analysisMode: AnalysisMode = (appSettings?.analysisMode as AnalysisMode) || 'hybrid';
+  const lang = typeof (req as any).body?.lang === 'string' ? (req as any).body.lang : undefined;
+
+  if (analysisMode !== 'local' && (!activeProv || !activeProv.apiKey)) {
+    return res.status(400).json({ error: 'No active AI Provider configured', errorCode: 'no_provider' });
   }
 
   const systemPrompt = activePrompt ? activePrompt.reanalysisPrompt : DEFAULT_REANALYSIS_PROMPT;
-  const jobData = {
-    title: job.title,
-    experience: job.experience,
-    degree: job.degree,
-    skills: job.skills ? JSON.parse(job.skills) : [],
-    checklist: job.checklist ? JSON.parse(job.checklist) : []
-  };
+  const jobData = buildJobData(job);
 
   if (!c.cvFilePath) return res.status(400).json({ error: 'Original CV file path not found' });
   const filePath = path.join(__dirname, c.cvFilePath);
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'CV file not found on disk' });
 
   try {
-    let cvContent: { text?: string; buffer?: Buffer; mimeType?: string } = {};
+    const name = c.originalFilename || '';
+    const mimeType = name.toLowerCase().endsWith('.pdf')
+      ? 'application/pdf'
+      : /\.(png|jpe?g)$/i.test(name)
+        ? 'image/png'
+        : 'text/plain';
 
-    if (c.originalFilename?.endsWith('.pdf') || c.originalFilename?.match(/\.(png|jpg|jpeg)$/i)) {
-      cvContent.buffer = fs.readFileSync(filePath);
-      cvContent.mimeType = c.originalFilename.endsWith('.pdf') ? 'application/pdf' : 'image/png';
-    } else if (c.originalFilename?.endsWith('.docx')) {
-      const docResult = await mammoth.extractRawText({ path: filePath });
-      cvContent.text = docResult.value;
-    } else {
-      cvContent.text = fs.readFileSync(filePath, 'utf8');
-    }
+    const prepared = await prepareCvContent({ filePath, mimeType, originalName: name });
 
-    const { result, tokensUsed } = await runModelAnalysisWithFailover(activeProv, systemPrompt, cvContent, jobData, req, 'reanalyze');
+    const { result, tokensUsed } = await analyzeCv({
+      mode: analysisMode, prepared, jobData, systemPrompt, activeProv, req, kind: 'reanalyze', lang
+    });
 
     db.update(candidates).set({
       name: result.name || c.name,
@@ -2883,7 +3083,10 @@ app.post('/api/candidates/:id/reanalyze', authenticateToken, requireRole(['admin
 
   } catch (err: any) {
     console.error('Failed re-analyzing candidate:', err);
-    res.status(500).json({ error: err.message || 'AI Re-analysis Failed' });
+    const classified = err instanceof AnalysisError
+      ? { code: err.code, detail: err.detail }
+      : classifyAiError(err);
+    res.status(500).json({ error: classified.detail || classified.code, errorCode: classified.code, errorDetail: classified.detail });
   }
 });
 
@@ -2930,21 +3133,26 @@ app.get('/api/screening-settings', authenticateToken, (req, res) => {
   const s = db.select().from(settings).where(eq(settings.id, 1)).get() as any;
   res.json({
     matchThreshold: s?.matchThreshold ?? 80,
-    notifyOnHighMatch: (s?.notifyOnHighMatch ?? 0) === 1
+    notifyOnHighMatch: (s?.notifyOnHighMatch ?? 0) === 1,
+    analysisMode: s?.analysisMode ?? 'hybrid'
   });
 });
 
 app.put('/api/screening-settings', authenticateToken, requireCapability('upload_cvs'), (req: AuthRequest, res) => {
-  const { matchThreshold, notifyOnHighMatch } = req.body;
+  const { matchThreshold, notifyOnHighMatch, analysisMode } = req.body;
 
   if (matchThreshold !== undefined && (typeof matchThreshold !== 'number' || matchThreshold < 0 || matchThreshold > 100)) {
     return res.status(400).json({ error: 'Match threshold must be a number between 0 and 100.' });
+  }
+  if (analysisMode !== undefined && !['ai', 'hybrid', 'local'].includes(analysisMode)) {
+    return res.status(400).json({ error: "Analysis mode must be one of 'ai', 'hybrid' or 'local'." });
   }
 
   const current = db.select().from(settings).where(eq(settings.id, 1)).get() as any;
   db.update(settings).set({
     matchThreshold: matchThreshold !== undefined ? parseInt(matchThreshold) : (current?.matchThreshold ?? 80),
-    notifyOnHighMatch: notifyOnHighMatch !== undefined ? (notifyOnHighMatch ? 1 : 0) : (current?.notifyOnHighMatch ?? 0)
+    notifyOnHighMatch: notifyOnHighMatch !== undefined ? (notifyOnHighMatch ? 1 : 0) : (current?.notifyOnHighMatch ?? 0),
+    analysisMode: analysisMode !== undefined ? analysisMode : (current?.analysisMode ?? 'hybrid')
   }).where(eq(settings.id, 1)).run();
 
   logAuditEvent(
@@ -2955,7 +3163,11 @@ app.put('/api/screening-settings', authenticateToken, requireCapability('upload_
   );
 
   const updated = db.select().from(settings).where(eq(settings.id, 1)).get() as any;
-  res.json({ matchThreshold: updated.matchThreshold, notifyOnHighMatch: updated.notifyOnHighMatch === 1 });
+  res.json({
+    matchThreshold: updated.matchThreshold,
+    notifyOnHighMatch: updated.notifyOnHighMatch === 1,
+    analysisMode: updated.analysisMode
+  });
 });
 
 // In-app notifications

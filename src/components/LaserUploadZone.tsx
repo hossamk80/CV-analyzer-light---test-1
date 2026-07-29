@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { UploadCloud, FileText, CheckCircle, AlertCircle, RefreshCw, SkipForward } from 'lucide-react';
+import { UploadCloud, FileText, CheckCircle, AlertCircle, RefreshCw, SkipForward, X, RotateCw } from 'lucide-react';
 import { useI18n } from '../i18n/I18nContext.js';
 
 interface UploadFileState {
@@ -9,6 +9,10 @@ interface UploadFileState {
   progress: number;
   status: 'queued' | 'processing' | 'success' | 'error' | 'skipped';
   error?: string;
+  /** Stable code from the server, translated on this side. */
+  errorCode?: string;
+  /** Raw provider text, shown as a collapsible technical detail. */
+  errorDetail?: string;
   skipReason?: 'duplicate_same_job';
   existingCandidateName?: string;
 }
@@ -17,6 +21,10 @@ interface LaserUploadZoneProps {
   files: UploadFileState[];
   onFilesSelected: (files: File[]) => void;
   onClear: () => void;
+  /** Drops a single row from the queue. */
+  onRemove: (id: string) => void;
+  /** Re-runs one failed file. */
+  onRetry: (id: string) => void;
   disabled?: boolean;
 }
 
@@ -25,11 +33,14 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
   files,
   onFilesSelected,
   onClear,
+  onRemove,
+  onRetry,
   disabled = false
 }) => {
   const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [expandedDetail, setExpandedDetail] = useState<string | null>(null);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -190,6 +201,32 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
                     {file.status === 'error' && <AlertCircle className="w-3 h-3" />}
                     {t(`uploadStatus_${file.status}` as any)}
                   </span>
+
+                  {/* Retry just this file, without re-uploading the whole batch. */}
+                  {file.status === 'error' && (
+                    <button
+                      type="button"
+                      onClick={() => onRetry(file.id)}
+                      className="tk-icon-btn tk-focusable shrink-0"
+                      style={{ width: 24, height: 24 }}
+                      title={t('retryFile')}
+                      aria-label={t('retryFile')}
+                    >
+                      <RotateCw className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+
+                  {/* Drop this one CV from the list — the rest of the batch is untouched. */}
+                  <button
+                    type="button"
+                    onClick={() => onRemove(file.id)}
+                    className="tk-icon-btn tk-focusable shrink-0"
+                    style={{ width: 24, height: 24 }}
+                    title={t('removeFile')}
+                    aria-label={t('removeFile')}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
                 {file.status === 'skipped' && (
@@ -201,10 +238,40 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
                   </p>
                 )}
 
-                {file.status === 'error' && file.error && (
-                  <p className="text-[11px] mt-1.5 leading-relaxed" style={{ color: '#ef4444' }}>
-                    {file.error.includes('AI Provider not configured') ? t('noProviderConfigured') : file.error}
-                  </p>
+                {file.status === 'error' && (
+                  <div className="mt-1.5" style={{ display: 'grid', gap: 4 }}>
+                    <p className="text-[11px] leading-relaxed" style={{ color: '#ef4444' }}>
+                      {file.errorCode ? t(`aiError_${file.errorCode}` as any) : (file.error || t('aiError_unknown'))}
+                    </p>
+                    {/* A failed call bills nothing — worth saying, since a quota
+                        error is exactly when people worry about that. */}
+                    <p className="text-[10px]" style={{ color: 'var(--tk-dim)' }}>{t('aiErrorNoTokensSpent')}</p>
+                    {file.errorDetail && (
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedDetail(expandedDetail === file.id ? null : file.id)}
+                          className="tk-focusable text-[10px] font-semibold"
+                          style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--tk-muted)' }}
+                        >
+                          {t('technicalDetails')}
+                        </button>
+                        {expandedDetail === file.id && (
+                          <p
+                            className="text-[10px] mt-1 leading-relaxed"
+                            dir="ltr"
+                            style={{
+                              padding: 8, borderRadius: 8, background: 'var(--tk-inset)',
+                              border: '1px solid var(--tk-border)', color: 'var(--tk-muted)',
+                              fontFamily: 'ui-monospace, SFMono-Regular, monospace', wordBreak: 'break-word'
+                            }}
+                          >
+                            {file.errorDetail}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             ))}

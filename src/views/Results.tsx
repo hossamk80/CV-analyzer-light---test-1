@@ -356,7 +356,10 @@ export const Results: React.FC = () => {
       const updated = await apiRequest('POST', `/api/candidates/${id}/reanalyze`);
       setCandidatesList(prev => prev.map(c => c.id === id ? updated : c));
     } catch (e: any) {
-      alert(t('reanalyzeFailed', { reason: e.message }));
+      // Prefer the translated sentence for the server's stable code; fall back
+      // to the raw message when the failure came from somewhere else.
+      const reason = e?.errorCode ? t(`aiError_${e.errorCode}` as any) : e?.message;
+      alert(t('reanalyzeFailed', { reason }));
     } finally {
       setLoading(false);
     }
