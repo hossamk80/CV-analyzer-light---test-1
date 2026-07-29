@@ -1,5 +1,5 @@
 export const ar = {
-  appName: "الجناح الذكي للتوظيف",
+  appName: "المحلل الذكي للتوظيف",
   cvAnalyzer: "محلل السير الذاتية",
   login: "تسجيل الدخول",
   logout: "تسجيل الخروج",
@@ -41,7 +41,7 @@ export const ar = {
   jobDefinitions: "تعريف متطلبات الوظائف",
   createJob: "إنشاء وظيفة جديدة",
   jobTitle: "المسمى الوظيفي",
-  department: "القسم / الإدارة",
+  department: "القسم / المشروع",
   location: "الموقع الجغرافي",
   experienceYears: "الحد الأدنى للخبرة (سنوات)",
   degreeRequired: "المؤهل التعليمي المطلوب",
