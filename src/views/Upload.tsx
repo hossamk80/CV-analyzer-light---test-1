@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext.js';
 import { useRole } from '../context/RoleContext.js';
@@ -23,13 +23,17 @@ interface UploadFileState {
   progress: number;
   status: 'queued' | 'processing' | 'success' | 'error' | 'skipped';
   error?: string;
+  errorCode?: string;
+  errorDetail?: string;
   // populated when status === 'skipped'
   skipReason?: 'duplicate_same_job';
   existingCandidateName?: string;
 }
 
+type AnalysisMode = 'ai' | 'hybrid' | 'local';
+
 export const Upload: React.FC = () => {
-  const { t, dir } = useI18n();
+  const { t, dir, language } = useI18n();
   const navigate = useNavigate();
   const { role, capabilities, gdprActive, toggleGdpr } = useRole();
   const canToggleGdpr = !!role && hasPermission(role, 'toggle_gdpr', capabilities);
@@ -41,7 +45,12 @@ export const Upload: React.FC = () => {
   // Screening knobs, persisted server-side via /api/screening-settings.
   const [matchThreshold, setMatchThreshold] = useState(80);
   const [notifyOnHighMatch, setNotifyOnHighMatch] = useState(false);
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('hybrid');
   const canChangeScreening = !!role && hasPermission(role, 'upload_cvs', capabilities);
+
+  // Files the user removed mid-flight. An upload already in the air cannot be
+  // recalled, so the worker checks this set and simply discards the outcome.
+  const removedIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     fetchJobs();
@@ -70,12 +79,13 @@ export const Upload: React.FC = () => {
       const s = await apiRequest('GET', '/api/screening-settings');
       setMatchThreshold(s.matchThreshold);
       setNotifyOnHighMatch(s.notifyOnHighMatch);
+      if (s.analysisMode) setAnalysisMode(s.analysisMode);
     } catch (e) {
       console.error('Error fetching screening settings:', e);
     }
   };
 
-  const persistScreeningSettings = async (payload: { matchThreshold?: number; notifyOnHighMatch?: boolean }) => {
+  const persistScreeningSettings = async (payload: { matchThreshold?: number; notifyOnHighMatch?: boolean; analysisMode?: AnalysisMode }) => {
     try {
       await apiRequest('PUT', '/api/screening-settings', payload);
     } catch (e: any) {
@@ -105,21 +115,32 @@ export const Upload: React.FC = () => {
     // Concurrency limit of 3
     const concurrency = 3;
     const queue = [...filesToUpload];
-    
+
     const uploadWorker = async () => {
       while (queue.length > 0) {
         const item = queue.shift();
         if (!item) continue;
+        // Removed while it was still waiting its turn — never send it.
+        if (removedIdsRef.current.has(item.id)) continue;
 
-        // Update status to processing
-        setFiles(prev => prev.map(f => f.id === item.id ? { ...f, status: 'processing', progress: 10 } : f));
+        // Only touch a row that is still in the list.
+        const patch = (updater: (f: UploadFileState) => UploadFileState) => {
+          if (removedIdsRef.current.has(item.id)) return;
+          setFiles(prev => prev.map(f => (f.id === item.id ? updater(f) : f)));
+        };
+
+        patch(f => ({ ...f, status: 'processing', progress: 10 }));
 
         // Start progress simulation timer
         let progressVal = 10;
         const progressTimer = setInterval(() => {
           if (progressVal < 90) {
             progressVal += Math.round(Math.random() * 8) + 2;
-            setFiles(prev => prev.map(f => f.id === item.id && f.status === 'processing' ? { ...f, progress: Math.min(progressVal, 90) } : f));
+            setFiles(prev => prev.map(f =>
+              f.id === item.id && f.status === 'processing'
+                ? { ...f, progress: Math.min(progressVal, 90) }
+                : f
+            ));
           }
         }, 400);
 
@@ -127,6 +148,9 @@ export const Upload: React.FC = () => {
           const formData = new FormData();
           formData.append('cvs', item.file);
           formData.append('jobId', selectedJobId);
+          // Lets the server store locally generated report text in the language
+          // the uploader is actually using.
+          formData.append('lang', language);
 
           // We use native fetch here to support multipart FormData uploads
           const response = await fetch('/api/upload', {
@@ -137,32 +161,57 @@ export const Upload: React.FC = () => {
 
           clearInterval(progressTimer);
 
-          const data = await response.json();
+          const data = await response.json().catch(() => ({}));
 
+          // A request-level rejection (paused job, no provider, 413, …) carries
+          // its own code; surface it exactly like a per-file failure.
           if (!response.ok) {
-            throw new Error(data.error || t('uploadFailed'));
+            patch(f => ({
+              ...f,
+              status: 'error',
+              progress: 100,
+              errorCode: data.errorCode || undefined,
+              errorDetail: data.error || `HTTP ${response.status}`,
+              error: data.error || `HTTP ${response.status}`
+            }));
+            continue;
           }
 
-          const fileResult = data.results[0];
+          const fileResult = data.results?.[0];
 
           if (fileResult?.skipped && fileResult?.skipReason === 'duplicate_same_job') {
             // Duplicate for same job — show amber warning
-            setFiles(prev => prev.map(f => f.id === item.id ? {
+            patch(f => ({
               ...f,
               status: 'skipped',
               progress: 100,
               skipReason: 'duplicate_same_job',
               existingCandidateName: fileResult.existingCandidateName
-            } : f));
+            }));
           } else if (fileResult?.success) {
-            setFiles(prev => prev.map(f => f.id === item.id ? { ...f, status: 'success', progress: 100 } : f));
+            patch(f => ({ ...f, status: 'success', progress: 100 }));
           } else {
-            throw new Error(fileResult ? fileResult.error : t('uploadFailed'));
+            patch(f => ({
+              ...f,
+              status: 'error',
+              progress: 100,
+              errorCode: fileResult?.errorCode || undefined,
+              errorDetail: fileResult?.errorDetail || fileResult?.error || undefined,
+              error: fileResult?.error || t('uploadFailed')
+            }));
           }
 
         } catch (err: any) {
           clearInterval(progressTimer);
-          setFiles(prev => prev.map(f => f.id === item.id ? { ...f, status: 'error', error: err.message || t('uploadFailed') } : f));
+          // Never reached the server at all — a browser/network failure.
+          patch(f => ({
+            ...f,
+            status: 'error',
+            progress: 100,
+            errorCode: 'network',
+            errorDetail: err?.message || undefined,
+            error: err?.message || t('uploadFailed')
+          }));
         }
       }
     };
@@ -173,7 +222,27 @@ export const Upload: React.FC = () => {
   };
 
   const handleClearList = () => {
+    files.forEach(f => removedIdsRef.current.add(f.id));
     setFiles([]);
+  };
+
+  /** Drops one CV from the queue without disturbing the rest of the batch. */
+  const handleRemoveFile = (id: string) => {
+    removedIdsRef.current.add(id);
+    setFiles(prev => prev.filter(f => f.id !== id));
+  };
+
+  /** Re-runs a single failed file. */
+  const handleRetryFile = (id: string) => {
+    const target = files.find(f => f.id === id);
+    if (!target) return;
+    removedIdsRef.current.delete(id);
+    setFiles(prev => prev.map(f =>
+      f.id === id
+        ? { ...f, status: 'queued', progress: 0, error: undefined, errorCode: undefined, errorDetail: undefined }
+        : f
+    ));
+    setTimeout(() => uploadBatch([target]), 50);
   };
 
   const selectedJob = jobs.find(j => String(j.id) === selectedJobId);
@@ -247,6 +316,8 @@ export const Upload: React.FC = () => {
         files={files}
         onFilesSelected={handleFilesSelected}
         onClear={handleClearList}
+        onRemove={handleRemoveFile}
+        onRetry={handleRetryFile}
         disabled={jobIsPaused}
       />
 
@@ -273,6 +344,47 @@ export const Upload: React.FC = () => {
           {jobIsPaused && (
             <p className="text-[11px] mt-1.5" style={{ color: '#f5b301' }}>
               {t('jobPausedNotice')}
+            </p>
+          )}
+        </div>
+
+        {/* Analysis mode — the single biggest lever on token spend, so it lives
+            right next to the upload zone rather than buried in Settings. */}
+        <div>
+          <label className="block text-[10.5px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: 'var(--tk-muted)' }}>
+            {t('analysisMode')}
+          </label>
+          <div className="flex gap-1.5 flex-wrap">
+            {(['local', 'hybrid', 'ai'] as AnalysisMode[]).map(mode => (
+              <button
+                key={mode}
+                type="button"
+                disabled={!canChangeScreening}
+                onClick={() => {
+                  if (!canChangeScreening) return;
+                  setAnalysisMode(mode);
+                  persistScreeningSettings({ analysisMode: mode });
+                }}
+                className="tk-focusable"
+                style={{
+                  height: 28, borderRadius: 8, paddingInline: 10, fontSize: 11, fontWeight: 600,
+                  cursor: canChangeScreening ? 'pointer' : 'not-allowed',
+                  opacity: canChangeScreening ? 1 : 0.5,
+                  ...(analysisMode === mode
+                    ? { background: 'var(--tk-accent)', color: 'var(--tk-on-accent)', border: '1px solid transparent' }
+                    : { background: 'transparent', color: 'var(--tk-soft)', border: '1px solid var(--tk-border-strong)' })
+                }}
+              >
+                {t(`analysisMode_${mode}` as any)}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] mt-1.5 leading-relaxed" style={{ color: 'var(--tk-muted)' }}>
+            {t(`analysisMode_${analysisMode}_desc` as any)}
+          </p>
+          {analysisMode === 'local' && (
+            <p className="text-[11px] mt-1" style={{ color: '#f5b301' }}>
+              {t('analysisModeLocalNote')}
             </p>
           )}
         </div>
