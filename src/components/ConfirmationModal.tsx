@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Loader2 } from 'lucide-react';
+import { useI18n } from '../i18n/I18nContext.js';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -23,11 +24,12 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   description,
   warningText,
   confirmWord,
-  confirmButtonText = 'Confirm',
-  cancelButtonText = 'Cancel',
+  confirmButtonText,
+  cancelButtonText,
   danger = true,
   loading = false
 }) => {
+  const { t } = useI18n();
   const [typedValue, setTypedValue] = useState('');
 
   useEffect(() => {
@@ -56,16 +58,16 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         aria-describedby="confirmation-modal-warning"
         className="tk-panel max-w-md w-full space-y-4 shadow-2xl"
       >
-        <div className="flex items-center gap-3 border-b border-border-main/50 pb-3">
-          <div className={`p-2.5 rounded-xl ${danger ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-brand/10 text-brand border border-brand/20'}`}>
-            <AlertTriangle className="w-5 h-5 shrink-0" aria-hidden="true" />
+        <div className="flex items-center gap-3 pb-3" style={{ borderBottom: '1px solid var(--tk-border)' }}>
+          <div className={`p-2 rounded-xl ${danger ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-brand/10 text-brand border border-brand/20'}`}>
+            <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
           </div>
-          <h3 id="confirmation-modal-title" className="text-base font-bold text-text-main text-start">
+          <h3 id="confirmation-modal-title" className="text-[14px] font-semibold text-start" style={{ color: 'var(--tk-text)' }}>
             {title}
           </h3>
         </div>
 
-        <div className="space-y-3 text-xs text-start">
+        <div className="space-y-3 text-[11.5px] text-start">
           <p className="text-text-main font-medium leading-relaxed">
             {description}
           </p>
@@ -82,7 +84,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           {confirmWord && (
             <div className="space-y-1.5 pt-1">
               <label className="block text-[11px] font-bold text-text-muted">
-                Type <span className="font-mono text-text-main select-all uppercase">"{confirmWord}"</span> to proceed:
+                {t('confirmTypeWord', { word: confirmWord })}
               </label>
               <input
                 type="text"
@@ -95,27 +97,29 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-border-main/50">
+        <div className="flex items-center justify-end gap-2 pt-3" style={{ borderTop: '1px solid var(--tk-border)' }}>
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="px-4 py-2 bg-bg-card border border-border-main text-text-muted hover:text-text-main rounded-xl font-bold text-xs cursor-pointer transition-colors"
+            className="tk-btn-neutral tk-focusable"
           >
-            {cancelButtonText}
+            {cancelButtonText ?? t('cancel')}
           </button>
           <button
             type="button"
             onClick={handleConfirm}
             disabled={!isConfirmed || loading}
-            className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-              danger
-                ? 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20'
-                : 'bg-brand text-white hover:bg-brand/90'
-            }`}
+            className="tk-focusable flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              height: 32, borderRadius: 9, paddingInline: 13, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              ...(danger
+                ? { background: 'rgba(239,68,68,.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,.2)' }
+                : { background: 'var(--tk-accent)', color: 'var(--tk-on-accent)', border: '1px solid transparent' })
+            }}
           >
             {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            <span>{confirmButtonText}</span>
+            <span>{confirmButtonText ?? t('confirm')}</span>
           </button>
         </div>
       </div>

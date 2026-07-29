@@ -35,9 +35,10 @@ export const Jobs: React.FC = () => {
   const [jobDescription, setJobDescription] = useState('');
   const [coreResponsibilities, setCoreResponsibilities] = useState('');
   const [additionalRequirements, setAdditionalRequirements] = useState('');
-  const [checklist, setChecklist] = useState<ChecklistItem[]>([
-    { id: 'req-1', requirement: 'Minimum required years of experience in the core field', importance: 'Mandatory' },
-    { id: 'req-2', requirement: 'Required university degree or educational specialization', importance: 'Important' }
+  // Seeded in the active interface language so a fresh form never mixes locales.
+  const [checklist, setChecklist] = useState<ChecklistItem[]>(() => [
+    { id: 'req-1', requirement: t('seedChecklist1'), importance: 'Mandatory' },
+    { id: 'req-2', requirement: t('seedChecklist2'), importance: 'Important' }
   ]);
 
   const [loading, setLoading] = useState(false);
@@ -70,7 +71,7 @@ export const Jobs: React.FC = () => {
     // Validate checklist items are not empty
     const invalidItems = checklist.some(item => !item.requirement.trim());
     if (invalidItems) {
-      setError('Please fill in or remove empty checklist requirement fields.');
+      setError(t('emptyChecklistError'));
       setLoading(false);
       return;
     }
@@ -97,40 +98,40 @@ export const Jobs: React.FC = () => {
       });
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Failed to create job definition');
+      setError(err.message || t('createJobFailed'));
     } finally {
       setLoading(false);
     }
   };
 
-  const microLabel = 'block text-[11px] font-bold uppercase tracking-[.1em] mb-1.5';
+  const microLabel = 'block text-[10.5px] font-bold uppercase tracking-[.1em] mb-1.5';
   const microLabelStyle = { color: 'var(--tk-muted)' } as React.CSSProperties;
 
   // Panel 1 — six basic specification fields (des-2.txt §14.1).
   const basicFields: { label: string; value: string; set: (v: string) => void; placeholder: string; type?: string; required?: boolean }[] = [
-    { label: t('jobTitle'), value: title, set: setTitle, placeholder: 'e.g. Senior Network & Systems Engineer', required: true },
-    { label: t('department'), value: department, set: setDepartment, placeholder: 'e.g. Software', required: true },
-    { label: t('location'), value: location, set: setLocation, placeholder: 'e.g. Riyadh, KSA', required: true },
+    { label: t('jobTitle'), value: title, set: setTitle, placeholder: t('phJobTitle'), required: true },
+    { label: t('department'), value: department, set: setDepartment, placeholder: t('phDepartment'), required: true },
+    { label: t('location'), value: location, set: setLocation, placeholder: t('phLocation'), required: true },
     { label: t('experienceYears'), value: String(experience), set: (v) => setExperience(parseInt(v) || 0), placeholder: '7', type: 'number', required: true },
-    { label: t('degreeRequired'), value: degree, set: setDegree, placeholder: "e.g. BSc", required: true },
-    { label: 'التخصص الدقيق المطلوب', value: specialization, set: setSpecialization, placeholder: 'مثال: هندسة شبكات وأنظمة' }
+    { label: t('degreeRequired'), value: degree, set: setDegree, placeholder: t('phDegree'), required: true },
+    { label: t('specializationRequired'), value: specialization, set: setSpecialization, placeholder: t('phSpecialization') }
   ];
 
-  // Panel 2 — seven stacked requirement fields; the last two are taller text areas (des-2.txt §14.2).
+  // Panel 2 — stacked requirement fields; the last three are taller text areas (des-2.txt §14.2).
   const requirementFields: { label: string; value: string; set: (v: string) => void; placeholder: string; area?: boolean }[] = [
-    { label: 'Target Core Skills (تفصل بفاصلة)', value: skills, set: setSkills, placeholder: 'BGP, OSPF, Terraform, Linux, AWS' },
-    { label: 'المهارات الفنية المطلوبة (تفصل بفاصلة)', value: technicalSkills, set: setTechnicalSkills, placeholder: 'Cisco, Azure, Windows Server' },
-    { label: 'الشهادات المهنية المطلوبة', value: requiredCerts, set: setRequiredCerts, placeholder: 'CCNP, AWS SA, PMP' },
-    { label: 'الجنسية المطلوبة', value: nationality, set: setNationality, placeholder: 'مثال: سعودي أو إقامة قابلة للنقل' },
-    { label: 'اللغات المطلوبة', value: languages, set: setLanguages, placeholder: 'مثال: العربية والإنجليزية' },
-    { label: 'المهارات السلوكية والشخصية (تفصل بفاصلة)', value: softSkills, set: setSoftSkills, placeholder: 'حل المشكلات, العمل الجماعي, التواصل' },
-    { label: 'الوصف العام للوظيفة', value: jobDescription, set: setJobDescription, placeholder: 'أدخل وصفاً عاماً للوظيفة والبيئة الوظيفية', area: true },
-    { label: 'المسؤوليات الأساسية', value: coreResponsibilities, set: setCoreResponsibilities, placeholder: 'أدخل الواجبات والمسؤوليات اليومية', area: true },
-    { label: 'متطلبات إضافية', value: additionalRequirements, set: setAdditionalRequirements, placeholder: 'شروط إضافية مثل رخصة القيادة أو برامج محددة', area: true }
+    { label: t('targetCoreSkills'), value: skills, set: setSkills, placeholder: t('phCoreSkills') },
+    { label: t('technicalSkillsRequired'), value: technicalSkills, set: setTechnicalSkills, placeholder: t('phTechnicalSkills') },
+    { label: t('certificationsRequired'), value: requiredCerts, set: setRequiredCerts, placeholder: t('phCertifications') },
+    { label: t('nationalityRequired'), value: nationality, set: setNationality, placeholder: t('phNationality') },
+    { label: t('languagesRequired'), value: languages, set: setLanguages, placeholder: t('phLanguages') },
+    { label: t('softSkillsRequired'), value: softSkills, set: setSoftSkills, placeholder: t('phSoftSkills') },
+    { label: t('jobDescriptionField'), value: jobDescription, set: setJobDescription, placeholder: t('phJobDescription'), area: true },
+    { label: t('coreResponsibilitiesField'), value: coreResponsibilities, set: setCoreResponsibilities, placeholder: t('phCoreResponsibilities'), area: true },
+    { label: t('additionalRequirementsField'), value: additionalRequirements, set: setAdditionalRequirements, placeholder: t('phAdditionalRequirements'), area: true }
   ];
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 900, display: 'grid', gap: 14 }}>
+    <form onSubmit={handleSubmit} style={{ maxWidth: 860, display: 'grid', gap: 10 }}>
       <button
         type="button"
         onClick={() => navigate('/')}
@@ -152,11 +153,11 @@ export const Jobs: React.FC = () => {
 
       {/* 1. Basic job specifications */}
       <div className="tk-panel">
-        <h3 className="text-[11px] font-bold uppercase tracking-[.14em] mb-4 flex items-center gap-1.5" style={{ color: 'var(--tk-accent-text)' }}>
+        <h3 className="text-[10.5px] font-bold uppercase tracking-[.14em] mb-3 flex items-center gap-1.5" style={{ color: 'var(--tk-accent-text)' }}>
           <Briefcase className="w-3.5 h-3.5" />
-          Basic job specifications
+          {t('basicJobSpecs')}
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(210px, 100%), 1fr))', gap: 10 }}>
           {basicFields.map(({ label, value, set, placeholder, type, required }) => (
             <div key={label}>
               <label className={microLabel} style={microLabelStyle}>{label}</label>
@@ -177,10 +178,10 @@ export const Jobs: React.FC = () => {
 
       {/* 2. Requirements & specifications */}
       <div className="tk-panel">
-        <h3 className="text-[11px] font-bold uppercase tracking-[.14em] mb-4" style={{ color: 'var(--tk-accent-text)' }}>
-          Requirements &amp; specifications
+        <h3 className="text-[10.5px] font-bold uppercase tracking-[.14em] mb-3" style={{ color: 'var(--tk-accent-text)' }}>
+          {t('requirementsAndSpecs')}
         </h3>
-        <div style={{ display: 'grid', gap: 14 }}>
+        <div style={{ display: 'grid', gap: 10 }}>
           {requirementFields.map(({ label, value, set, placeholder, area }) => (
             <div key={label}>
               <label className={microLabel} style={microLabelStyle}>{label}</label>
@@ -191,7 +192,7 @@ export const Jobs: React.FC = () => {
                   placeholder={placeholder}
                   rows={3}
                   className="tk-field tk-focusable"
-                  style={{ height: 'auto', minHeight: 38, paddingBlock: 10, lineHeight: 1.7, resize: 'vertical' }}
+                  style={{ height: 'auto', minHeight: 34, paddingBlock: 9, lineHeight: 1.7, resize: 'vertical' }}
                 />
               ) : (
                 <input
@@ -210,7 +211,7 @@ export const Jobs: React.FC = () => {
       {/* 3. ATS evaluation criteria */}
       <div className="tk-panel">
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-          <h3 className="text-[11px] font-bold uppercase tracking-[.14em] flex items-center gap-1.5" style={{ color: 'var(--tk-accent-text)' }}>
+          <h3 className="text-[10.5px] font-bold uppercase tracking-[.14em] flex items-center gap-1.5" style={{ color: 'var(--tk-accent-text)' }}>
             <CheckSquare className="w-3.5 h-3.5" />
             {t('checklistTitle')}
           </h3>
@@ -218,7 +219,7 @@ export const Jobs: React.FC = () => {
             type="button"
             onClick={handleAddChecklistItem}
             className="tk-btn-primary tk-focusable"
-            style={{ height: 32, padding: '0 12px', fontSize: 11.5 }}
+            style={{ height: 28, padding: '0 10px', fontSize: 11 }}
           >
             <PlusCircle className="w-3.5 h-3.5" />
             <span>{t('addChecklistItem')}</span>
@@ -229,7 +230,7 @@ export const Jobs: React.FC = () => {
           {checklist.map((item, idx) => (
             <div
               key={item.id}
-              style={{ padding: 13, borderRadius: 13, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}
+              style={{ padding: 11, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}
             >
               <div className="flex items-start gap-2">
                 <textarea
@@ -239,14 +240,14 @@ export const Jobs: React.FC = () => {
                   placeholder={t('requirementDescription')}
                   rows={2}
                   className="tk-field tk-focusable"
-                  style={{ flex: 1, height: 'auto', minHeight: 38, paddingBlock: 9, fontSize: 12.5, background: 'var(--tk-input)', resize: 'vertical' }}
+                  style={{ flex: 1, height: 'auto', minHeight: 34, paddingBlock: 8, fontSize: 12, background: 'var(--tk-input)', resize: 'vertical' }}
                 />
                 <button
                   type="button"
                   onClick={() => handleRemoveChecklistItem(item.id)}
                   className="tk-icon-btn tk-focusable"
-                  title={`Remove item ${idx + 1}`}
-                  aria-label={`Remove item ${idx + 1}`}
+                  title={t('removeItemN', { n: String(idx + 1) })}
+                  aria-label={t('removeItemN', { n: String(idx + 1) })}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -265,9 +266,9 @@ export const Jobs: React.FC = () => {
                     background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)', border: 'none', cursor: 'pointer'
                   }}
                 >
-                  <option value="Mandatory">Mandatory</option>
-                  <option value="Important">Important</option>
-                  <option value="Additional">Additional</option>
+                  <option value="Mandatory">{t('importance_Mandatory')}</option>
+                  <option value="Important">{t('importance_Important')}</option>
+                  <option value="Additional">{t('importance_Additional')}</option>
                 </select>
               </div>
             </div>
@@ -281,7 +282,6 @@ export const Jobs: React.FC = () => {
           type="button"
           onClick={() => navigate('/')}
           className="tk-btn-neutral tk-focusable"
-          style={{ height: 38, padding: '0 18px', fontSize: 12.5 }}
         >
           {t('cancel')}
         </button>
@@ -289,9 +289,9 @@ export const Jobs: React.FC = () => {
           type="submit"
           disabled={loading}
           className="tk-btn-primary tk-focusable"
-          style={{ height: 38, padding: '0 18px', fontSize: 12.5, opacity: loading ? 0.5 : 1 }}
+          style={{ opacity: loading ? 0.5 : 1 }}
         >
-          {loading ? 'Saving…' : t('saveJob')}
+          {loading ? t('saving') : t('saveJob')}
         </button>
       </div>
     </form>

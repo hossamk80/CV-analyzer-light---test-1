@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Check, ChevronsUpDown } from 'lucide-react';
+import { X, ChevronsUpDown } from 'lucide-react';
+import { useI18n } from '../i18n/I18nContext.js';
 
 interface MultiSelectFilterProps {
   label: string;
@@ -16,6 +17,7 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
   selectedValues,
   onChange
 }) => {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -57,11 +59,11 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
 
   return (
     <div className="flex flex-col w-full relative" ref={containerRef}>
-      <label className="text-[11px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: 'var(--tk-muted)' }}>{label}</label>
+      <label className="text-[10.5px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: 'var(--tk-muted)' }}>{label}</label>
       
       {/* Selector Box */}
       <div 
-        className="min-h-[38px] p-1.5 flex flex-wrap gap-1.5 items-center cursor-text text-sm" style={{ borderRadius: 11, border: '1px solid var(--tk-border-strong)', background: 'var(--tk-inset)', color: 'var(--tk-text)' }}
+        className="min-h-[34px] p-1.5 flex flex-wrap gap-1.5 items-center cursor-text text-[12px]" style={{ borderRadius: 9, border: '1px solid var(--tk-border-strong)', background: 'var(--tk-inset)', color: 'var(--tk-text)' }}
         onClick={() => setIsOpen(true)}
       >
         {selectedValues.map(val => (
@@ -88,7 +90,7 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={selectedValues.length === 0 ? placeholder : ''}
-          className="flex-1 bg-transparent border-none outline-none min-w-[80px] p-0.5 text-[12.5px]" style={{ color: 'var(--tk-text)' }}
+          className="flex-1 bg-transparent border-none outline-none min-w-[70px] p-0.5 text-[12px]" style={{ color: 'var(--tk-text)' }}
           onFocus={() => setIsOpen(true)}
         />
         
@@ -104,14 +106,14 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
                 key={option}
                 type="button"
                 onClick={() => handleSelect(option)}
-                className="w-full text-start px-3 py-2 rounded-lg text-[12.5px] flex items-center justify-between tk-focusable" style={{ color: 'var(--tk-text)' }}
+                className="w-full text-start px-3 py-2 rounded-lg text-[12px] flex items-center justify-between tk-focusable" style={{ color: 'var(--tk-text)' }}
               >
                 <span>{option}</span>
               </button>
             ))
           ) : (
             query.trim() === '' && (
-              <div className="px-3 py-2 text-xs text-center" style={{ color: 'var(--tk-muted)' }}>No options available</div>
+              <div className="px-3 py-2 text-[11.5px] text-center" style={{ color: 'var(--tk-muted)' }}>{t('noOptionsAvailable')}</div>
             )
           )}
 
@@ -119,9 +121,9 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
             <button
               type="button"
               onClick={handleAddCustom}
-              className="w-full text-start px-3 py-2 rounded-lg text-[12.5px] flex items-center justify-between mt-1 tk-focusable" style={{ color: 'var(--tk-accent-text)', borderTop: '1px solid var(--tk-border)' }}
+              className="w-full text-start px-3 py-2 rounded-lg text-[12px] flex items-center justify-between mt-1 tk-focusable" style={{ color: 'var(--tk-accent-text)', borderTop: '1px solid var(--tk-border)' }}
             >
-              <span>Add Custom: "{query}"</span>
+              <span>{t('addCustomOption', { value: query })}</span>
             </button>
           )}
         </div>

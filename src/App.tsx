@@ -72,10 +72,10 @@ const RailAvatar: React.FC = () => {
         aria-expanded={open}
         className="tk-focusable"
         style={{
-          width: 34, height: 34, borderRadius: '50%', cursor: 'pointer',
+          width: 30, height: 30, borderRadius: '50%', cursor: 'pointer',
           background: 'var(--tk-accent)', color: 'var(--tk-on-accent)',
           border: '1px solid var(--tk-border-strong)',
-          fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center'
+          fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}
       >
         {initial}
@@ -92,8 +92,8 @@ const RailAvatar: React.FC = () => {
             insetInlineStart: '100%',
             marginInlineStart: 10,
             zIndex: 40,
-            width: 180,
-            borderRadius: 14,
+            width: 172,
+            borderRadius: 12,
             border: '1px solid var(--tk-border-strong)',
             boxShadow: '0 22px 50px rgba(0,0,0,.35)',
             padding: '12px 14px'
@@ -141,24 +141,24 @@ const Rail: React.FC = () => {
     <aside
       className="no-print"
       style={{
-        width: 'clamp(60px, 6vw, 76px)', flex: 'none', position: 'sticky', top: 0,
+        width: 'clamp(56px, 5vw, 66px)', flex: 'none', position: 'sticky', top: 0,
         height: '100vh', background: 'var(--tk-rail)', borderInlineEnd: '1px solid var(--tk-border)',
-        padding: '18px 0 14px', display: 'flex', flexDirection: 'column', alignItems: 'center'
+        padding: '14px 0 12px', display: 'flex', flexDirection: 'column', alignItems: 'center'
       }}
     >
       <div
-        title="Home"
+        title={t('navHome')}
         style={{
-          width: 40, height: 40, borderRadius: 12, marginBottom: 14, flex: 'none',
+          width: 34, height: 34, borderRadius: 10, marginBottom: 12, flex: 'none',
           background: 'linear-gradient(150deg, var(--tk-accent), color-mix(in srgb, var(--tk-accent) 55%, #000))',
           boxShadow: '0 6px 20px color-mix(in srgb, var(--tk-accent) 45%, transparent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}
       >
-        <BrainCircuit className="w-5 h-5" style={{ color: 'var(--tk-on-accent)' }} />
+        <BrainCircuit className="w-4 h-4" style={{ color: 'var(--tk-on-accent)' }} />
       </div>
 
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
         {visibleNavs.map(item => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -170,7 +170,7 @@ const Rail: React.FC = () => {
               aria-label={item.label}
               className="tk-focusable"
               style={{
-                position: 'relative', width: 44, height: 44, borderRadius: 13,
+                position: 'relative', width: 38, height: 38, borderRadius: 11,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: isActive ? 'var(--tk-accent-text)' : 'var(--tk-muted)',
                 background: isActive ? 'var(--tk-accent-soft)' : 'transparent',
@@ -184,18 +184,18 @@ const Rail: React.FC = () => {
                 // the right, and creates a horizontal scrollbar at small widths.
                 <span
                   style={{
-                    position: 'absolute', insetInlineStart: -8, width: 3, height: 20, borderRadius: 3,
+                    position: 'absolute', insetInlineStart: -7, width: 3, height: 18, borderRadius: 3,
                     background: 'var(--tk-accent)', boxShadow: '0 0 12px color-mix(in srgb, var(--tk-accent) 70%, transparent)'
                   }}
                 />
               )}
-              <Icon className="w-[19px] h-[19px]" />
+              <Icon className="w-[17px] h-[17px]" />
             </Link>
           );
         })}
       </nav>
 
-      <div style={{ width: 22, borderTop: '1px solid var(--tk-border)', margin: '14px 0' }} />
+      <div style={{ width: 20, borderTop: '1px solid var(--tk-border)', margin: '12px 0' }} />
       <RailAvatar />
     </aside>
   );
@@ -231,7 +231,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div className="tk-page" style={{ display: 'flex' }}>
       <Rail />
       <div style={{ flex: '1 1 0', minWidth: 0 }}>
-        <main style={{ padding: 'clamp(16px,2vw,24px) clamp(14px,2.2vw,30px) 44px' }}>
+        <main style={{ padding: 'clamp(12px,1.5vw,18px) clamp(12px,1.6vw,22px) 36px', minWidth: 0 }}>
           <TopNavbar kicker={kicker} title={getPageTitle()} />
           <div className="print-container">{children}</div>
         </main>

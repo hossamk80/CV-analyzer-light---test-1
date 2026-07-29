@@ -16,18 +16,8 @@ type Capability =
 
 type RbacMatrix = Record<UserRole, Record<Capability, boolean>>;
 
-const CAPABILITY_LABELS: Record<Capability, { title: string; desc: string }> = {
-  view_dashboard: { title: 'View Dashboard & Results', desc: 'Access candidate rankings, match scores, and overview' },
-  manage_jobs: { title: 'Manage Job Positions', desc: 'Create, edit, and archive job openings' },
-  upload_cvs: { title: 'Upload & Analyze CVs', desc: 'Upload candidate resume batches and run AI parsing' },
-  change_status: { title: 'Change Candidate Status', desc: 'Update candidate pipeline status (Shortlisted, Interviewing, etc.)' },
-  delete_data: { title: 'Delete Candidates & Jobs', desc: 'Permanently remove candidates, files, and job listings' },
-  manage_settings: { title: 'Manage System Settings', desc: 'Configure AI providers, prompts, theme, and security' },
-  toggle_gdpr: { title: 'Toggle GDPR Anonymization', desc: 'Mask or unmask PII contact information across the interface' }
-};
-
 export const RbacSettingsView: React.FC = () => {
-  const { language } = useI18n();
+  const { t } = useI18n();
   const [matrix, setMatrix] = useState<RbacMatrix | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,7 +35,7 @@ export const RbacSettingsView: React.FC = () => {
       const data = await apiRequest('GET', '/api/rbac');
       setMatrix(data);
     } catch (err: any) {
-      setError(err.message || 'Failed to load RBAC matrix');
+      setError(err.message || t('rbacLoadFailed'));
     } finally {
       setLoading(false);
     }
@@ -72,9 +62,9 @@ export const RbacSettingsView: React.FC = () => {
     setSuccessMsg(null);
     try {
       await apiRequest('PUT', '/api/rbac', matrix);
-      setSuccessMsg('RBAC capabilities updated and enforced successfully.');
+      setSuccessMsg(t('rbacSaved'));
     } catch (err: any) {
-      setError(err.message || 'Failed to save RBAC matrix');
+      setError(err.message || t('rbacSaveFailed'));
     } finally {
       setSaving(false);
     }
@@ -84,7 +74,7 @@ export const RbacSettingsView: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-[300px] text-text-muted text-sm gap-2">
         <RefreshCw className="w-5 h-5 animate-spin text-brand" />
-        <span>Loading role permissions matrix...</span>
+        <span>{t('rbacLoading')}</span>
       </div>
     );
   }
@@ -107,30 +97,26 @@ export const RbacSettingsView: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex justify-between items-center border-b border-border-main/50 pb-4">
+      <div className="flex justify-between items-center gap-3 flex-wrap pb-3" style={{ borderBottom: '1px solid var(--tk-border)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-brand" />
+          <div className="flex items-center justify-center shrink-0" style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' }}>
+            <Shield className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-text-main">
-              {language === 'ar' ? 'إدارة الصلاحيات والأدوار (Dynamic RBAC)' : 'Dynamic Role Capabilities Matrix'}
-            </h2>
-            <p className="text-xs text-text-muted">
-              {language === 'ar' ? 'تعديل صلاحيات كل دور في النظام وتطبيقها ديناميكياً' : 'Configure and enforce fine-grained capabilities per role (Admin, Manager, Recruiter).'}
-            </p>
+            <h2 className="text-[15px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('rbacTitle')}</h2>
+            <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>{t('rbacSubtitle')}</p>
           </div>
         </div>
 
         <button
           onClick={handleSave}
           disabled={saving}
-          className="tk-btn-primary tk-focusable flex items-center gap-1.5 text-xs transition-colors cursor-pointer disabled:opacity-50"
+          className="tk-btn-primary tk-focusable disabled:opacity-50"
         >
-          {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          <span>{saving ? 'Saving...' : 'Save Matrix'}</span>
+          {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+          <span>{saving ? t('saving') : t('rbacSaveMatrix')}</span>
         </button>
       </div>
 
@@ -143,36 +129,35 @@ export const RbacSettingsView: React.FC = () => {
 
       {/* RBAC Matrix Table */}
       <div className="tk-panel overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-bg-main/60 border-b border-border-main text-text-muted font-bold uppercase tracking-wider">
+        <div className="tk-table-scroll">
+          <table className="tk-table">
+            <thead>
               <tr>
-                <th className="py-3.5 px-5">Capability / Permission</th>
-                <th className="py-3.5 px-4 text-center w-28">
-                  <span className="text-purple-500 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">Admin</span>
+                <th>{t('rbacColumnCapability')}</th>
+                <th style={{ textAlign: 'center', width: 110 }}>
+                  <span className="text-purple-500 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">{t('admin')}</span>
                 </th>
-                <th className="py-3.5 px-4 text-center w-28">
-                  <span className="text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">Manager</span>
+                <th style={{ textAlign: 'center', width: 110 }}>
+                  <span className="text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">{t('manager')}</span>
                 </th>
-                <th className="py-3.5 px-4 text-center w-28">
-                  <span className="text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Recruiter</span>
+                <th style={{ textAlign: 'center', width: 110 }}>
+                  <span className="text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">{t('recruiter')}</span>
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border-main/40 text-text-main font-medium">
+            <tbody>
               {capabilities.map(cap => {
-                const info = CAPABILITY_LABELS[cap];
                 return (
-                  <tr key={cap} className="hover:bg-bg-hover/30 transition-colors">
-                    <td className="py-3.5 px-5">
-                      <div className="font-bold text-text-main text-xs">{info.title}</div>
-                      <div className="text-[11px] text-text-muted">{info.desc}</div>
+                  <tr key={cap}>
+                    <td>
+                      <div className="font-semibold text-[12px]" style={{ color: 'var(--tk-text)' }}>{t(`cap_${cap}` as any)}</div>
+                      <div className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>{t(`cap_${cap}_desc` as any)}</div>
                     </td>
 
                     {roles.map(r => {
                       const enabled = matrix[r]?.[cap] || false;
                       return (
-                        <td key={r} className="py-3.5 px-4 text-center">
+                        <td key={r} style={{ textAlign: 'center' }}>
                           <input
                             type="checkbox"
                             checked={enabled}

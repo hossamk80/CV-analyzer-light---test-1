@@ -35,7 +35,7 @@ interface Job {
 }
 
 export const Analytics: React.FC = () => {
-  const { language } = useI18n();
+  const { t } = useI18n();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<string>('all');
@@ -55,7 +55,7 @@ export const Analytics: React.FC = () => {
       setCandidates(cList);
       setJobs(jList);
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch analytics data');
+      setError(err.message || t('accessDeniedBody'));
     } finally {
       setLoading(false);
     }
@@ -135,11 +135,12 @@ export const Analytics: React.FC = () => {
     const counts: Record<string, number> = {};
     filteredCandidates.forEach(c => {
       const job = jobs.find(j => j.id === c.jobId);
-      const dept = job?.department?.trim() || 'Unassigned';
+      const dept = job?.department?.trim() || t('unassignedDept');
       counts[dept] = (counts[dept] || 0) + 1;
     });
     return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  }, [filteredCandidates, jobs]);
+    // `t` is a dependency because the "unassigned" bucket label is localized.
+  }, [filteredCandidates, jobs, t]);
 
   // Compute Top Skills & Gaps
   const topSkillsAndGaps = useMemo(() => {
@@ -176,7 +177,7 @@ export const Analytics: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-[300px] text-sm gap-2" style={{ color: 'var(--tk-muted)' }}>
         <RefreshCw className="w-5 h-5 animate-spin" style={{ color: 'var(--tk-accent)' }} />
-        <span>Computing analytics and funnel metrics…</span>
+        <span>{t('computingAnalytics')}</span>
       </div>
     );
   }
@@ -186,43 +187,63 @@ export const Analytics: React.FC = () => {
   }
 
   const statTiles = [
-    { label: 'Total candidates', value: String(funnelMetrics.total), delta: 'Evaluated in selected scope', icon: Users },
-    { label: 'Avg match score', value: `${scoreAnalytics.avgMatch}%`, delta: `Tech ${scoreAnalytics.avgTech}% · Exp ${scoreAnalytics.avgExp}%`, icon: Award },
-    { label: 'Shortlisted rate', value: `${funnelMetrics.shortlistedPct}%`, delta: `${funnelMetrics.shortlisted} shortlisted`, icon: TrendingUp },
-    { label: 'Est. time to shortlist', value: timeToHireDays ? `${timeToHireDays} days` : '—', delta: timeToHireDays ? 'From upload to advancement' : 'No candidates advanced yet', icon: Clock }
+    {
+      label: t('statTotalCandidates'),
+      value: String(funnelMetrics.total),
+      delta: t('statTotalCandidatesHint'),
+      icon: Users
+    },
+    {
+      label: t('statAvgMatch'),
+      value: `${scoreAnalytics.avgMatch}%`,
+      delta: t('statAvgMatchHint', { tech: String(scoreAnalytics.avgTech), exp: String(scoreAnalytics.avgExp) }),
+      icon: Award
+    },
+    {
+      label: t('statShortlistRate'),
+      value: `${funnelMetrics.shortlistedPct}%`,
+      delta: t('statShortlistHint', { count: String(funnelMetrics.shortlisted) }),
+      icon: TrendingUp
+    },
+    {
+      label: t('statTimeToShortlist'),
+      value: timeToHireDays ? t('daysUnit', { count: timeToHireDays }) : '—',
+      delta: timeToHireDays ? t('statTimeToShortlistHint') : t('statTimeToShortlistNone'),
+      icon: Clock
+    }
   ];
 
   // Funnel rows, widest first, each measured against the top of the funnel (des-2.txt §9).
   const funnelRows = [
-    { label: 'CVs received', count: funnelMetrics.total },
-    { label: 'Pending review', count: funnelMetrics.pending },
-    { label: 'Shortlisted', count: funnelMetrics.shortlisted },
-    { label: 'Interviewing', count: funnelMetrics.interviewing },
-    { label: 'Rejected', count: funnelMetrics.rejected }
+    { label: t('funnelReceived'), count: funnelMetrics.total },
+    { label: t('funnelPending'), count: funnelMetrics.pending },
+    { label: t('funnelShortlisted'), count: funnelMetrics.shortlisted },
+    { label: t('funnelInterviewing'), count: funnelMetrics.interviewing },
+    { label: t('funnelRejected'), count: funnelMetrics.rejected }
   ];
   const funnelTop = funnelMetrics.total || 1;
   const deptMax = byDepartment.length > 0 ? Math.max(...byDepartment.map(([, v]) => v)) : 1;
 
   const tierCards = [
-    { label: 'Full match (≥80%)', count: scoreAnalytics.fullMatchCount, hint: 'Top tier fits' },
-    { label: 'Partial (50–79%)', count: scoreAnalytics.partialMatchCount, hint: 'Moderate fits' },
-    { label: 'Low (<50%)', count: scoreAnalytics.lowMatchCount, hint: 'Unmatched' }
+    { label: t('tierFull'), count: scoreAnalytics.fullMatchCount, hint: t('tierFullHint') },
+    { label: t('tierPartial'), count: scoreAnalytics.partialMatchCount, hint: t('tierPartialHint') },
+    { label: t('tierLow'), count: scoreAnalytics.lowMatchCount, hint: t('tierLowHint') }
   ];
 
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
+    <div style={{ display: 'grid', gap: 10, minWidth: 0 }}>
       {/* Job filter */}
       <div className="flex items-center gap-2 flex-wrap">
-        <label className="text-[11px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>
-          {language === 'ar' ? 'الوظيفة' : 'Job'}
+        <label className="text-[10.5px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>
+          {t('analyticsJobFilter')}
         </label>
         <select
           value={selectedJobId}
           onChange={(e) => setSelectedJobId(e.target.value)}
           className="tk-field tk-focusable"
-          style={{ width: 'auto', minWidth: 200, height: 36, cursor: 'pointer' }}
+          style={{ width: 'auto', minWidth: 180, maxWidth: '100%', cursor: 'pointer' }}
         >
-          <option value="all">All jobs combined ({jobs.length})</option>
+          <option value="all">{t('allJobsCombined', { count: String(jobs.length) })}</option>
           {jobs.map(j => (
             <option key={j.id} value={j.id}>{j.title}</option>
           ))}
@@ -230,50 +251,48 @@ export const Analytics: React.FC = () => {
       </div>
 
       {/* Stat tiles */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(185px, 100%), 1fr))', gap: 10 }}>
         {statTiles.map(({ label, value, delta, icon: Icon }) => (
           <div key={label} className="tk-tile">
-            <span className="text-[11px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
+            <span className="text-[10.5px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
               <Icon className="w-3.5 h-3.5" />
               {label}
             </span>
-            <div className="flex items-baseline gap-2 flex-wrap mt-2">
-              <span style={{ fontSize: 'clamp(24px,2.6vw,32px)', fontWeight: 500, letterSpacing: '-.03em', color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>
-                {value}
-              </span>
-              <span className="text-[11.5px]" style={{ color: 'var(--tk-accent-text)' }}>{delta}</span>
+            <div className="flex items-baseline gap-2 flex-wrap mt-1.5">
+              <span className="tk-stat-value">{value}</span>
+              <span className="text-[11px]" style={{ color: 'var(--tk-accent-text)' }}>{delta}</span>
             </div>
           </div>
         ))}
       </div>
 
       {/* Hiring funnel + CVs by department */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(330px, 100%), 1fr))', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 10 }}>
         <div className="tk-panel">
-          <h3 className="text-[15px] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
+          <h3 className="text-[14px] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
             <PieChart className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
-            Hiring funnel
+            {t('hiringFunnel')}
           </h3>
-          <p className="text-[11px] mb-4" style={{ color: 'var(--tk-muted)' }}>Conversion across the current candidate set</p>
+          <p className="text-[11px] mb-3" style={{ color: 'var(--tk-muted)' }}>{t('hiringFunnelSub')}</p>
 
-          <div style={{ display: 'grid', gap: 12 }}>
+          <div style={{ display: 'grid', gap: 9 }}>
             {funnelRows.map(({ label, count }, i) => {
               const pct = Math.round((count / funnelTop) * 100);
               return (
                 <div key={label}>
                   <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <span className="text-[12.5px]" style={{ color: 'var(--tk-text)' }}>{label}</span>
-                    <span className="text-[12.5px]" style={{ color: 'var(--tk-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                    <span className="text-[12px]" style={{ color: 'var(--tk-text)' }}>{label}</span>
+                    <span className="text-[12px]" style={{ color: 'var(--tk-muted)', fontVariantNumeric: 'tabular-nums' }}>
                       {count}
                       <span className="inline-block text-end" style={{ width: 44, color: 'var(--tk-dim)' }}>{pct}%</span>
                     </span>
                   </div>
-                  <div style={{ height: 26, borderRadius: 9, background: 'var(--tk-track)', overflow: 'hidden' }}>
+                  <div style={{ height: 20, borderRadius: 7, background: 'var(--tk-track)', overflow: 'hidden' }}>
                     <div
                       style={{
                         height: '100%',
                         width: count > 0 ? `max(6%, ${pct}%)` : '0%',
-                        borderRadius: 9,
+                        borderRadius: 7,
                         background: `linear-gradient(90deg, color-mix(in srgb, var(--tk-accent) ${Math.max(70 - 8 * i, 20)}%, transparent), var(--tk-accent))`,
                         boxShadow: count > 0 ? '0 0 18px color-mix(in srgb, var(--tk-accent) 22%, transparent)' : 'none'
                       }}
@@ -286,23 +305,23 @@ export const Analytics: React.FC = () => {
         </div>
 
         <div className="tk-panel">
-          <h3 className="text-[15px] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
+          <h3 className="text-[14px] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
             <BarChart3 className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
-            CVs by department
+            {t('cvsByDepartment')}
           </h3>
-          <p className="text-[11px] mb-4" style={{ color: 'var(--tk-muted)' }}>Volume screened per hiring department</p>
+          <p className="text-[11px] mb-3" style={{ color: 'var(--tk-muted)' }}>{t('cvsByDepartmentSub')}</p>
 
           {byDepartment.length === 0 ? (
-            <p className="text-xs py-8 text-center" style={{ color: 'var(--tk-muted)' }}>No candidates screened yet.</p>
+            <p className="text-[12px] py-8 text-center" style={{ color: 'var(--tk-muted)' }}>{t('noCandidatesYet')}</p>
           ) : (
-            <div className="flex items-end" style={{ height: 210, gap: 'clamp(8px,1.4vw,18px)' }}>
+            <div className="flex items-end" style={{ height: 175, gap: 'clamp(6px,1.2vw,14px)' }}>
               {byDepartment.map(([dept, count]) => (
                 <div key={dept} className="flex flex-col items-center justify-end" style={{ flex: 1, minWidth: 0, height: '100%' }}>
                   <span className="text-[11.5px] mb-1.5" style={{ color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
                   <div
                     style={{
                       width: '100%',
-                      height: Math.max(4, Math.round((count / deptMax) * 148)),
+                      height: Math.max(4, Math.round((count / deptMax) * 122)),
                       borderRadius: '8px 8px 0 0',
                       background: 'linear-gradient(180deg, var(--tk-accent), color-mix(in srgb, var(--tk-accent) 18%, transparent))',
                       boxShadow: '0 0 18px color-mix(in srgb, var(--tk-accent) 22%, transparent)'
@@ -324,29 +343,29 @@ export const Analytics: React.FC = () => {
 
       {/* Score tier breakdown */}
       <div className="tk-panel">
-        <h3 className="text-[15px] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
+        <h3 className="text-[14px] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
           <Award className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
-          Match quality distribution
+          {t('matchQualityDistribution')}
         </h3>
-        <p className="text-[11px] mb-4" style={{ color: 'var(--tk-muted)' }}>Candidates grouped by overall match score</p>
+        <p className="text-[11px] mb-3" style={{ color: 'var(--tk-muted)' }}>{t('matchQualitySub')}</p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: 10 }}>
           {tierCards.map(({ label, count, hint }) => (
-            <div key={label} style={{ padding: 14, borderRadius: 13, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
+            <div key={label} style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
               <span className="text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>{label}</span>
-              <p style={{ fontSize: 24, fontWeight: 500, letterSpacing: '-.03em', color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>{count}</p>
+              <p style={{ fontSize: 21, fontWeight: 500, letterSpacing: '-.03em', color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>{count}</p>
               <p className="text-[11px]" style={{ color: 'var(--tk-dim)' }}>{hint}</p>
             </div>
           ))}
         </div>
 
-        <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--tk-border)', display: 'grid', gap: 8 }}>
+        <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--tk-border)', display: 'grid', gap: 7 }}>
           {[
-            { label: 'Technical match average', value: scoreAnalytics.avgTech },
-            { label: 'Experience match average', value: scoreAnalytics.avgExp },
-            { label: 'Cultural / soft-skills average', value: scoreAnalytics.avgCult }
+            { label: t('avgTechnical'), value: scoreAnalytics.avgTech },
+            { label: t('avgExperience'), value: scoreAnalytics.avgExp },
+            { label: t('avgCultural'), value: scoreAnalytics.avgCult }
           ].map(({ label, value }) => (
-            <div key={label} className="flex items-center justify-between gap-3 text-[12.5px]">
+            <div key={label} className="flex items-center justify-between gap-3 text-[12px]">
               <span style={{ color: 'var(--tk-muted)' }}>{label}</span>
               <span style={{ color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>{value}%</span>
             </div>
@@ -355,19 +374,19 @@ export const Analytics: React.FC = () => {
       </div>
 
       {/* Top matched skills & common gaps */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(270px, 100%), 1fr))', gap: 10 }}>
         <div className="tk-panel">
-          <h3 className="text-[15px] font-medium flex items-center gap-2 mb-3" style={{ color: 'var(--tk-text)' }}>
+          <h3 className="text-[14px] font-medium flex items-center gap-2 mb-2.5" style={{ color: 'var(--tk-text)' }}>
             <CheckCircle2 className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
-            Top matched skills
+            {t('topMatchedSkills')}
           </h3>
           {topSkillsAndGaps.topSkills.length === 0 ? (
-            <p className="text-xs py-4 text-center" style={{ color: 'var(--tk-muted)' }}>No skill data evaluated yet.</p>
+            <p className="text-[12px] py-4 text-center" style={{ color: 'var(--tk-muted)' }}>{t('noSkillData')}</p>
           ) : (
             <div className="tk-row-list">
               {topSkillsAndGaps.topSkills.map(([skill, cnt]) => (
                 <div key={skill} className="flex items-center justify-between gap-2 flex-wrap">
-                  <span className="text-[12.5px]" style={{ color: 'var(--tk-text)' }}>{skill}</span>
+                  <span className="text-[12px]" style={{ color: 'var(--tk-text)' }}>{skill}</span>
                   <span className="tk-pill is-active">{cnt}</span>
                 </div>
               ))}
@@ -376,17 +395,17 @@ export const Analytics: React.FC = () => {
         </div>
 
         <div className="tk-panel">
-          <h3 className="text-[15px] font-medium flex items-center gap-2 mb-3" style={{ color: 'var(--tk-text)' }}>
+          <h3 className="text-[14px] font-medium flex items-center gap-2 mb-2.5" style={{ color: 'var(--tk-text)' }}>
             <XCircle className="w-4 h-4" style={{ color: 'var(--tk-muted)' }} />
-            Most common gaps
+            {t('commonGaps')}
           </h3>
           {topSkillsAndGaps.topGaps.length === 0 ? (
-            <p className="text-xs py-4 text-center" style={{ color: 'var(--tk-muted)' }}>No gap data evaluated yet.</p>
+            <p className="text-[12px] py-4 text-center" style={{ color: 'var(--tk-muted)' }}>{t('noGapData')}</p>
           ) : (
             <div className="tk-row-list">
               {topSkillsAndGaps.topGaps.map(([gap, cnt]) => (
                 <div key={gap} className="flex items-center justify-between gap-2 flex-wrap">
-                  <span className="text-[12.5px]" style={{ color: 'var(--tk-soft)' }}>{gap}</span>
+                  <span className="text-[12px]" style={{ color: 'var(--tk-soft)' }}>{gap}</span>
                   <span className="tk-pill">{cnt}</span>
                 </div>
               ))}

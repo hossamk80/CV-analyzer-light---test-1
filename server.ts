@@ -477,9 +477,9 @@ function seedDatabase() {
   if (integrationsCount.count === 0) {
     console.log('Seeding default integrations settings...');
     db.insert(integrationsSettings).values([
-      { platformName: 'LinkedIn', isActive: 0, endpointUrl: 'https://api.linkedin.com', clientId: '', clientSecret: '', lastSyncDate: 'Never synced' },
-      { platformName: 'Odoo', isActive: 0, endpointUrl: '', clientId: '', clientSecret: '', apiKey: '', lastSyncDate: 'Never synced' },
-      { platformName: 'Custom', isActive: 0, endpointUrl: '', clientId: 'Bearer', apiKey: '', customHeaders: '{}', lastSyncDate: 'Never synced' }
+      { platformName: 'LinkedIn', isActive: 0, endpointUrl: 'https://api.linkedin.com', clientId: '', clientSecret: '', lastSyncDate: '' },
+      { platformName: 'Odoo', isActive: 0, endpointUrl: '', clientId: '', clientSecret: '', apiKey: '', lastSyncDate: '' },
+      { platformName: 'Custom', isActive: 0, endpointUrl: '', clientId: 'Bearer', apiKey: '', customHeaders: '{}', lastSyncDate: '' }
     ]).run();
   }
 }
@@ -1351,9 +1351,9 @@ app.get('/api/integrations', authenticateToken, requireCapability('manage_settin
     const count = sqlite.prepare('SELECT count(*) as c FROM integrations_settings').get() as { c: number };
     if (count.c === 0) {
       db.insert(integrationsSettings).values([
-        { platformName: 'LinkedIn', isActive: 0, endpointUrl: 'https://api.linkedin.com', clientId: '', clientSecret: '', lastSyncDate: 'Never synced' },
-        { platformName: 'Odoo',     isActive: 0, endpointUrl: '', clientId: '', clientSecret: '', apiKey: '', lastSyncDate: 'Never synced' },
-        { platformName: 'Custom',   isActive: 0, endpointUrl: '', clientId: 'Bearer', apiKey: '', customHeaders: '{}', lastSyncDate: 'Never synced' }
+        { platformName: 'LinkedIn', isActive: 0, endpointUrl: 'https://api.linkedin.com', clientId: '', clientSecret: '', lastSyncDate: '' },
+        { platformName: 'Odoo',     isActive: 0, endpointUrl: '', clientId: '', clientSecret: '', apiKey: '', lastSyncDate: '' },
+        { platformName: 'Custom',   isActive: 0, endpointUrl: '', clientId: 'Bearer', apiKey: '', customHeaders: '{}', lastSyncDate: '' }
       ]).run();
     }
 
@@ -1573,11 +1573,12 @@ app.post('/api/ai-providers/models', authenticateToken, requireCapability('manag
 app.get('/api/ai-providers/health-check', authenticateToken, requireCapability('manage_settings'), async (req, res) => {
   const activeProv = db.select().from(aiProviders).where(eq(aiProviders.isActive, 1)).get() as any;
   if (!activeProv) {
-    return res.json({ isConfigured: false, isModelSupported: false, warning: 'No active AI Provider configured' });
+    // `warningCode` lets the client render a localized message; `warning` stays as an English fallback.
+    return res.json({ isConfigured: false, isModelSupported: false, warningCode: 'no_active_provider', warning: 'No active AI Provider configured' });
   }
 
   if (!activeProv.apiKey) {
-    return res.json({ isConfigured: false, isModelSupported: false, warning: 'Active AI Provider API key is missing' });
+    return res.json({ isConfigured: false, isModelSupported: false, warningCode: 'missing_api_key', warning: 'Active AI Provider API key is missing' });
   }
 
   if (activeProv.modelName === 'Custom') {
@@ -1593,6 +1594,7 @@ app.get('/api/ai-providers/health-check', authenticateToken, requireCapability('
       providerName: activeProv.providerName,
       modelName: activeProv.modelName,
       availableModels: liveModels.slice(0, 5),
+      warningCode: isSupported ? null : 'unsupported_model',
       warning: isSupported ? null : `Saved model '${activeProv.modelName}' may no longer be supported by ${activeProv.providerName}`
     });
   } catch (err: any) {
@@ -1601,6 +1603,7 @@ app.get('/api/ai-providers/health-check', authenticateToken, requireCapability('
       isModelSupported: false,
       providerName: activeProv.providerName,
       modelName: activeProv.modelName,
+      warningCode: 'health_check_failed',
       warning: `Unable to verify active model health: ${err.message}`
     });
   }

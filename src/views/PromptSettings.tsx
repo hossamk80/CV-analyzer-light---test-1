@@ -57,7 +57,7 @@ export const PromptSettings: React.FC = () => {
       setPromptsList(list);
     } catch (e: any) {
       console.error('Failed loading prompts:', e);
-      setError(e.message || 'Failed to load prompts');
+      setError(e.message || t('accessDeniedBody'));
     } finally {
       setLoading(false);
     }
@@ -68,14 +68,14 @@ export const PromptSettings: React.FC = () => {
       await apiRequest('POST', `/api/prompts/${id}/activate`);
       fetchPrompts();
     } catch (e: any) {
-      alert('Failed activating prompt version: ' + e.message);
+      alert(t('promptActionFailed', { reason: e.message }));
     }
   };
 
   const handleDeletePrompt = (id: number) => {
     setPendingConfirm({
-      title: 'Delete Prompt Version',
-      description: 'Are you sure you want to delete this prompt version?',
+      title: t('deletePromptTitle'),
+      description: t('deletePromptDesc'),
       danger: true,
       onConfirm: async () => {
         setPendingConfirm(null);
@@ -83,7 +83,7 @@ export const PromptSettings: React.FC = () => {
           await apiRequest('DELETE', `/api/prompts/${id}`);
           fetchPrompts();
         } catch (e: any) {
-          alert('Failed deleting prompt version: ' + e.message);
+          alert(t('promptActionFailed', { reason: e.message }));
         }
       },
     });
@@ -91,8 +91,8 @@ export const PromptSettings: React.FC = () => {
 
   const handleRestoreDefaults = () => {
     setPendingConfirm({
-      title: 'Restore Default Prompts',
-      description: 'Restore built-in default prompts as a new draft?',
+      title: t('restoreDefaultsTitle'),
+      description: t('restoreDefaultsDesc'),
       danger: false,
       onConfirm: async () => {
         setPendingConfirm(null);
@@ -100,7 +100,7 @@ export const PromptSettings: React.FC = () => {
           await apiRequest('POST', '/api/prompts/restore-defaults');
           fetchPrompts();
         } catch (e: any) {
-          alert('Failed restoring default prompts: ' + e.message);
+          alert(t('promptActionFailed', { reason: e.message }));
         }
       },
     });
@@ -121,7 +121,7 @@ export const PromptSettings: React.FC = () => {
       setNewReanalysis('');
       fetchPrompts();
     } catch (e: any) {
-      alert('Failed creating prompt version: ' + e.message);
+      alert(t('promptActionFailed', { reason: e.message }));
     }
   };
 
@@ -143,34 +143,36 @@ export const PromptSettings: React.FC = () => {
     return <AccessDenied message={error} onRetry={fetchPrompts} />;
   }
 
+  const microLabel = 'block text-[10.5px] font-bold uppercase tracking-[.1em] mb-1.5 text-text-muted';
+
   return (
-    <div className="space-y-6">
-      <div className="tk-panel flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-4">
+      <div className="tk-panel flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center">
-            <MessageSquareCode className="w-5 h-5 text-brand" />
+          <div className="flex items-center justify-center shrink-0" style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' }}>
+            <MessageSquareCode className="w-4 h-4" />
           </div>
           <div className="space-y-0.5">
-            <h2 className="text-xl font-black text-text-main">{t('promptTitle')}</h2>
-            <p className="text-xs text-text-muted">Edit and version system instructions that direct AI CV parsing.</p>
+            <h2 className="text-[15px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('promptTitle')}</h2>
+            <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>{t('promptSubtitle')}</p>
           </div>
         </div>
 
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={handleRestoreDefaults}
-            className="flex items-center gap-1.5 px-3 py-2 bg-bg-hover border border-border-main text-text-main text-xs font-bold rounded-xl hover:bg-border-main transition-colors cursor-pointer"
+            className="tk-btn-neutral tk-focusable"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>{t('restoreDefaults')}</span>
           </button>
-          
+
           <button
             onClick={() => {
               setShowAddForm(!showAddForm);
               loadDefaultTemplate();
             }}
-            className="tk-btn-primary tk-focusable flex items-center gap-1.5 text-xs transition-colors cursor-pointer"
+            className="tk-btn-primary tk-focusable"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>{t('addNewPrompt')}</span>
@@ -180,58 +182,57 @@ export const PromptSettings: React.FC = () => {
 
       {/* Add Prompt Version Form */}
       {showAddForm && (
-        <form onSubmit={handleCreatePrompt} className="tk-panel space-y-4">
-          <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider">Create Prompt Version</h3>
-          
+        <form onSubmit={handleCreatePrompt} className="tk-panel space-y-3">
+          <h3 className={microLabel}>{t('addNewPrompt')}</h3>
+
           <div>
-            <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">{t('promptName')}</label>
+            <label className={microLabel}>{t('promptName')}</label>
             <input
               type="text"
               required
-              placeholder="e.g. Gemini 2.5 optimized prompt v2"
+              placeholder={t('promptNamePlaceholder')}
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               className="tk-field tk-focusable"
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">{t('analysisPrompt')}</label>
+              <label className={microLabel}>{t('analysisPrompt')}</label>
               <textarea
                 required
                 rows={12}
                 value={newAnalysis}
                 onChange={(e) => setNewAnalysis(e.target.value)}
                 className="tk-field tk-focusable"
+                style={{ height: 'auto', paddingBlock: 9, lineHeight: 1.7, resize: 'vertical' }}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">{t('reanalysisPrompt')}</label>
+              <label className={microLabel}>{t('reanalysisPrompt')}</label>
               <textarea
                 required
                 rows={12}
                 value={newReanalysis}
                 onChange={(e) => setNewReanalysis(e.target.value)}
                 className="tk-field tk-focusable"
+                style={{ height: 'auto', paddingBlock: 9, lineHeight: 1.7, resize: 'vertical' }}
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-1">
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="px-4 py-2 border border-border-main rounded-lg text-xs font-bold text-text-muted hover:text-text-main"
+              className="tk-btn-neutral tk-focusable"
             >
               {t('cancel')}
             </button>
-            <button
-              type="submit"
-              className="px-5 py-2 bg-brand text-white rounded-lg font-bold text-xs shadow-md shadow-brand/10 transition-colors cursor-pointer"
-            >
-              Save Version
+            <button type="submit" className="tk-btn-primary tk-focusable">
+              {t('saveVersion')}
             </button>
           </div>
         </form>
@@ -240,9 +241,9 @@ export const PromptSettings: React.FC = () => {
       {/* Prompts Versions List */}
       <div className="tk-panel overflow-hidden">
         {loading ? (
-          <div className="py-12 text-center text-text-muted">Loading prompt versions...</div>
+          <div className="py-12 text-center text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>{t('loadingPrompts')}</div>
         ) : promptsList.length === 0 ? (
-          <div className="py-12 text-center text-text-muted">No prompt versions. Restore defaults to seed.</div>
+          <div className="py-12 text-center text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>{t('noPromptVersions')}</div>
         ) : (
           <div className="divide-y divide-border-main/50">
             {promptsList.map(p => {
@@ -258,8 +259,8 @@ export const PromptSettings: React.FC = () => {
                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </button>
                       <div>
-                        <h4 className="text-sm font-bold text-text-main">{p.name}</h4>
-                        <span className="text-[10px] text-text-muted">Version ID: #{p.id}</span>
+                        <h4 className="text-[13px] font-semibold" style={{ color: 'var(--tk-text)' }}>{p.name}</h4>
+                        <span className="text-[10px]" style={{ color: 'var(--tk-muted)' }}>{t('versionId', { id: String(p.id) })}</span>
                       </div>
                     </div>
 
@@ -272,9 +273,9 @@ export const PromptSettings: React.FC = () => {
                       ) : (
                         <button
                           onClick={() => handleActivatePrompt(p.id)}
-                          className="text-xs text-brand hover:underline font-bold cursor-pointer"
+                          className="text-[11.5px] text-brand hover:underline font-bold cursor-pointer"
                         >
-                          Activate
+                          {t('activateVersion')}
                         </button>
                       )}
 
@@ -282,7 +283,7 @@ export const PromptSettings: React.FC = () => {
                         <button
                           onClick={() => handleDeletePrompt(p.id)}
                           className="p-1.5 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors cursor-pointer"
-                          title="Delete version"
+                          title={t('deleteVersion')}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

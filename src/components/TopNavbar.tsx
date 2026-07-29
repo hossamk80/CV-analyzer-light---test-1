@@ -25,7 +25,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ kicker, title }) => {
   return (
     <header
       className="flex flex-wrap items-center gap-3 justify-between no-print"
-      style={{ marginBottom: 'clamp(18px,2vw,26px)' }}
+      style={{ marginBottom: 'clamp(14px,1.6vw,20px)' }}
     >
       <div style={{ minWidth: 0 }}>
         <div
@@ -36,7 +36,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ kicker, title }) => {
         </div>
         <h1
           className="font-medium truncate"
-          style={{ fontSize: 'clamp(21px,2.4vw,30px)', letterSpacing: '-.02em', color: 'var(--tk-text)' }}
+          style={{ fontSize: 'clamp(18px,2vw,25px)', letterSpacing: '-.02em', color: 'var(--tk-text)' }}
         >
           {title}
         </h1>
@@ -45,16 +45,16 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ kicker, title }) => {
       <div className="flex items-center gap-2.5 flex-wrap" style={{ justifyContent: 'flex-end', minWidth: 0 }}>
         <div className="relative" style={{ flex: '1 1 170px', maxWidth: 260, minWidth: 150 }}>
           <Search
-            className="w-4 h-4 absolute pointer-events-none"
-            style={{ insetInlineStart: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--tk-muted)' }}
+            className="w-3.5 h-3.5 absolute pointer-events-none"
+            style={{ insetInlineStart: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--tk-muted)' }}
           />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('search') || 'Search'}
+            placeholder={t('search')}
             className="tk-field tk-focusable"
-            style={{ height: 36, borderRadius: 10, background: 'var(--tk-input)', paddingInlineStart: 34, width: '100%' }}
+            style={{ background: 'var(--tk-input)', paddingInlineStart: 30, width: '100%' }}
           />
         </div>
 
@@ -62,17 +62,17 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ kicker, title }) => {
           <button
             type="button"
             onClick={toggleGdpr}
-            title="Toggle GDPR anonymization mode"
+            title={t('gdprToggleTitle')}
             aria-pressed={gdprActive}
             className="flex items-center gap-1.5 px-3 tk-focusable"
             style={{
-              height: 36, borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              height: 32, borderRadius: 9, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
               background: gdprActive ? 'var(--tk-accent-soft)' : 'transparent',
               color: gdprActive ? 'var(--tk-accent-text)' : 'var(--tk-soft)',
               border: `1px solid ${gdprActive ? 'var(--tk-accent-line)' : 'var(--tk-border-strong)'}`
             }}
           >
-            <ShieldCheck className="w-4 h-4" />
+            <ShieldCheck className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{t('gdprMode')}</span>
           </button>
         )}
@@ -82,11 +82,11 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ kicker, title }) => {
           onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
           className="flex items-center gap-1.5 px-3 tk-focusable"
           style={{
-            height: 36, borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            height: 32, borderRadius: 9, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
             background: 'transparent', color: 'var(--tk-soft)', border: '1px solid var(--tk-border-strong)'
           }}
         >
-          <Globe className="w-4 h-4" />
+          <Globe className="w-3.5 h-3.5" />
           <span>{language === 'ar' ? 'English' : 'العربية'}</span>
         </button>
 

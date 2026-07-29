@@ -20,14 +20,6 @@ interface LaserUploadZoneProps {
   disabled?: boolean;
 }
 
-const STATUS_LABEL: Record<UploadFileState['status'], string> = {
-  queued: 'Queued',
-  processing: 'Parsing',
-  success: 'Parsed',
-  error: 'Failed',
-  skipped: 'Duplicate'
-};
-
 /** Drop zone + processing queue — des-2.txt §7 (left column of the Upload screen). */
 export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
   files,
@@ -68,18 +60,19 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
     }
   };
 
+  // Unit symbols are the SI abbreviations, identical in both locales.
   const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return '0 KB';
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const sizes = ['B', 'KB', 'MB'];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const doneCount = files.filter(f => f.status === 'success' || f.status === 'skipped').length;
 
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
+    <div style={{ display: 'grid', gap: 10 }}>
       {/* Drop zone */}
       <div
         onDragEnter={handleDrag}
@@ -98,8 +91,8 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
           }
         }}
         style={{
-          padding: 'clamp(24px,3vw,44px) clamp(18px,2vw,28px)',
-          borderRadius: 18,
+          padding: 'clamp(18px,2.2vw,32px) clamp(14px,1.6vw,22px)',
+          borderRadius: 14,
           border: `1.5px dashed ${isDragActive ? 'var(--tk-accent)' : 'var(--tk-accent-line)'}`,
           background: 'var(--tk-dropzone)',
           cursor: disabled ? 'not-allowed' : 'pointer',
@@ -120,23 +113,23 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
         <div
           className="mx-auto flex items-center justify-center"
           style={{
-            width: 56, height: 56, borderRadius: 17, background: 'var(--tk-accent-soft)',
-            color: 'var(--tk-accent-text)', boxShadow: '0 0 30px color-mix(in srgb, var(--tk-accent) 28%, transparent)'
+            width: 46, height: 46, borderRadius: 14, background: 'var(--tk-accent-soft)',
+            color: 'var(--tk-accent-text)', boxShadow: '0 0 24px color-mix(in srgb, var(--tk-accent) 28%, transparent)'
           }}
         >
-          <UploadCloud className="w-7 h-7" />
+          <UploadCloud className="w-6 h-6" />
         </div>
 
-        <p className="font-medium mt-4" style={{ fontSize: 'clamp(17px,2vw,21px)', color: 'var(--tk-text)' }}>
+        <p className="font-medium mt-3" style={{ fontSize: 'clamp(15px,1.6vw,18px)', color: 'var(--tk-text)' }}>
           {t('dragDropCVs')}
         </p>
-        <p className="text-xs mt-1.5" style={{ color: 'var(--tk-muted)' }}>
+        <p className="text-[11.5px] mt-1.5" style={{ color: 'var(--tk-muted)' }}>
           {t('supportedFiles')}
         </p>
-        <span className="tk-btn-primary mt-4" style={{ height: 38, padding: '0 18px', fontSize: 12.5, pointerEvents: 'none' }}>
-          Browse files
+        <span className="tk-btn-primary mt-3.5" style={{ pointerEvents: 'none' }}>
+          {t('browseFiles')}
         </span>
-        <p className="text-[11px] mt-3" style={{ color: 'var(--tk-dim)' }}>
+        <p className="text-[11px] mt-2.5" style={{ color: 'var(--tk-dim)' }}>
           {t('parallelProcessNotice')}
         </p>
       </div>
@@ -145,23 +138,23 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
       {files.length > 0 && (
         <div className="tk-panel">
           <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-            <h4 className="text-[15px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('processingCvs')}</h4>
+            <h4 className="text-[14px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('processingCvs')}</h4>
             <div className="flex items-center gap-3">
               <span className="text-[11px]" style={{ color: 'var(--tk-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                {files.length} files · {doneCount} done
+                {t('filesDoneCount', { total: String(files.length), done: String(doneCount) })}
               </span>
               <button
                 type="button"
                 onClick={onClear}
                 className="tk-btn-neutral tk-focusable"
-                style={{ height: 30, padding: '0 12px', fontSize: 11 }}
+                style={{ height: 28, padding: '0 10px', fontSize: 11 }}
               >
-                Clear list
+                {t('clearList')}
               </button>
             </div>
           </div>
 
-          <div className="tk-row-list" style={{ maxHeight: 340, overflowY: 'auto' }}>
+          <div className="tk-row-list" style={{ maxHeight: 300, overflowY: 'auto' }}>
             {files.map(file => (
               <div key={file.id}>
                 <div className="flex items-center gap-3 flex-wrap">
@@ -187,7 +180,7 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
                   <span
                     className={`tk-pill ${file.status === 'success' ? 'is-active' : ''}`}
                     style={{
-                      width: 72, justifyContent: 'center',
+                      minWidth: 74, justifyContent: 'center',
                       ...(file.status === 'error' ? { background: 'rgba(239,68,68,.1)', color: '#ef4444' } : {})
                     }}
                   >
@@ -195,15 +188,16 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
                     {file.status === 'success' && <CheckCircle className="w-3 h-3" />}
                     {file.status === 'skipped' && <SkipForward className="w-3 h-3" />}
                     {file.status === 'error' && <AlertCircle className="w-3 h-3" />}
-                    {STATUS_LABEL[file.status]}
+                    {t(`uploadStatus_${file.status}` as any)}
                   </span>
                 </div>
 
                 {file.status === 'skipped' && (
                   <p className="text-[11px] mt-1.5 leading-relaxed" style={{ color: 'var(--tk-dim)' }}>
-                    Already analyzed for this job
-                    {file.existingCandidateName && <> as <strong style={{ color: 'var(--tk-soft)' }}>{file.existingCandidateName}</strong></>}
-                    . Use <strong style={{ color: 'var(--tk-soft)' }}>Re-analyze</strong> on the candidate to refresh it.
+                    {t('duplicateAlready')}
+                    {file.existingCandidateName && <> {t('duplicateAs', { name: file.existingCandidateName })}</>}
+                    {'. '}
+                    {t('duplicateUseReanalyze')}
                   </p>
                 )}
 
