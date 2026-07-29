@@ -1,5 +1,5 @@
 export const en = {
-  appName: "Smart Recruitment Suite",
+  appName: "Smart Recruitment Analyzer",
   cvAnalyzer: "CV Analyzer",
   login: "Login",
   logout: "Logout",
