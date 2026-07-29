@@ -73,6 +73,15 @@ interface Stats {
   jobCandidateCounts: Record<number, number>;
 }
 
+interface Reliability {
+  hasData: boolean;
+  totalRuns: number;
+  successRuns: number;
+  successRate: number | null;
+  fallbackRate: number | null;
+  avgDurationMs: number | null;
+}
+
 /** Builds an SVG polyline `points` string from a series, scaled into an 8x34 sparkline box. */
 function sparklinePoints(values: number[]): string {
   if (values.length === 0) return '';
@@ -96,6 +105,7 @@ export const Dashboard: React.FC = () => {
   const canDeleteJobs = role ? hasPermission(role, 'delete_data', capabilities) : false;
 
   const [stats, setStats] = useState<Stats>({ totalCvs: 0, activeJobs: 0, excellentMatches: 0, averageMatch: 0, trend7d: [], topCandidates: [], jobCandidateCounts: {} });
+  const [reliability, setReliability] = useState<Reliability | null>(null);
   const [jobsList, setJobsList] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
@@ -131,6 +141,12 @@ export const Dashboard: React.FC = () => {
       const jobsData = await apiRequest('GET', '/api/jobs');
       setStats(statsData);
       setJobsList(jobsData);
+
+      try {
+        setReliability(await apiRequest('GET', '/api/ai/reliability'));
+      } catch {
+        // Reliability is supplementary — the rest of the dashboard still renders without it.
+      }
     } catch (e) {
       console.error('Error fetching dashboard data:', e);
     } finally {
@@ -329,6 +345,44 @@ export const Dashboard: React.FC = () => {
               <Sparkles className="w-4 h-4" />
               {t('assistantTitle')}
             </h4>
+
+            {/* Extraction reliability donut — the share of real AI runs (last 30 days) that
+                returned a usable structured result. Named "reliability", not "accuracy":
+                the system has no ground truth to score its own judgement against. */}
+            <div className="flex items-center justify-center py-1">
+              <div style={{ position: 'relative', width: 104, height: 104 }}>
+                <svg viewBox="0 0 120 120" width="104" height="104">
+                  <g transform="rotate(-90 60 60)">
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="var(--tk-track)" strokeWidth="9" />
+                    {reliability?.hasData && (
+                      <circle
+                        cx="60" cy="60" r="50" fill="none"
+                        stroke="var(--tk-accent)" strokeWidth="9" strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 50 * ((reliability.successRate ?? 0) / 100)} ${2 * Math.PI * 50}`}
+                        style={{ filter: 'drop-shadow(0 0 8px color-mix(in srgb, var(--tk-accent) 60%, transparent))' }}
+                      />
+                    )}
+                  </g>
+                </svg>
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center"
+                  style={{ color: 'var(--tk-text)' }}
+                >
+                  <span style={{ fontSize: 23, fontWeight: 500, letterSpacing: '-.03em', fontVariantNumeric: 'tabular-nums' }}>
+                    {reliability?.hasData ? `${reliability.successRate}%` : '—'}
+                  </span>
+                  <span className="text-[9px] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-muted)' }}>
+                    Reliability
+                  </span>
+                </div>
+              </div>
+            </div>
+            <p className="text-[11px] text-center" style={{ color: 'var(--tk-dim)' }}>
+              {reliability?.hasData
+                ? `${reliability.successRuns}/${reliability.totalRuns} AI runs succeeded (30d)`
+                : 'No AI runs recorded yet'}
+            </p>
+
             <p className="text-xs leading-relaxed flex items-center gap-2 flex-wrap" style={{ color: 'var(--tk-muted)' }}>
               <span><strong style={{ color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>{todayCount}</strong> {t('screenedToday')}</span>
               <span>·</span>

@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext.js';
 import { ShieldCheck, Globe, Search } from 'lucide-react';
 import { hasPermission } from '../utils/rbac.js';
 import AppearancePopover from './AppearancePopover.js';
+import NotificationsBell from './NotificationsBell.js';
 
 interface TopNavbarProps {
   kicker: string;
@@ -88,6 +89,8 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ kicker, title }) => {
           <Globe className="w-4 h-4" />
           <span>{language === 'ar' ? 'English' : 'العربية'}</span>
         </button>
+
+        <NotificationsBell />
 
         <AppearancePopover
           open={popoverOpen}

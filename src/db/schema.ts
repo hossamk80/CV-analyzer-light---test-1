@@ -18,6 +18,8 @@ export const settings = sqliteTable('settings', {
   whatsappMessage: text('whatsapp_message').notNull().default('Hi {name}, we are pleased to update you on your application for the {job} position. Your status is now: {status}.'),
   gdprRetentionDays: integer('gdpr_retention_days').notNull().default(90),
   auditLogRetentionDays: integer('audit_log_retention_days').notNull().default(90),
+  matchThreshold: integer('match_threshold').notNull().default(80),        // score at/above which a CV counts as a strong match
+  notifyOnHighMatch: integer('notify_on_high_match').notNull().default(0), // raise an in-app notification when one lands
 });
 
 export const jobs = sqliteTable('jobs', {
@@ -114,6 +116,37 @@ export const auditLogs = sqliteTable('audit_logs', {
   userAgent: text('user_agent'),
   requestMethod: text('request_method'),
   requestUrl: text('request_url'),
+  createdAt: text('created_at').notNull().default(''),
+});
+
+/**
+ * One row per AI analysis attempt. This is the only real signal the system has about how
+ * the extraction pipeline is behaving, so the dashboard's reliability metric is computed
+ * from it rather than from a hardcoded figure.
+ */
+export const aiRuns = sqliteTable('ai_runs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  providerName: text('provider_name').notNull(),
+  modelName: text('model_name').notNull(),
+  status: text('status').notNull(),                          // 'success' | 'failed'
+  usedFallbackProvider: integer('used_fallback_provider').notNull().default(0),
+  kind: text('kind').notNull().default('upload'),            // 'upload' | 'reanalyze'
+  candidateId: integer('candidate_id'),
+  tokensUsed: integer('tokens_used').notNull().default(0),
+  durationMs: integer('duration_ms').notNull().default(0),
+  errorMessage: text('error_message'),
+  createdAt: text('created_at').notNull().default(''),
+});
+
+/** In-app notifications (e.g. a CV landing at/above the configured match threshold). */
+export const notifications = sqliteTable('notifications', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  type: text('type').notNull(),                              // 'high_match'
+  title: text('title').notNull(),
+  body: text('body').notNull(),
+  candidateId: integer('candidate_id'),
+  jobId: integer('job_id'),
+  isRead: integer('is_read').notNull().default(0),
   createdAt: text('created_at').notNull().default(''),
 });
 

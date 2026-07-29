@@ -304,7 +304,8 @@ Create a `.env.local` (see [`.env.example`](.env.example)):
 
 ## 🚀 Getting Started
 
-**Prerequisites:** Node.js 18+.
+**Prerequisites:** Node.js **22.5 or newer** — the database layer uses the built-in
+`node:sqlite` module, which does not exist on older releases.
 
 ```bash
 # 1. Install dependencies

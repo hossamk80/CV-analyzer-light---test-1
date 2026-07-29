@@ -14,7 +14,7 @@ dotenv.config();
 dotenv.config({ path: '.env.local' });
 
 import { db, sqlite } from './src/db/index.js';
-import { users, settings, jobs, candidates, aiProviders, aiPrompts, integrationsSettings, auditLogs, roleCapabilities } from './src/db/schema.js';
+import { users, settings, jobs, candidates, aiProviders, aiPrompts, integrationsSettings, auditLogs, roleCapabilities, aiRuns, notifications } from './src/db/schema.js';
 import { eq, and, ne, desc, sql } from 'drizzle-orm';
 import { DEFAULT_ANALYSIS_PROMPT, DEFAULT_REANALYSIS_PROMPT } from './src/prompts.js';
 
@@ -222,6 +222,31 @@ function initDbSchema() {
       is_enabled INTEGER NOT NULL DEFAULT 1,
       UNIQUE(role, capability)
     );
+
+    CREATE TABLE IF NOT EXISTS ai_runs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      provider_name TEXT NOT NULL,
+      model_name TEXT NOT NULL,
+      status TEXT NOT NULL,
+      used_fallback_provider INTEGER NOT NULL DEFAULT 0,
+      kind TEXT NOT NULL DEFAULT 'upload',
+      candidate_id INTEGER,
+      tokens_used INTEGER NOT NULL DEFAULT 0,
+      duration_ms INTEGER NOT NULL DEFAULT 0,
+      error_message TEXT,
+      created_at TEXT NOT NULL DEFAULT ''
+    );
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      candidate_id INTEGER,
+      job_id INTEGER,
+      is_read INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT ''
+    );
   `);
 
   // ── Non-destructive column migrations (safe to run on existing databases) ──
@@ -251,6 +276,8 @@ function initDbSchema() {
   try { sqlite.exec(`ALTER TABLE audit_logs ADD COLUMN request_method TEXT;`); } catch {}
   try { sqlite.exec(`ALTER TABLE audit_logs ADD COLUMN request_url TEXT;`); } catch {}
   try { sqlite.exec(`ALTER TABLE settings ADD COLUMN audit_log_retention_days INTEGER DEFAULT 90;`); } catch {}
+  try { sqlite.exec(`ALTER TABLE settings ADD COLUMN match_threshold INTEGER DEFAULT 80;`); } catch {}
+  try { sqlite.exec(`ALTER TABLE settings ADD COLUMN notify_on_high_match INTEGER DEFAULT 0;`); } catch {}
   // Jobs table new optional fields
   try { sqlite.exec(`ALTER TABLE jobs ADD COLUMN specialization TEXT;`); } catch {}
   try { sqlite.exec(`ALTER TABLE jobs ADD COLUMN technical_skills TEXT;`); } catch {}
@@ -1176,10 +1203,14 @@ app.get('/api/settings', authenticateToken, requireCapability('manage_settings')
 });
 
 app.put('/api/settings', authenticateToken, requireCapability('manage_settings'), (req: AuthRequest, res) => {
-  const { tokenQuota, emailSubject, emailBody, whatsappMessage, gdprRetentionDays, auditLogRetentionDays } = req.body;
+  const { tokenQuota, emailSubject, emailBody, whatsappMessage, gdprRetentionDays, auditLogRetentionDays, matchThreshold, notifyOnHighMatch } = req.body;
 
   if (auditLogRetentionDays !== undefined && (typeof auditLogRetentionDays !== 'number' || auditLogRetentionDays < 90)) {
     return res.status(400).json({ error: 'Audit log retention period cannot be set below the 90-day minimum floor.' });
+  }
+
+  if (matchThreshold !== undefined && (typeof matchThreshold !== 'number' || matchThreshold < 0 || matchThreshold > 100)) {
+    return res.status(400).json({ error: 'Match threshold must be a number between 0 and 100.' });
   }
 
   const current = db.select().from(settings).where(eq(settings.id, 1)).get() as any;
@@ -1190,7 +1221,9 @@ app.put('/api/settings', authenticateToken, requireCapability('manage_settings')
     emailBody: emailBody !== undefined ? emailBody : current?.emailBody,
     whatsappMessage: whatsappMessage !== undefined ? whatsappMessage : current?.whatsappMessage,
     gdprRetentionDays: gdprRetentionDays !== undefined ? parseInt(gdprRetentionDays) : current?.gdprRetentionDays,
-    auditLogRetentionDays: auditLogRetentionDays !== undefined ? parseInt(auditLogRetentionDays) : (current?.auditLogRetentionDays || 90)
+    auditLogRetentionDays: auditLogRetentionDays !== undefined ? parseInt(auditLogRetentionDays) : (current?.auditLogRetentionDays || 90),
+    matchThreshold: matchThreshold !== undefined ? parseInt(matchThreshold) : (current?.matchThreshold ?? 80),
+    notifyOnHighMatch: notifyOnHighMatch !== undefined ? (notifyOnHighMatch ? 1 : 0) : (current?.notifyOnHighMatch ?? 0)
   }).where(eq(settings.id, 1)).run();
 
   logAuditEvent(req, 'settings_change', 'settings', 1, current, req.body, 'Updated system settings');
@@ -2311,15 +2344,50 @@ async function runModelAnalysis(
 }
 
 /** Failover wrapper: falls back to secondary active AI provider if primary fails (Phase 3.4) */
+/** Records the outcome of one AI analysis attempt — the source data for /api/ai/reliability. */
+function recordAiRun(entry: {
+  providerName: string;
+  modelName: string;
+  status: 'success' | 'failed';
+  usedFallbackProvider?: boolean;
+  kind?: 'upload' | 'reanalyze';
+  tokensUsed?: number;
+  durationMs: number;
+  errorMessage?: string;
+}) {
+  try {
+    db.insert(aiRuns).values({
+      providerName: entry.providerName,
+      modelName: entry.modelName,
+      status: entry.status,
+      usedFallbackProvider: entry.usedFallbackProvider ? 1 : 0,
+      kind: entry.kind || 'upload',
+      tokensUsed: entry.tokensUsed || 0,
+      durationMs: Math.round(entry.durationMs),
+      errorMessage: entry.errorMessage ? entry.errorMessage.slice(0, 500) : null,
+      createdAt: new Date().toISOString()
+    }).run();
+  } catch (e) {
+    console.error('[AI Run Log Error]', e);
+  }
+}
+
 async function runModelAnalysisWithFailover(
   primaryProvider: any,
   systemPrompt: string,
   cvContent: { text?: string; buffer?: Buffer; mimeType?: string },
   jobData: any,
-  req?: AuthRequest
+  req?: AuthRequest,
+  kind: 'upload' | 'reanalyze' = 'upload'
 ): Promise<{ result: any; tokensUsed: number }> {
+  const startedAt = Date.now();
   try {
-    return await runModelAnalysis(primaryProvider, systemPrompt, cvContent, jobData);
+    const out = await runModelAnalysis(primaryProvider, systemPrompt, cvContent, jobData);
+    recordAiRun({
+      providerName: primaryProvider.providerName, modelName: primaryProvider.modelName,
+      status: 'success', kind, tokensUsed: out.tokensUsed, durationMs: Date.now() - startedAt
+    });
+    return out;
   } catch (primaryErr: any) {
     console.warn(`[AI Failover] Primary provider ${primaryProvider.providerName} (${primaryProvider.modelName}) failed: ${primaryErr.message}`);
 
@@ -2342,14 +2410,51 @@ async function runModelAnalysisWithFailover(
         `Automatic AI failover triggered from '${primaryProvider.providerName}' to '${altProvider.providerName}' due to error: ${primaryErr.message}`
       );
       try {
-        return await runModelAnalysis(altProvider, systemPrompt, cvContent, jobData);
+        const out = await runModelAnalysis(altProvider, systemPrompt, cvContent, jobData);
+        recordAiRun({
+          providerName: altProvider.providerName, modelName: altProvider.modelName,
+          status: 'success', usedFallbackProvider: true, kind,
+          tokensUsed: out.tokensUsed, durationMs: Date.now() - startedAt
+        });
+        return out;
       } catch (altErr: any) {
         console.error(`[AI Failover] Secondary provider ${altProvider.providerName} also failed: ${altErr.message}`);
+        recordAiRun({
+          providerName: altProvider.providerName, modelName: altProvider.modelName,
+          status: 'failed', usedFallbackProvider: true, kind,
+          durationMs: Date.now() - startedAt, errorMessage: altErr.message
+        });
         throw new Error(`Primary AI provider failed (${primaryErr.message}) and secondary provider failed (${altErr.message})`);
       }
     }
 
+    recordAiRun({
+      providerName: primaryProvider.providerName, modelName: primaryProvider.modelName,
+      status: 'failed', kind, durationMs: Date.now() - startedAt, errorMessage: primaryErr.message
+    });
     throw primaryErr;
+  }
+}
+
+/** Raises an in-app notification when a freshly analyzed CV lands at/above the configured threshold. */
+function maybeNotifyHighMatch(candidateId: number, candidateName: string, matchScore: number, job: any) {
+  try {
+    const s = db.select().from(settings).where(eq(settings.id, 1)).get() as any;
+    if (!s || s.notifyOnHighMatch !== 1) return;
+    const threshold = s.matchThreshold ?? 80;
+    if (matchScore < threshold) return;
+
+    db.insert(notifications).values({
+      type: 'high_match',
+      title: `${matchScore}% match — ${job?.title || 'position'}`,
+      body: `${candidateName} scored ${matchScore}%, at or above the ${threshold}% threshold.`,
+      candidateId,
+      jobId: job?.id ?? null,
+      isRead: 0,
+      createdAt: new Date().toISOString()
+    }).run();
+  } catch (e) {
+    console.error('[Notification Error]', e);
   }
 }
 
@@ -2546,6 +2651,8 @@ app.post('/api/upload', authenticateToken, requireCapability('upload_cvs'), uplo
             fileResult.candidateId = Number(dbResult.lastInsertRowid);
             fileResult.reusedFile = true; // hint for the frontend
 
+            maybeNotifyHighMatch(fileResult.candidateId, result.name || file.originalname, result.match_score || 0, job);
+
             // Global candidate duplicate detection (Phase 3.3)
             const candidateId = fileResult.candidateId;
             if (result.contact_email || result.contact_phone || result.name) {
@@ -2639,6 +2746,8 @@ app.post('/api/upload', authenticateToken, requireCapability('upload_cvs'), uplo
         const candidateId = Number(dbResult.lastInsertRowid);
         fileResult.success = true;
         fileResult.candidateId = candidateId;
+
+        maybeNotifyHighMatch(candidateId, result.name || file.originalname, result.match_score || 0, job);
 
         // Global candidate duplicate detection (Phase 3.3)
         if (result.contact_email || result.contact_phone || result.name) {
@@ -2741,7 +2850,7 @@ app.post('/api/candidates/:id/reanalyze', authenticateToken, requireRole(['admin
       cvContent.text = fs.readFileSync(filePath, 'utf8');
     }
 
-    const { result, tokensUsed } = await runModelAnalysisWithFailover(activeProv, systemPrompt, cvContent, jobData, req);
+    const { result, tokensUsed } = await runModelAnalysisWithFailover(activeProv, systemPrompt, cvContent, jobData, req, 'reanalyze');
 
     db.update(candidates).set({
       name: result.name || c.name,
@@ -2776,6 +2885,93 @@ app.post('/api/candidates/:id/reanalyze', authenticateToken, requireRole(['admin
 });
 
 // Dashboard KPI stats
+/**
+ * Real reliability of the AI extraction pipeline over the last 30 days, derived from the
+ * ai_runs log. Deliberately reports "extraction reliability" (did the provider return a
+ * usable structured result) rather than "accuracy" — the system has no ground truth to
+ * score its own judgement against, so an accuracy figure would be invented.
+ */
+app.get('/api/ai/reliability', authenticateToken, (req, res) => {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  const cutoffMs = cutoff.getTime();
+
+  const runs = (db.select().from(aiRuns).all() as any[])
+    .filter(r => r.createdAt && new Date(r.createdAt).getTime() >= cutoffMs);
+
+  const total = runs.length;
+  if (total === 0) {
+    return res.json({ hasData: false, totalRuns: 0, successRuns: 0, successRate: null, fallbackRate: null, avgDurationMs: null });
+  }
+
+  const successRuns = runs.filter(r => r.status === 'success').length;
+  const fallbackRuns = runs.filter(r => r.usedFallbackProvider === 1).length;
+  const avgDurationMs = Math.round(runs.reduce((sum, r) => sum + (r.durationMs || 0), 0) / total);
+
+  res.json({
+    hasData: true,
+    totalRuns: total,
+    successRuns,
+    successRate: Math.round((successRuns / total) * 1000) / 10,
+    fallbackRate: Math.round((fallbackRuns / total) * 1000) / 10,
+    avgDurationMs
+  });
+});
+
+/**
+ * Screening knobs used by the Upload screen. Split out from /api/settings because that
+ * route is admin-only, while anyone who can upload CVs needs to read — and adjust — the
+ * threshold that governs their own screening run.
+ */
+app.get('/api/screening-settings', authenticateToken, (req, res) => {
+  const s = db.select().from(settings).where(eq(settings.id, 1)).get() as any;
+  res.json({
+    matchThreshold: s?.matchThreshold ?? 80,
+    notifyOnHighMatch: (s?.notifyOnHighMatch ?? 0) === 1
+  });
+});
+
+app.put('/api/screening-settings', authenticateToken, requireCapability('upload_cvs'), (req: AuthRequest, res) => {
+  const { matchThreshold, notifyOnHighMatch } = req.body;
+
+  if (matchThreshold !== undefined && (typeof matchThreshold !== 'number' || matchThreshold < 0 || matchThreshold > 100)) {
+    return res.status(400).json({ error: 'Match threshold must be a number between 0 and 100.' });
+  }
+
+  const current = db.select().from(settings).where(eq(settings.id, 1)).get() as any;
+  db.update(settings).set({
+    matchThreshold: matchThreshold !== undefined ? parseInt(matchThreshold) : (current?.matchThreshold ?? 80),
+    notifyOnHighMatch: notifyOnHighMatch !== undefined ? (notifyOnHighMatch ? 1 : 0) : (current?.notifyOnHighMatch ?? 0)
+  }).where(eq(settings.id, 1)).run();
+
+  logAuditEvent(
+    req, 'settings_change', 'settings', 1,
+    { matchThreshold: current?.matchThreshold, notifyOnHighMatch: current?.notifyOnHighMatch },
+    { matchThreshold, notifyOnHighMatch },
+    'Updated screening threshold / notification preference'
+  );
+
+  const updated = db.select().from(settings).where(eq(settings.id, 1)).get() as any;
+  res.json({ matchThreshold: updated.matchThreshold, notifyOnHighMatch: updated.notifyOnHighMatch === 1 });
+});
+
+// In-app notifications
+app.get('/api/notifications', authenticateToken, (req, res) => {
+  const list = db.select().from(notifications).orderBy(desc(notifications.id)).limit(30).all() as any[];
+  res.json({ notifications: list, unreadCount: list.filter(n => n.isRead === 0).length });
+});
+
+app.post('/api/notifications/:id/read', authenticateToken, (req, res) => {
+  const id = parseInt(req.params.id);
+  db.update(notifications).set({ isRead: 1 }).where(eq(notifications.id, id)).run();
+  res.json({ message: 'Notification marked as read' });
+});
+
+app.post('/api/notifications/read-all', authenticateToken, (req, res) => {
+  db.update(notifications).set({ isRead: 1 }).where(eq(notifications.isRead, 0)).run();
+  res.json({ message: 'All notifications marked as read' });
+});
+
 app.get('/api/dashboard/stats', authenticateToken, (req, res) => {
   const allCand = db.select().from(candidates).all() as any[];
   const allJobs = db.select().from(jobs).all() as any[];

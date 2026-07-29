@@ -38,8 +38,14 @@ export const Upload: React.FC = () => {
   const [files, setFiles] = useState<UploadFileState[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
 
+  // Screening knobs, persisted server-side via /api/screening-settings.
+  const [matchThreshold, setMatchThreshold] = useState(80);
+  const [notifyOnHighMatch, setNotifyOnHighMatch] = useState(false);
+  const canChangeScreening = !!role && hasPermission(role, 'upload_cvs', capabilities);
+
   useEffect(() => {
     fetchJobs();
+    fetchScreeningSettings();
   }, []);
 
   const fetchJobs = async () => {
@@ -56,6 +62,24 @@ export const Upload: React.FC = () => {
       console.error('Error fetching jobs:', e);
     } finally {
       setLoadingJobs(false);
+    }
+  };
+
+  const fetchScreeningSettings = async () => {
+    try {
+      const s = await apiRequest('GET', '/api/screening-settings');
+      setMatchThreshold(s.matchThreshold);
+      setNotifyOnHighMatch(s.notifyOnHighMatch);
+    } catch (e) {
+      console.error('Error fetching screening settings:', e);
+    }
+  };
+
+  const persistScreeningSettings = async (payload: { matchThreshold?: number; notifyOnHighMatch?: boolean }) => {
+    try {
+      await apiRequest('PUT', '/api/screening-settings', payload);
+    } catch (e: any) {
+      console.error('Failed saving screening settings:', e);
     }
   };
 
@@ -215,6 +239,39 @@ export const Upload: React.FC = () => {
           )}
         </div>
 
+        {/* Match threshold — governs which CVs count as a strong match and, when the
+            notification switch is on, which ones raise a notification (des-2.txt §7.2). */}
+        <div>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <label
+              htmlFor="match-threshold"
+              className="text-[11px] font-bold uppercase tracking-[.1em]"
+              style={{ color: 'var(--tk-muted)' }}
+            >
+              Match threshold
+            </label>
+            <span className="text-[12.5px]" style={{ color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>
+              {matchThreshold}%
+            </span>
+          </div>
+          <input
+            id="match-threshold"
+            type="range"
+            min={0}
+            max={100}
+            value={matchThreshold}
+            disabled={!canChangeScreening}
+            onChange={(e) => setMatchThreshold(parseInt(e.target.value))}
+            onPointerUp={() => persistScreeningSettings({ matchThreshold })}
+            onKeyUp={() => persistScreeningSettings({ matchThreshold })}
+            className="w-full tk-focusable"
+            style={{ cursor: canChangeScreening ? 'pointer' : 'not-allowed', opacity: canChangeScreening ? 1 : 0.5 }}
+          />
+          <p className="text-[11px] mt-1.5" style={{ color: 'var(--tk-muted)' }}>
+            CVs scoring at or above this count as a strong match.
+          </p>
+        </div>
+
         {/* Auto-screen: reflects how the pipeline actually works today (upload triggers analysis
             immediately), so it is shown as a locked-on state rather than a toggle that lies. */}
         <div className="flex items-start justify-between gap-3">
@@ -242,6 +299,33 @@ export const Upload: React.FC = () => {
             aria-label="Anonymize personal data"
             className={`tk-switch tk-focusable ${gdprActive ? 'is-on' : ''}`}
             style={{ opacity: canToggleGdpr ? 1 : 0.5, cursor: canToggleGdpr ? 'pointer' : 'not-allowed' }}
+          >
+            <span className="tk-switch-knob" />
+          </button>
+        </div>
+
+        {/* Raises a real in-app notification (header bell) when a CV lands at/above the threshold. */}
+        <div className="flex items-start justify-between gap-3">
+          <div style={{ minWidth: 0 }}>
+            <p className="text-[12.5px] font-medium" style={{ color: 'var(--tk-text)' }}>Notify on strong match</p>
+            <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>
+              Raise a notification when a CV reaches {matchThreshold}%
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (!canChangeScreening) return;
+              const next = !notifyOnHighMatch;
+              setNotifyOnHighMatch(next);
+              persistScreeningSettings({ notifyOnHighMatch: next });
+            }}
+            disabled={!canChangeScreening}
+            role="switch"
+            aria-checked={notifyOnHighMatch}
+            aria-label="Notify on strong match"
+            className={`tk-switch tk-focusable ${notifyOnHighMatch ? 'is-on' : ''}`}
+            style={{ opacity: canChangeScreening ? 1 : 0.5, cursor: canChangeScreening ? 'pointer' : 'not-allowed' }}
           >
             <span className="tk-switch-knob" />
           </button>
