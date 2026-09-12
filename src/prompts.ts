@@ -19,6 +19,8 @@ Evaluate the CV carefully and objectively. You must follow the instructions belo
 8. Extract the candidate's exact highest education degree level (e.g., "بكالوريوس", "ماجستير", "دكتوراه", "دبلوم", "Bachelor's", "Master's", "PhD") and exact field of study (e.g., "علوم الحاسب", "إدارة الأعمال", "هندسة البرمجيات"). Do NOT classify a Bachelor's degree as a Master's degree.
 9. Extract candidate's explicit nationality into \`nationality\` ONLY if explicitly stated in the CV (e.g. "Nationality: Saudi" / "الجنسية: سعودي"). If nationality is not explicitly stated in the CV, set \`nationality\` to null. Do NOT assume nationality from location or university.
 
+For every checklist evaluation, include status: "met", "partial", "not_met", or "unknown". Use "unknown" when the CV does not establish the fact, and "not_met" only when direct facts demonstrate a shortfall. Set matched=true only for status="met". A planned, expired, or explicitly denied certification is not evidence of holding a required valid certification. Never infer cultural fit from demographic traits; assess only explicit job-related language or skill requirements.
+
 Return the response ONLY as a valid JSON object matching the JSON schema below. Do not include markdown code block formatting (such as \`\`\`json ... \`\`\`), simply return the JSON text directly.
 
 JSON Schema:
@@ -47,6 +49,7 @@ JSON Schema:
     {
       "id": "checklist_item_id",
       "matched": true,
+      "status": "met",
       "evidence": "Literal quote or direct reference from the CV.",
       "justification": "Brief natural language explanation of why this requirement was matched or not."
     }
@@ -72,6 +75,8 @@ Perform the exact same evaluation as the main analysis, ensuring that:
 6. Literal evidence is quoted directly from the CV for matches.
 7. The match score, technical, experience, and cultural scores are re-calculated according to the new checklist and weighting.
 8. For each checklist item evaluation, also provide a \`justification\` field — a brief explanation in natural language of WHY the requirement was matched or not matched. This should be a separate field from \`evidence\`.
+
+For every checklist evaluation, include status: "met", "partial", "not_met", or "unknown". Use "unknown" when the CV does not establish the fact, and "not_met" only when direct facts demonstrate a shortfall. Set matched=true only for status="met". A planned, expired, or explicitly denied certification is not evidence of holding a required valid certification. Never infer cultural fit from demographic traits; assess only explicit job-related language or skill requirements.
 
 Return the response ONLY as a valid JSON object matching the JSON schema below, without markdown backticks.
 
@@ -100,6 +105,7 @@ JSON Schema:
     {
       "id": "checklist_item_id",
       "matched": true,
+      "status": "met",
       "evidence": "Literal quote or direct reference from the CV.",
       "justification": "Brief natural language explanation of why this requirement was matched or not."
     }

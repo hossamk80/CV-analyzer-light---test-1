@@ -1,6 +1,22 @@
 import type { en } from './en.js';
 
 export const ar: typeof en = {
+  workflowType: "مسار العمل",
+  workflowRecruitment: "التوظيف الداخلي",
+  workflowTender: "المنافسات والمشاريع",
+  projectName: "اسم المشروع / المرجع",
+  requiredCount: "العدد المطلوب",
+  mandatory_met: "الشروط الإلزامية مستوفاة حسب السيرة",
+  mandatory_review: "شروط إلزامية تحتاج مراجعة",
+  mandatory_not_met: "شروط إلزامية غير مستوفاة",
+  mandatory_unconfigured: "لم تُحدد شروط إلزامية",
+  requirement_met: "مستوفى حسب السيرة",
+  requirement_partial: "مستوفى جزئيًا",
+  requirement_not_met: "غير مستوفى",
+  requirement_unknown: "غير مثبت في السيرة",
+  profileApplications: "تقييمات الملف نفسه لوظائف أخرى",
+  profileNote: "الربط التلقائي للملفات المتطابقة فقط؛ اختلاف نسخة السيرة يحتاج مراجعة الهوية.",
+
   /* ── عام / مشترك ──────────────────────────────────────────────── */
   appName: "المحلل الذكي للتوظيف",
   cvAnalyzer: "محلل السير الذاتية",

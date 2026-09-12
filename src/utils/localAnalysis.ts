@@ -33,7 +33,7 @@ export interface AnalysisResult {
   score_cultural: number;
   skills: string[];
   gaps: string[];
-  checklist_eval: { id: string; matched: boolean; evidence: string; justification: string }[];
+  checklist_eval: { id: string; status?: string; matched: boolean; evidence: string; justification: string }[];
   experience_timeline: { yearStart: string; yearEnd: string; company: string; title: string; description: string }[];
   certifications_list: string[];
   interview_questions: string[];
@@ -51,7 +51,7 @@ const IMPORTANCE_WEIGHT: Record<string, number> = { Mandatory: 3, Important: 2, 
 // Words carrying no matching signal — dropped before keyword comparison.
 const STOPWORDS = new Set([
   // English
-  'the', 'and', 'for', 'with', 'from', 'that', 'this', 'have', 'has', 'had', 'are', 'was', 'were',
+  'of', 'in', 'the', 'and', 'for', 'with', 'from', 'that', 'this', 'have', 'has', 'had', 'are', 'was', 'were',
   'must', 'should', 'will', 'can', 'able', 'least', 'more', 'than', 'years', 'year', 'experience',
   'required', 'requirement', 'requirements', 'minimum', 'good', 'strong', 'excellent', 'knowledge',
   'skills', 'skill', 'ability', 'work', 'working', 'related', 'field', 'other', 'any', 'all', 'not',
@@ -69,6 +69,7 @@ const STOPWORDS = new Set([
 export function normalizeText(input: string): string {
   return (input || '')
     .toLowerCase()
+    .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
     .replace(/[ً-ْٰـ]/g, '') // diacritics + tatweel
     .replace(/[أإآٱ]/g, 'ا')
     .replace(/ى/g, 'ي')
@@ -119,7 +120,7 @@ export function extractTotalYears(text: string): number | null {
   const norm = normalizeText(text);
 
   let best = 0;
-  for (const m of norm.matchAll(/(\d{1,2}(?:\.\d)?)\s*\+?\s*(?:years?|سنوات|سنه)/g)) {
+  for (const m of norm.matchAll(/(\d{1,2}(?:\.\d)?)\s*\+?\s*(?:years?\s+(?:of\s+)?(?:[a-z]+\s+){0,3}experience|سنوات\s*خبره|سنه\s*خبره)/g)) {
     const v = parseFloat(m[1]);
     if (!isNaN(v) && v > best && v <= 50) best = v;
   }
@@ -128,7 +129,7 @@ export function extractTotalYears(text: string): number | null {
   // Fall back to date ranges: 2016 - 2020, 2019 – present, …
   const currentYear = new Date().getFullYear();
   const ranges: [number, number][] = [];
-  for (const m of (text || '').matchAll(/(19\d{2}|20\d{2})\s*[-–—to]+\s*((?:19|20)\d{2}|present|current|now|الان|الآن|حتى الان|حاليا)/gi)) {
+  for (const m of employmentText(text).matchAll(/(19\d{2}|20\d{2})\s*[-–—to]+\s*((?:19|20)\d{2}|present|current|now|الان|الآن|حتى الان|حاليا)/gi)) {
     const start = parseInt(m[1], 10);
     const endRaw = m[2].toLowerCase();
     const end = /^\d{4}$/.test(endRaw) ? parseInt(endRaw, 10) : currentYear;
@@ -155,20 +156,24 @@ export function extractTotalYears(text: string): number | null {
 
 /** Returns the subset of `terms` that actually appears in the CV text. */
 export function matchTerms(cvText: string, terms: string[]): string[] {
-  const haystack = normalizeText(cvText);
-  const found: string[] = [];
-  for (const term of terms) {
+  return Array.from(new Set(terms.filter(term => term.trim() && sentencesOf(cvText).some(line => {
+    const norm = normalizeText(line);
     const needle = normalizeText(term);
-    if (!needle || needle.length < 2) continue;
-    if (haystack.includes(needle)) {
-      found.push(term.trim());
-      continue;
-    }
-    // Multi-word term: accept when every word is present somewhere.
-    const parts = keywordsOf(term);
-    if (parts.length > 1 && parts.every(p => haystack.includes(p))) found.push(term.trim());
-  }
-  return Array.from(new Set(found));
+    const at = norm.indexOf(needle);
+    if (at < 0) return false;
+    if (/[\p{L}\p{N}]/u.test(norm[at - 1] || '') || /[\p{L}\p{N}]/u.test(norm[at + needle.length] || '')) return false;
+    return !/(?:\bno\b|\bnot\b|without|planned|pursuing|studying|لا احمل|غير حاصل|لم احصل|قيد الدراسه)/.test(norm);
+  })).map(t => t.trim())));
+}
+
+/** Restrict date fallback to a labelled employment section; education is never experience. */
+function employmentText(text: string): string {
+  let active = false;
+  return text.split(/\n/).filter(line => {
+    if (/^(education|academic|qualifications|certifications|التعليم|المؤهلات|الشهادات)/i.test(line.trim())) active = false;
+    if (/^(employment|work experience|professional experience|experience|الخبرات|الخبرة العملية)/i.test(line.trim())) active = true;
+    return active;
+  }).join('\n');
 }
 
 const DEGREE_PATTERNS: { key: string; re: RegExp }[] = [
@@ -188,7 +193,8 @@ const FIELD_PATTERNS: { key: string; re: RegExp }[] = [
 
 export function extractEducation(text: string): { degreeKey: string | null; fieldKey: string | null } {
   const degreeKey = DEGREE_PATTERNS.find(p => p.re.test(text))?.key ?? null;
-  const fieldKey = FIELD_PATTERNS.find(p => p.re.test(text))?.key ?? null;
+  const degreeLine = text.split(/\n/).find(line => DEGREE_PATTERNS.find(p => p.key === degreeKey)?.re.test(line)) || '';
+  const fieldKey = FIELD_PATTERNS.find(p => p.re.test(degreeLine))?.key ?? null;
   return { degreeKey, fieldKey };
 }
 
@@ -242,10 +248,10 @@ export function evaluateChecklist(cvText: string, checklist: JobData['checklist'
   return (checklist || []).map(item => {
     const keywords = keywordsOf(item.requirement || '');
     if (keywords.length === 0) {
-      return { id: item.id, matched: false, evidence: '', coverage: 0, keywords: [] as string[], hits: [] as string[] };
+      return { id: item.id, status: 'unknown', matched: false, evidence: '', coverage: 0, keywords: [] as string[], hits: [] as string[] };
     }
 
-    const hits = keywords.filter(k => haystack.includes(k));
+    const hits = keywords.filter(k => matchTerms(cvText, [k]).length > 0);
     const coverage = hits.length / keywords.length;
 
     // Evidence = the sentence covering the most requirement keywords.
@@ -253,7 +259,7 @@ export function evaluateChecklist(cvText: string, checklist: JobData['checklist'
     let bestHits = 0;
     for (const sentence of sentences) {
       const s = normalizeText(sentence);
-      const n = hits.filter(k => s.includes(k)).length;
+      const n = hits.filter(k => matchTerms(sentence, [k]).length > 0).length;
       if (n > bestHits) {
         bestHits = n;
         evidence = sentence.length > 220 ? sentence.slice(0, 217) + '…' : sentence;
@@ -262,8 +268,13 @@ export function evaluateChecklist(cvText: string, checklist: JobData['checklist'
 
     // A single keyword hit out of many is noise; require majority coverage,
     // or a full hit when the requirement is a short phrase.
-    const matched = keywords.length <= 2 ? hits.length === keywords.length : coverage >= 0.6;
-    return { id: item.id, matched, evidence: matched ? evidence : '', coverage, keywords, hits };
+    const requiredYears = normalizeText(item.requirement).match(/(\d+)\s*(?:years?|سنوات|سنه)/);
+    const years = extractTotalYears(cvText);
+    const matched = (keywords.length <= 2 ? hits.length === keywords.length : coverage >= 0.6)
+      && (!requiredYears || (years !== null && years >= Number(requiredYears[1])));
+    const status = requiredYears && years !== null && years < Number(requiredYears[1]) ? 'not_met'
+      : matched ? (requiredYears || keywords.length > 2 ? 'partial' : 'met') : 'unknown';
+    return { id: item.id, status, matched: status === 'met', evidence: evidence || '', coverage, keywords, hits };
   });
 }
 
@@ -305,7 +316,7 @@ export function analyzeLocally(
     evaluated.forEach((ev, i) => {
       const w = IMPORTANCE_WEIGHT[checklist[i]?.importance || 'Important'] ?? 2;
       weightTotal += w;
-      weighted += w * Math.min(1, ev.coverage);
+      weighted += w * (ev.matched ? 1 : ev.status === 'partial' ? 0.5 : 0);
     });
     technical = weightTotal > 0 ? (weighted / weightTotal) * 100 : 0;
   } else {
@@ -352,6 +363,7 @@ export function analyzeLocally(
 
   const checklist_eval = evaluated.map((ev, i) => ({
     id: ev.id,
+    status: ev.status,
     matched: ev.matched,
     evidence: ev.evidence,
     justification: ev.matched

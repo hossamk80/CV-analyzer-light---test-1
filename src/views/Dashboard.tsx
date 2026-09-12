@@ -1,3 +1,4 @@
+import WorkflowFields, { type Workflow } from '../components/WorkflowFields.js';
 import React, { useState, useEffect } from 'react';
 import { useI18n } from '../i18n/I18nContext.js';
 import { useRole } from '../context/RoleContext.js';
@@ -24,6 +25,9 @@ import {
 import { useNavigate, Link } from 'react-router-dom';
 
 interface Job {
+  workflowType?: string;
+  projectName?: string;
+  requiredCount?: number;
   id: number;
   title: string;
   department: string;
@@ -113,6 +117,7 @@ export const Dashboard: React.FC = () => {
   const [editingJob, setEditingJob] = useState<Job | null>(null);
 
   // Edit fields
+  const [editWorkflow, setEditWorkflow] = useState<Workflow>({workflowType:'recruitment', projectName:'', requiredCount:1});
   const [editTitle, setEditTitle] = useState('');
   const [editDept, setEditDept] = useState('');
   const [editLoc, setEditLoc] = useState('');
@@ -204,6 +209,7 @@ export const Dashboard: React.FC = () => {
 
   const handleOpenEdit = (job: Job) => {
     setEditingJob(job);
+    setEditWorkflow({ workflowType: job.workflowType || 'recruitment', projectName: job.projectName || '', requiredCount: job.requiredCount || 1 });
     setEditTitle(job.title || '');
     setEditDept(job.department || '');
     setEditLoc(job.location || '');
@@ -266,6 +272,7 @@ export const Dashboard: React.FC = () => {
         val ? val.split(',').map(s => s.trim()).filter(Boolean) : [];
 
       await apiRequest('PUT', `/api/jobs/${editingJob.id}`, {
+        ...editWorkflow,
         title: editTitle,
         department: editDept,
         location: editLoc,
@@ -500,6 +507,8 @@ export const Dashboard: React.FC = () => {
                   <div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="tk-pill is-active">{job.department}</span>
+                      <span className="tk-pill">{t(job.workflowType === "tender" ? "workflowTender" : "workflowRecruitment")} · {job.requiredCount || 1}</span>
+                      {job.projectName && <span className="tk-pill"><Bidi>{job.projectName}</Bidi></span>}
                       {job.status === 'Paused' && (
                         <span className="tk-pill">
                           <Pause className="w-3 h-3" />
@@ -607,6 +616,7 @@ export const Dashboard: React.FC = () => {
             <h3 className="text-[15px] font-medium mb-4" style={{ color: 'var(--tk-text)' }}>{t('editJob')}</h3>
 
             <form onSubmit={handleSaveJobEdit} className="space-y-3">
+              <WorkflowFields value={editWorkflow} onChange={setEditWorkflow}/>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={modalLabel}>{t('jobTitle')}</label>

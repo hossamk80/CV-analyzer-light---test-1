@@ -1,4 +1,20 @@
 export const en = {
+  workflowType: "Workflow",
+  workflowRecruitment: "Internal recruitment",
+  workflowTender: "Tenders and projects",
+  projectName: "Project / reference",
+  requiredCount: "Required positions",
+  mandatory_met: "Mandatory requirements met per CV",
+  mandatory_review: "Mandatory requirements need review",
+  mandatory_not_met: "Mandatory requirements not met",
+  mandatory_unconfigured: "No mandatory requirements configured",
+  requirement_met: "Met per CV",
+  requirement_partial: "Partially met",
+  requirement_not_met: "Not met",
+  requirement_unknown: "Not evidenced in CV",
+  profileApplications: "Same CV assessments for other jobs",
+  profileNote: "Automatic linking uses identical files only; different CV versions need identity review.",
+
   /* ── Generic / shared ─────────────────────────────────────────── */
   appName: "Smart Recruitment Analyzer",
   cvAnalyzer: "CV Analyzer",

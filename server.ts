@@ -39,7 +39,9 @@ function serverT(lang: string | undefined) {
 
 // Setup directories
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const bundled = path.basename(__filename) === 'server.mjs';
+const __dirname = bundled ? path.dirname(path.dirname(__filename)) : path.dirname(__filename);
+if (bundled && !process.env.NODE_ENV) process.env.NODE_ENV = 'production';
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -66,7 +68,8 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT || 3000);
+if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) throw new Error('PORT must be an integer between 1 and 65535');
 const JWT_SECRET = process.env.AUTH_SECRET || 'demo-secret-key-change-me-in-production-12345';
 
 /** Helper to parse HTTP Cookie header natively without third-party libraries */
@@ -508,6 +511,25 @@ function seedDatabase() {
 
 // Execute DB initialization
 initDbSchema();
+
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS candidate_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT, document_key TEXT UNIQUE NOT NULL);
+`);
+if (!(sqlite.prepare('PRAGMA table_info(candidates)').all() as any[]).some(c => c.name === 'profile_id')) sqlite.exec('ALTER TABLE candidates ADD COLUMN profile_id INTEGER');
+sqlite.exec(`
+  BEGIN;
+  INSERT OR IGNORE INTO candidate_profiles(document_key) SELECT CASE WHEN file_hash IS NOT NULL AND file_hash <> '' THEN 'hash:' || file_hash ELSE 'legacy:' || id END FROM candidates;
+  UPDATE candidates SET profile_id = (SELECT id FROM candidate_profiles WHERE document_key = CASE WHEN candidates.file_hash IS NOT NULL AND candidates.file_hash <> '' THEN 'hash:' || candidates.file_hash ELSE 'legacy:' || candidates.id END) WHERE profile_id IS NULL;
+  CREATE TRIGGER IF NOT EXISTS candidate_profile_insert AFTER INSERT ON candidates WHEN NEW.profile_id IS NULL BEGIN
+    INSERT OR IGNORE INTO candidate_profiles(document_key) VALUES(CASE WHEN NEW.file_hash IS NOT NULL AND NEW.file_hash <> '' THEN 'hash:' || NEW.file_hash ELSE 'legacy:' || NEW.id END);
+    UPDATE candidates SET profile_id = (SELECT id FROM candidate_profiles WHERE document_key = CASE WHEN NEW.file_hash IS NOT NULL AND NEW.file_hash <> '' THEN 'hash:' || NEW.file_hash ELSE 'legacy:' || NEW.id END) WHERE id = NEW.id;
+  END;
+  COMMIT;
+`);
+for (const [column, definition] of [['workflow_type', "TEXT NOT NULL DEFAULT 'recruitment'"], ['project_name', 'TEXT'], ['required_count', 'INTEGER NOT NULL DEFAULT 1']]) {
+  const cols = sqlite.prepare('PRAGMA table_info(jobs)').all() as any[];
+  if (!cols.some(c => c.name === column)) sqlite.exec(`ALTER TABLE jobs ADD COLUMN ${column} ${definition}`);
+}
 seedDatabase();
 
 // ----------------------------------------------------
@@ -726,12 +748,18 @@ app.get('/api/jobs/:id', authenticateToken, (req, res) => {
 });
 
 app.post('/api/jobs', authenticateToken, requireCapability('manage_jobs'), (req: AuthRequest, res) => {
+  if (req.body.workflowType !== undefined && !['recruitment', 'tender'].includes(req.body.workflowType)) return res.status(400).json({ error: 'Invalid workflow type' });
+  if (req.body.requiredCount !== undefined && (!Number.isInteger(req.body.requiredCount) || req.body.requiredCount < 1)) return res.status(400).json({ error: 'Required count must be a positive integer' });
+  if (req.body.projectName !== undefined && typeof req.body.projectName !== 'string') return res.status(400).json({ error: 'Invalid project name' });
   const { title, department, location, experience, degree, skills, checklist, specialization, technicalSkills, nationality, languages, softSkills, requiredCerts, jobDescription, coreResponsibilities, additionalRequirements } = req.body;
   if (!title || !department || !location || !checklist) {
     return res.status(400).json({ error: 'Required job fields are missing' });
   }
 
   const result = db.insert(jobs).values({
+    workflowType: req.body.workflowType || 'recruitment',
+    projectName: req.body.projectName || null,
+    requiredCount: req.body.requiredCount ?? 1,
     title,
     department,
     location,
@@ -770,6 +798,9 @@ app.post('/api/jobs', authenticateToken, requireCapability('manage_jobs'), (req:
 });
 
 app.put('/api/jobs/:id', authenticateToken, requireCapability('manage_jobs'), (req: AuthRequest, res) => {
+  if (req.body.workflowType !== undefined && !['recruitment', 'tender'].includes(req.body.workflowType)) return res.status(400).json({ error: 'Invalid workflow type' });
+  if (req.body.requiredCount !== undefined && (!Number.isInteger(req.body.requiredCount) || req.body.requiredCount < 1)) return res.status(400).json({ error: 'Required count must be a positive integer' });
+  if (req.body.projectName !== undefined && typeof req.body.projectName !== 'string') return res.status(400).json({ error: 'Invalid project name' });
   const jobId = parseInt(req.params.id);
   const { title, department, location, experience, degree, skills, checklist, status, specialization, technicalSkills, nationality, languages, softSkills, requiredCerts, jobDescription, coreResponsibilities, additionalRequirements } = req.body;
 
@@ -777,6 +808,9 @@ app.put('/api/jobs/:id', authenticateToken, requireCapability('manage_jobs'), (r
   if (!existingJob) return res.status(404).json({ error: 'Job not found' });
 
   db.update(jobs).set({
+    workflowType: req.body.workflowType ?? existingJob.workflowType,
+    projectName: req.body.projectName ?? existingJob.projectName,
+    requiredCount: req.body.requiredCount ?? existingJob.requiredCount,
     title: title || existingJob.title,
     department: department || existingJob.department,
     location: location || existingJob.location,
@@ -890,6 +924,14 @@ app.delete('/api/jobs/:id', authenticateToken, requireCapability('delete_data'),
   );
 
   res.json({ message: 'Job deleted successfully', deletedCandidates: jobCandidates.length });
+});
+
+// Profile membership uses exact document hashes, never name similarity.
+app.get('/api/candidates/:id/applications', authenticateToken, (req, res) => {
+  const candidate = db.select().from(candidates).where(eq(candidates.id, Number(req.params.id))).get();
+  if (!candidate) return res.status(404).json({ error: 'Candidate not found' });
+  const applications = candidate.profileId ? db.select().from(candidates).where(eq(candidates.profileId, candidate.profileId)).all() : [candidate];
+  res.json(applications.map(c => ({ id: c.id, jobId: c.jobId, matchScore: c.matchScore, status: c.status })));
 });
 
 // 3. Candidates API
@@ -2556,6 +2598,11 @@ function buildJobData(job: any) {
     }
   };
   const data: Record<string, any> = {
+    workflowType: job.workflowType,
+    nationality: job.nationality,
+    jobDescription: job.jobDescription,
+    coreResponsibilities: job.coreResponsibilities,
+    additionalRequirements: job.additionalRequirements,
     title: job.title,
     experience: job.experience,
     degree: job.degree,
@@ -3056,6 +3103,10 @@ app.post('/api/candidates/:id/reanalyze', authenticateToken, requireRole(['admin
     });
 
     db.update(candidates).set({
+      educationDegree: result.education_degree ?? null,
+      educationField: result.education_field ?? null,
+      nationality: result.nationality ?? null,
+      totalExperienceYears: result.total_experience_years ?? null,
       name: result.name || c.name,
       matchScore: result.match_score || 0,
       scoreTechnical: result.score_technical || 0,
@@ -3193,7 +3244,8 @@ app.get('/api/dashboard/stats', authenticateToken, (req, res) => {
 
   const totalCvs = allCand.length;
   const activeJobs = allJobs.filter((j: any) => j.status !== 'Paused').length;
-  const excellentMatches = allCand.filter((c: any) => c.matchScore >= 80).length;
+  const threshold = db.select().from(settings).where(eq(settings.id, 1)).get()?.matchThreshold ?? 80;
+  const excellentMatches = allCand.filter((c: any) => c.matchScore >= threshold).length;
   const averageMatch = totalCvs > 0 ? Math.round(allCand.reduce((sum: number, c: any) => sum + c.matchScore, 0) / totalCvs) : 0;
 
   // Real last-7-days CV volume + average match trend, computed from actual candidate
@@ -3213,7 +3265,7 @@ app.get('/api/dashboard/stats', authenticateToken, (req, res) => {
       lastKnownAvg = Math.round(dayCands.reduce((sum: number, c: any) => sum + c.matchScore, 0) / dayCands.length);
     }
     runningCvs = allCand.filter((c: any) => c.createdAt && new Date(c.createdAt).getTime() <= cutoff).length;
-    runningExcellent = allCand.filter((c: any) => c.createdAt && new Date(c.createdAt).getTime() <= cutoff && c.matchScore >= 80).length;
+    runningExcellent = allCand.filter((c: any) => c.createdAt && new Date(c.createdAt).getTime() <= cutoff && c.matchScore >= threshold).length;
     runningJobs = allJobs.filter((j: any) => j.createdAt && new Date(j.createdAt).getTime() <= cutoff).length;
     return {
       date: key, label,

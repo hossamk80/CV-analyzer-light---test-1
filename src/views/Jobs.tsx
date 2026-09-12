@@ -1,3 +1,4 @@
+import WorkflowFields, { type Workflow } from '../components/WorkflowFields.js';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext.js';
@@ -20,6 +21,7 @@ export const Jobs: React.FC = () => {
   const { t } = useI18n();
   const navigate = useNavigate();
 
+  const [workflow, setWorkflow] = useState<Workflow>({ workflowType: 'recruitment', projectName: '', requiredCount: 1 });
   const [title, setTitle] = useState('');
   const [department, setDepartment] = useState('');
   const [location, setLocation] = useState('');
@@ -79,6 +81,7 @@ export const Jobs: React.FC = () => {
     try {
       const skillsArray = skills ? skills.split(',').map(s => s.trim()).filter(Boolean) : [];
       await apiRequest('POST', '/api/jobs', {
+        ...workflow,
         title,
         department,
         location,
@@ -142,6 +145,7 @@ export const Jobs: React.FC = () => {
         {t('navDashboard')}
       </button>
 
+      <WorkflowFields value={workflow} onChange={setWorkflow}/>
       {error && (
         <div
           className="text-xs font-medium"

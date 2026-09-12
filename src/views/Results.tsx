@@ -1,3 +1,4 @@
+import { mandatorySummary } from '../utils/screening.js';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext.js';
@@ -65,6 +66,8 @@ interface Candidate {
 interface Job {
   id: number;
   title: string;
+  checklist?: string;
+  workflowType?: string;
 }
 
 export const Results: React.FC = () => {
@@ -77,6 +80,8 @@ export const Results: React.FC = () => {
   const [candidatesList, setCandidatesList] = useState<Candidate[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<string>(queryJobId || '');
+  const [matchThreshold, setMatchThreshold] = useState(80);
+  useEffect(() => { apiRequest('GET', '/api/screening-settings').then(s => setMatchThreshold(s.matchThreshold)).catch(() => {}); }, []);
   const [loading, setLoading] = useState(true);
 
   const [pendingConfirm, setPendingConfirm] = useState<{
@@ -563,7 +568,7 @@ export const Results: React.FC = () => {
   };
 
   const getMatchClassification = (score: number) => {
-    if (score >= 80) return { label: t('matchFull'), isStrong: true };
+    if (score >= matchThreshold) return { label: t('matchFull'), isStrong: true };
     if (score >= 50) return { label: t('matchPartial'), isStrong: false };
     return { label: t('matchNone'), isStrong: false };
   };
@@ -887,6 +892,9 @@ export const Results: React.FC = () => {
                       const isSelected = selectedForBulk.includes(c.id);
                       const isDualCompare = dualCompareLeft?.id === c.id || dualCompareRight?.id === c.id;
                       const classification = getMatchClassification(c.matchScore);
+                      const candidateJob = jobs.find(j => j.id === c.jobId);
+                      const mandatory = mandatorySummary(JSON.parse(candidateJob?.checklist || '[]'), c.checklistEval || []);
+                      if (mandatory.status !== 'met') classification.isStrong = false;
                       const isTopThree = index < 3;
 
                       return (
@@ -915,6 +923,7 @@ export const Results: React.FC = () => {
                             <div className="text-[9.5px] truncate" dir="ltr" style={{ color: 'var(--tk-dim)', maxWidth: 150 }}>
                               {c.originalFilename}
                             </div>
+                            <div className="text-[10px] mt-1">{t(`mandatory_${mandatory.status}`)}</div>
                           </td>
 
                           {(() => {
