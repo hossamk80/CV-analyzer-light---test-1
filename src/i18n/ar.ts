@@ -1,6 +1,7 @@
 import type { en } from './en.js';
 
 export const ar: typeof en = {
+  customModelHelp: "أدخل معرّف API الدقيق، مثل gemini-3-flash-preview. الحفظ المخصص لا يؤكد دعم النموذج؛ استخدم اختبار الاتصال للتحقق.",
   workflowType: "مسار العمل",
   workflowRecruitment: "التوظيف الداخلي",
   workflowTender: "المنافسات والمشاريع",

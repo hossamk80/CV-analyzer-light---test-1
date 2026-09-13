@@ -25,6 +25,11 @@ try {
  const a=Number(add.run(job.id,'Synthetic A',85,'same-document').lastInsertRowid);const b=Number(add.run(job.id,'Synthetic A',90,'same-document').lastInsertRowid);const c=Number(add.run(job.id,'Synthetic A',95,'different-document').lastInsertRowid);
  const apps=await (await call('/api/candidates/'+a+'/applications')).json();assert.deepEqual(apps.map(x=>x.id),[a,b]);assert.ok(!apps.some(x=>x.id===c));
  await call('/api/screening-settings','PUT',{matchThreshold:90});const stats=await (await call('/api/dashboard/stats')).json();assert.equal(stats.excellentMatches,2);
+ const provider=await call('/api/ai-providers','POST',{providerName:'Google Gemini',modelName:'gemini-custom-test',apiKey:'synthetic-key-only',isCustomModel:true});
+ assert.equal(provider.status,201);const providerId=(await provider.json()).id;
+ assert.equal((await call('/api/ai-providers/'+providerId,'PUT',{modelName:'gemini-custom-updated',isCustomModel:true})).status,200);
+ assert.equal(db.prepare('SELECT api_key FROM ai_providers WHERE id=?').get(providerId).api_key,'synthetic-key-only');
+ assert.equal((await call('/api/ai-providers/'+providerId,'PUT',{modelName:'Gemini 3 Flash',isCustomModel:true})).status,400);
  db.close();
  console.log('PASS: production frontend, auth, workflow CRUD/validation, conservative profile linking, configurable dashboard threshold.');
 } finally {

@@ -1,4 +1,5 @@
 export const en = {
+  customModelHelp: "Enter the exact API model ID (e.g. gemini-3-flash-preview). Custom saves an unverified ID; use Test Connection to check access.",
   workflowType: "Workflow",
   workflowRecruitment: "Internal recruitment",
   workflowTender: "Tenders and projects",

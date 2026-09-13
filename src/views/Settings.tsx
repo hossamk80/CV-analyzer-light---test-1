@@ -72,6 +72,7 @@ export const Settings: React.FC = () => {
   // New Provider Fields
   const [newProvName, setNewProvName] = useState('Google Gemini');
   const [newModelName, setNewModelName] = useState('gemini-2.0-flash');
+  const [newCustomModel, setNewCustomModel] = useState(false);
   const [newApiKey, setNewApiKey] = useState('');
   const [newBaseUrl, setNewBaseUrl] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -84,6 +85,7 @@ export const Settings: React.FC = () => {
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
   const [editProvName, setEditProvName] = useState('');
   const [editModelName, setEditModelName] = useState('');
+  const [editCustomModel, setEditCustomModel] = useState(false);
   const [editApiKey, setEditApiKey] = useState('');
   const [editBaseUrl, setEditBaseUrl] = useState('');
   const [editSaving, setEditSaving] = useState(false);
@@ -240,6 +242,7 @@ export const Settings: React.FC = () => {
       const result = await apiRequest('POST', '/api/ai-providers', {
         providerName: newProvName,
         modelName: newModelName,
+        isCustomModel: newCustomModel,
         apiKey: newApiKey,
         baseUrl: newBaseUrl || null
       });
@@ -282,6 +285,7 @@ export const Settings: React.FC = () => {
       await apiRequest('PUT', `/api/ai-providers/${editingProvider.id}`, {
         providerName: editProvName,
         modelName: editModelName,
+        isCustomModel: editCustomModel,
         // Only send apiKey if user actually typed something new
         ...(editApiKey ? { apiKey: editApiKey } : {}),
         baseUrl: editBaseUrl || null
@@ -511,6 +515,7 @@ export const Settings: React.FC = () => {
               apiKey={newApiKey}
               onChangeProvider={setNewProvName}
               onChangeModel={setNewModelName}
+              onChangeCustom={setNewCustomModel}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -655,6 +660,7 @@ export const Settings: React.FC = () => {
                             providerId={p.id}
                             onChangeProvider={setEditProvName}
                             onChangeModel={setEditModelName}
+                            onChangeCustom={setEditCustomModel}
                           />
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

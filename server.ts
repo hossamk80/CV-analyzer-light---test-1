@@ -1,3 +1,4 @@
+import { fetchGeminiModels, normalizeModelId } from './src/utils/providerModels.js';
 import express from 'express';
 import multer from 'multer';
 import jwt from 'jsonwebtoken';
@@ -1540,20 +1541,7 @@ async function fetchLiveModelsFromProvider(providerName: string, apiKey: string)
   }
 
   if (providerName === 'Google Gemini') {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error?.message || `Google Gemini API error ${res.status}`);
-    }
-    const validModels = (data.models || [])
-      .filter((m: any) => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
-      .map((m: any) => m.name.replace(/^models\//, ''));
-    
-    if (validModels.length === 0) {
-      throw new Error('No supported generateContent models returned by Google Gemini API');
-    }
-    return validModels;
+    return fetchGeminiModels(apiKey);
   } else if (providerName === 'OpenAI') {
     const url = 'https://api.openai.com/v1/models';
     const res = await fetch(url, {
@@ -1674,13 +1662,15 @@ app.get('/api/ai-providers/health-check', authenticateToken, requireCapability('
 });
 
 app.post('/api/ai-providers', authenticateToken, requireCapability('manage_settings'), async (req: AuthRequest, res) => {
-  const { providerName, modelName, apiKey, baseUrl } = req.body;
+  const { providerName, apiKey, baseUrl, isCustomModel } = req.body;
+  let modelName: string;
+  try { modelName = normalizeModelId(req.body.modelName); } catch (e: any) { return res.status(400).json({ error: e.message }); }
   if (!providerName || !modelName || !apiKey) {
     return res.status(400).json({ error: 'Provider Name, Model Name, and API Key are required' });
   }
 
   // Requirement 5: Save Validation against live model list
-  if (modelName !== 'Custom' && !modelName.startsWith('Custom')) {
+  if (isCustomModel !== true) {
     try {
       const liveModels = await fetchLiveModelsFromProvider(providerName, apiKey);
       if (liveModels.length > 0 && !liveModels.includes(modelName)) {
@@ -1717,11 +1707,12 @@ app.put('/api/ai-providers/:id', authenticateToken, requireCapability('manage_se
     finalKey = existing.apiKey;
   }
 
-  const targetModel = modelName || existing.modelName;
+  let targetModel: string;
+  try { targetModel = normalizeModelId(modelName ?? existing.modelName); } catch (e: any) { return res.status(400).json({ error: e.message }); }
   const targetProvider = providerName || existing.providerName;
 
   // Requirement 5: Save Validation against live model list
-  if (targetModel !== 'Custom' && !targetModel.startsWith('Custom')) {
+  if (req.body.isCustomModel !== true) {
     try {
       const liveModels = await fetchLiveModelsFromProvider(targetProvider, finalKey);
       if (liveModels.length > 0 && !liveModels.includes(targetModel)) {
