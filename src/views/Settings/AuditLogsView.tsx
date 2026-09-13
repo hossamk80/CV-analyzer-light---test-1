@@ -67,14 +67,14 @@ export const AuditLogsView: React.FC = () => {
     const badge = ACTION_BADGES[actionType];
     if (!badge) {
       return (
-        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-bg-hover text-text-muted border border-border-main rounded-full px-2 py-0.5">
+        <span className="inline-flex items-center gap-1 text-[0.625rem] font-bold bg-bg-hover text-text-muted border border-border-main rounded-full px-2 py-0.5">
           {actionType}
         </span>
       );
     }
     const { cls, Icon } = badge;
     return (
-      <span className={`inline-flex items-center gap-1 text-[10px] font-bold border rounded-full px-2 py-0.5 ${cls}`}>
+      <span className={`inline-flex items-center gap-1 text-[0.625rem] font-bold border rounded-full px-2 py-0.5 ${cls}`}>
         <Icon className="w-3 h-3" />
         {t(`audit_${actionType}` as any)}
       </span>
@@ -102,8 +102,8 @@ export const AuditLogsView: React.FC = () => {
             <ShieldCheck className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-[15px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('auditTitle')}</h2>
-            <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>{t('auditSubtitle')}</p>
+            <h2 className="text-[0.9375rem] font-medium" style={{ color: 'var(--tk-text)' }}>{t('auditTitle')}</h2>
+            <p className="text-[0.6875rem]" style={{ color: 'var(--tk-muted)' }}>{t('auditSubtitle')}</p>
           </div>
         </div>
 
@@ -118,7 +118,7 @@ export const AuditLogsView: React.FC = () => {
 
       <div className="tk-panel overflow-hidden">
         {logs.length === 0 ? (
-          <div className="p-8 text-center text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>
+          <div className="p-8 text-center text-[0.78125rem]" style={{ color: 'var(--tk-muted)' }}>
             {t('auditEmpty')}
           </div>
         ) : (
@@ -141,7 +141,7 @@ export const AuditLogsView: React.FC = () => {
                     onClick={() => setSelectedLog(log)}
                     className="cursor-pointer"
                   >
-                    <td className="font-mono text-[11px]" style={{ color: 'var(--tk-muted)' }}>#{log.id}</td>
+                    <td className="font-mono text-[0.6875rem]" style={{ color: 'var(--tk-muted)' }}>#{log.id}</td>
                     <td className="whitespace-nowrap" style={{ color: 'var(--tk-muted)' }}>
                       <div className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
@@ -151,7 +151,7 @@ export const AuditLogsView: React.FC = () => {
                     <td className="whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <span className="font-semibold" style={{ color: 'var(--tk-text)' }}>{log.actorUsername}</span>
-                        <span className="text-[10px] font-bold text-brand bg-brand/10 border border-brand/20 px-1.5 py-0.5 rounded-md">
+                        <span className="text-[0.625rem] font-bold text-brand bg-brand/10 border border-brand/20 px-1.5 py-0.5 rounded-md">
                           {t(log.actorRole as any)}
                         </span>
                       </div>
@@ -193,17 +193,17 @@ export const AuditLogsView: React.FC = () => {
             <div className="space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-2 p-3 bg-bg-main/50 rounded-xl border border-border-main/50">
                 <div>
-                  <p className="text-[10px] font-bold uppercase text-text-muted">{t('auditColActor')}</p>
+                  <p className="text-[0.625rem] font-bold uppercase text-text-muted">{t('auditColActor')}</p>
                   <p className="font-bold text-text-main">{selectedLog.actorUsername} ({t(selectedLog.actorRole as any)})</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase text-text-muted">{t('auditColTimestamp')}</p>
+                  <p className="text-[0.625rem] font-bold uppercase text-text-muted">{t('auditColTimestamp')}</p>
                   <p className="font-semibold text-text-main">{new Date(selectedLog.createdAt).toLocaleString(language === 'ar' ? 'ar' : 'en')}</p>
                 </div>
               </div>
 
               <div>
-                <p className="text-[10px] font-bold uppercase text-text-muted mb-1">{t('auditColDetails')}</p>
+                <p className="text-[0.625rem] font-bold uppercase text-text-muted mb-1">{t('auditColDetails')}</p>
                 <p className="p-2.5 bg-bg-main/50 rounded-xl border border-border-main/50 text-text-main font-medium leading-relaxed">
                   {selectedLog.details || t('auditNoDetails')}
                 </p>
@@ -211,8 +211,8 @@ export const AuditLogsView: React.FC = () => {
 
               {selectedLog.beforeValue && (
                 <div>
-                  <p className="text-[10px] font-bold uppercase text-text-muted mb-1">{t('auditBeforeState')}</p>
-                  <pre className="p-2.5 bg-bg-main/70 rounded-xl border border-border-main/50 text-[11px] text-amber-500 font-mono overflow-x-auto">
+                  <p className="text-[0.625rem] font-bold uppercase text-text-muted mb-1">{t('auditBeforeState')}</p>
+                  <pre className="p-2.5 bg-bg-main/70 rounded-xl border border-border-main/50 text-[0.6875rem] text-amber-500 font-mono overflow-x-auto">
                     {selectedLog.beforeValue}
                   </pre>
                 </div>
@@ -220,8 +220,8 @@ export const AuditLogsView: React.FC = () => {
 
               {selectedLog.afterValue && (
                 <div>
-                  <p className="text-[10px] font-bold uppercase text-text-muted mb-1">{t('auditAfterState')}</p>
-                  <pre className="p-2.5 bg-bg-main/70 rounded-xl border border-border-main/50 text-[11px] text-green-500 font-mono overflow-x-auto">
+                  <p className="text-[0.625rem] font-bold uppercase text-text-muted mb-1">{t('auditAfterState')}</p>
+                  <pre className="p-2.5 bg-bg-main/70 rounded-xl border border-border-main/50 text-[0.6875rem] text-green-500 font-mono overflow-x-auto">
                     {selectedLog.afterValue}
                   </pre>
                 </div>

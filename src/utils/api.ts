@@ -12,7 +12,7 @@ export async function apiRequest(
   body?: any,
   isMultipart = false
 ): Promise<any> {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { 'Accept-Language': document.documentElement.lang || 'ar' };
 
   if (!isMultipart) {
     headers['Content-Type'] = 'application/json';
@@ -41,6 +41,15 @@ export async function apiRequest(
       errorCode = data.errorCode;
       errorDetail = data.errorDetail;
     } catch (e) {}
+    if ((document.documentElement.lang || 'ar') === 'ar' && !/[ء-ي]/.test(errMsg)) {
+      errMsg = response.status === 401 ? 'انتهت الجلسة أو يلزم تسجيل الدخول.'
+        : response.status === 403 ? 'ليست لديك صلاحية لتنفيذ هذا الإجراء.'
+        : response.status === 404 ? 'تعذر العثور على البيانات المطلوبة.'
+        : response.status === 429 ? 'تم تجاوز عدد المحاولات المسموح. حاول لاحقًا.'
+        : response.status >= 500 ? 'حدث خطأ في الخادم. حاول مرة أخرى.'
+        : 'تعذر تنفيذ الطلب. راجع البيانات المدخلة.';
+      errorDetail = errMsg;
+    }
     const err = new Error(errMsg) as ApiError;
     err.status = response.status;
     err.errorCode = errorCode;

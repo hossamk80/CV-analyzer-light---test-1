@@ -75,7 +75,7 @@ const RailAvatar: React.FC = () => {
           width: 30, height: 30, borderRadius: '50%', cursor: 'pointer',
           background: 'var(--tk-accent)', color: 'var(--tk-on-accent)',
           border: '1px solid var(--tk-border-strong)',
-          fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center'
+          fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}
       >
         {initial}
@@ -99,15 +99,15 @@ const RailAvatar: React.FC = () => {
             padding: '12px 14px'
           }}
         >
-          <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--tk-text)' }}>{username}</p>
-          <p className="text-[10px] font-bold uppercase tracking-[.1em] mb-3" style={{ color: 'var(--tk-accent-text)' }}>
+          <p className="text-[0.8125rem] font-semibold truncate" style={{ color: 'var(--tk-text)' }}>{username}</p>
+          <p className="text-[0.625rem] font-bold uppercase tracking-[.1em] mb-3" style={{ color: 'var(--tk-accent-text)' }}>
             {role ? t(role as any) : ''}
           </p>
           <button
             type="button"
             onClick={logout}
             className="tk-btn-neutral tk-focusable"
-            style={{ width: '100%', height: 32, fontSize: 12 }}
+            style={{ width: '100%', height: 32, fontSize: '0.75rem' }}
           >
             <LogOut className="w-3.5 h-3.5" />
             {t('logout')}
@@ -231,7 +231,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div className="tk-page" style={{ display: 'flex' }}>
       <Rail />
       <div style={{ flex: '1 1 0', minWidth: 0 }}>
-        <main style={{ padding: 'clamp(12px,1.5vw,18px) clamp(12px,1.6vw,22px) 36px', minWidth: 0 }}>
+        <main style={{ padding: 'clamp(0.75rem,1.5vw,1.125rem) clamp(0.75rem,1.6vw,1.375rem) 36px', minWidth: 0 }}>
           <TopNavbar kicker={kicker} title={getPageTitle()} />
           <div className="print-container">{children}</div>
         </main>

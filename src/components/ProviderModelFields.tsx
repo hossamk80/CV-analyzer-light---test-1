@@ -24,7 +24,7 @@ export const ProviderModelFields: React.FC<ProviderModelFieldsProps> = ({
   onChangeCustom
 }) => {
   const { t } = useI18n();
-  const fieldLabel = 'block text-[10.5px] font-bold uppercase tracking-[.1em] mb-1.5 text-text-muted';
+  const fieldLabel = 'block text-[0.65625rem] font-bold uppercase tracking-[.1em] mb-1.5 text-text-muted';
   const [modelOptions, setModelOptions] = useState<string[]>([]);
   const [fetchingModels, setFetchingModels] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -134,7 +134,7 @@ export const ProviderModelFields: React.FC<ProviderModelFieldsProps> = ({
             type="button"
             onClick={() => handleFetchLiveModels(selectedProvider, apiKey)}
             disabled={fetchingModels}
-            className="flex items-center gap-1 text-[11px] font-bold text-brand hover:underline cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-1 text-[0.6875rem] font-bold text-brand hover:underline cursor-pointer disabled:opacity-50"
             title={t('fetchModelsTitle')}
           >
             <RefreshCw className={`w-3 h-3 ${fetchingModels ? 'animate-spin' : ''}`} />
@@ -157,7 +157,7 @@ export const ProviderModelFields: React.FC<ProviderModelFieldsProps> = ({
         </select>
 
         {fetchError && (
-          <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-amber-500 font-medium">
+          <div className="mt-1.5 flex items-center gap-1.5 text-[0.6875rem] text-amber-500 font-medium">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
             <span>{t('showingCachedOptions', { error: fetchError })}</span>
           </div>

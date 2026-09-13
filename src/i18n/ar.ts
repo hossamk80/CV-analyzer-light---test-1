@@ -1,6 +1,17 @@
 import type { en } from './en.js';
 
 export const ar: typeof en = {
+  purgeSuccess: "تمت عملية التنقية بنجاح.",
+  auditPurgeSuccess: "اكتملت تنقية سجل التدقيق؛ تم حذف {count} سجل.",
+  notificationSent: "تم تجهيز رسالة التواصل بنجاح.",
+  interviewScheduled: "تم تجهيز موعد المقابلة بنجاح.",
+
+  fontSize: "حجم الخط",
+  fontSize_small: "صغير",
+  fontSize_normal: "عادي",
+  fontSize_large: "كبير",
+  fontSize_xlarge: "كبير جدًا",
+
   customModelHelp: "أدخل معرّف API الدقيق، مثل gemini-3-flash-preview. الحفظ المخصص لا يؤكد دعم النموذج؛ استخدم اختبار الاتصال للتحقق.",
   workflowType: "مسار العمل",
   workflowRecruitment: "التوظيف الداخلي",

@@ -107,7 +107,7 @@ export const Jobs: React.FC = () => {
     }
   };
 
-  const microLabel = 'block text-[10.5px] font-bold uppercase tracking-[.1em] mb-1.5';
+  const microLabel = 'block text-[0.65625rem] font-bold uppercase tracking-[.1em] mb-1.5';
   const microLabelStyle = { color: 'var(--tk-muted)' } as React.CSSProperties;
 
   // Panel 1 — six basic specification fields (des-2.txt §14.1).
@@ -157,7 +157,7 @@ export const Jobs: React.FC = () => {
 
       {/* 1. Basic job specifications */}
       <div className="tk-panel">
-        <h3 className="text-[10.5px] font-bold uppercase tracking-[.14em] mb-3 flex items-center gap-1.5" style={{ color: 'var(--tk-accent-text)' }}>
+        <h3 className="text-[0.65625rem] font-bold uppercase tracking-[.14em] mb-3 flex items-center gap-1.5" style={{ color: 'var(--tk-accent-text)' }}>
           <Briefcase className="w-3.5 h-3.5" />
           {t('basicJobSpecs')}
         </h3>
@@ -182,7 +182,7 @@ export const Jobs: React.FC = () => {
 
       {/* 2. Requirements & specifications */}
       <div className="tk-panel">
-        <h3 className="text-[10.5px] font-bold uppercase tracking-[.14em] mb-3" style={{ color: 'var(--tk-accent-text)' }}>
+        <h3 className="text-[0.65625rem] font-bold uppercase tracking-[.14em] mb-3" style={{ color: 'var(--tk-accent-text)' }}>
           {t('requirementsAndSpecs')}
         </h3>
         <div style={{ display: 'grid', gap: 10 }}>
@@ -215,7 +215,7 @@ export const Jobs: React.FC = () => {
       {/* 3. ATS evaluation criteria */}
       <div className="tk-panel">
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-          <h3 className="text-[10.5px] font-bold uppercase tracking-[.14em] flex items-center gap-1.5" style={{ color: 'var(--tk-accent-text)' }}>
+          <h3 className="text-[0.65625rem] font-bold uppercase tracking-[.14em] flex items-center gap-1.5" style={{ color: 'var(--tk-accent-text)' }}>
             <CheckSquare className="w-3.5 h-3.5" />
             {t('checklistTitle')}
           </h3>
@@ -223,7 +223,7 @@ export const Jobs: React.FC = () => {
             type="button"
             onClick={handleAddChecklistItem}
             className="tk-btn-primary tk-focusable"
-            style={{ height: 28, padding: '0 10px', fontSize: 11 }}
+            style={{ height: 28, padding: '0 10px', fontSize: '0.6875rem' }}
           >
             <PlusCircle className="w-3.5 h-3.5" />
             <span>{t('addChecklistItem')}</span>
@@ -244,7 +244,7 @@ export const Jobs: React.FC = () => {
                   placeholder={t('requirementDescription')}
                   rows={2}
                   className="tk-field tk-focusable"
-                  style={{ flex: 1, height: 'auto', minHeight: 34, paddingBlock: 8, fontSize: 12, background: 'var(--tk-input)', resize: 'vertical' }}
+                  style={{ flex: 1, height: 'auto', minHeight: 34, paddingBlock: 8, fontSize: '0.75rem', background: 'var(--tk-input)', resize: 'vertical' }}
                 />
                 <button
                   type="button"
@@ -258,7 +258,7 @@ export const Jobs: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2 mt-2.5">
-                <span className="text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>
+                <span className="text-[0.625rem] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>
                   {t('importanceLevel')}
                 </span>
                 <select
@@ -266,7 +266,7 @@ export const Jobs: React.FC = () => {
                   onChange={(e) => handleChecklistImportanceChange(item.id, e.target.value)}
                   className="tk-focusable"
                   style={{
-                    height: 28, borderRadius: 99, paddingInline: 11, fontSize: 11, fontWeight: 600,
+                    height: 28, borderRadius: 99, paddingInline: 11, fontSize: '0.6875rem', fontWeight: 600,
                     background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)', border: 'none', cursor: 'pointer'
                   }}
                 >

@@ -16,7 +16,7 @@ interface TopNavbarProps {
 export const TopNavbar: React.FC<TopNavbarProps> = ({ kicker, title }) => {
   const { t, language, setLanguage } = useI18n();
   const { role, gdprActive, capabilities, toggleGdpr } = useRole();
-  const { themeMode, accent, setThemeMode, setAccent } = useTheme();
+  const { themeMode, accent, fontScale, setThemeMode, setAccent, setFontScale } = useTheme();
   const [search, setSearch] = useState('');
   const [popoverOpen, setPopoverOpen] = useState(false);
 
@@ -25,18 +25,18 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ kicker, title }) => {
   return (
     <header
       className="flex flex-wrap items-center gap-3 justify-between no-print"
-      style={{ marginBottom: 'clamp(14px,1.6vw,20px)' }}
+      style={{ marginBottom: 'clamp(0.875rem,1.6vw,1.25rem)' }}
     >
       <div style={{ minWidth: 0 }}>
         <div
-          className="text-[10px] font-bold uppercase"
+          className="text-[0.625rem] font-bold uppercase"
           style={{ letterSpacing: '.22em', color: 'var(--tk-accent-text)' }}
         >
           {kicker}
         </div>
         <h1
           className="font-medium truncate"
-          style={{ fontSize: 'clamp(18px,2vw,25px)', letterSpacing: '-.02em', color: 'var(--tk-text)' }}
+          style={{ fontSize: 'clamp(1.125rem,2vw,1.5625rem)', letterSpacing: '-.02em', color: 'var(--tk-text)' }}
         >
           {title}
         </h1>
@@ -66,7 +66,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ kicker, title }) => {
             aria-pressed={gdprActive}
             className="flex items-center gap-1.5 px-3 tk-focusable"
             style={{
-              height: 32, borderRadius: 9, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
+              height: 32, borderRadius: 9, fontSize: '0.71875rem', fontWeight: 600, cursor: 'pointer',
               background: gdprActive ? 'var(--tk-accent-soft)' : 'transparent',
               color: gdprActive ? 'var(--tk-accent-text)' : 'var(--tk-soft)',
               border: `1px solid ${gdprActive ? 'var(--tk-accent-line)' : 'var(--tk-border-strong)'}`
@@ -82,7 +82,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ kicker, title }) => {
           onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
           className="flex items-center gap-1.5 px-3 tk-focusable"
           style={{
-            height: 32, borderRadius: 9, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
+            height: 32, borderRadius: 9, fontSize: '0.71875rem', fontWeight: 600, cursor: 'pointer',
             background: 'transparent', color: 'var(--tk-soft)', border: '1px solid var(--tk-border-strong)'
           }}
         >
@@ -99,6 +99,8 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ kicker, title }) => {
           accent={accent}
           onThemeChange={setThemeMode}
           onAccentChange={setAccent}
+          fontScale={fontScale}
+          onFontScaleChange={setFontScale}
         />
       </div>
     </header>

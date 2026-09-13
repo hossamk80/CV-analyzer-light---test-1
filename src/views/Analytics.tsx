@@ -234,7 +234,7 @@ export const Analytics: React.FC = () => {
     <div style={{ display: 'grid', gap: 10, minWidth: 0 }}>
       {/* Job filter */}
       <div className="flex items-center gap-2 flex-wrap">
-        <label className="text-[10.5px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>
+        <label className="text-[0.65625rem] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>
           {t('analyticsJobFilter')}
         </label>
         <select
@@ -254,13 +254,13 @@ export const Analytics: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(185px, 100%), 1fr))', gap: 10 }}>
         {statTiles.map(({ label, value, delta, icon: Icon }) => (
           <div key={label} className="tk-tile">
-            <span className="text-[10.5px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
+            <span className="text-[0.65625rem] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
               <Icon className="w-3.5 h-3.5" />
               {label}
             </span>
             <div className="flex items-baseline gap-2 flex-wrap mt-1.5">
               <span className="tk-stat-value">{value}</span>
-              <span className="text-[11px]" style={{ color: 'var(--tk-accent-text)' }}>{delta}</span>
+              <span className="text-[0.6875rem]" style={{ color: 'var(--tk-accent-text)' }}>{delta}</span>
             </div>
           </div>
         ))}
@@ -269,11 +269,11 @@ export const Analytics: React.FC = () => {
       {/* Hiring funnel + CVs by department */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 10 }}>
         <div className="tk-panel">
-          <h3 className="text-[14px] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
+          <h3 className="text-[0.875rem] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
             <PieChart className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
             {t('hiringFunnel')}
           </h3>
-          <p className="text-[11px] mb-3" style={{ color: 'var(--tk-muted)' }}>{t('hiringFunnelSub')}</p>
+          <p className="text-[0.6875rem] mb-3" style={{ color: 'var(--tk-muted)' }}>{t('hiringFunnelSub')}</p>
 
           <div style={{ display: 'grid', gap: 9 }}>
             {funnelRows.map(({ label, count }, i) => {
@@ -281,8 +281,8 @@ export const Analytics: React.FC = () => {
               return (
                 <div key={label}>
                   <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <span className="text-[12px]" style={{ color: 'var(--tk-text)' }}>{label}</span>
-                    <span className="text-[12px]" style={{ color: 'var(--tk-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                    <span className="text-[0.75rem]" style={{ color: 'var(--tk-text)' }}>{label}</span>
+                    <span className="text-[0.75rem]" style={{ color: 'var(--tk-muted)', fontVariantNumeric: 'tabular-nums' }}>
                       {count}
                       <span className="inline-block text-end" style={{ width: 44, color: 'var(--tk-dim)' }}>{pct}%</span>
                     </span>
@@ -305,19 +305,19 @@ export const Analytics: React.FC = () => {
         </div>
 
         <div className="tk-panel">
-          <h3 className="text-[14px] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
+          <h3 className="text-[0.875rem] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
             <BarChart3 className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
             {t('cvsByDepartment')}
           </h3>
-          <p className="text-[11px] mb-3" style={{ color: 'var(--tk-muted)' }}>{t('cvsByDepartmentSub')}</p>
+          <p className="text-[0.6875rem] mb-3" style={{ color: 'var(--tk-muted)' }}>{t('cvsByDepartmentSub')}</p>
 
           {byDepartment.length === 0 ? (
-            <p className="text-[12px] py-8 text-center" style={{ color: 'var(--tk-muted)' }}>{t('noCandidatesYet')}</p>
+            <p className="text-[0.75rem] py-8 text-center" style={{ color: 'var(--tk-muted)' }}>{t('noCandidatesYet')}</p>
           ) : (
-            <div className="flex items-end" style={{ height: 175, gap: 'clamp(6px,1.2vw,14px)' }}>
+            <div className="flex items-end" style={{ height: 175, gap: 'clamp(0.375rem,1.2vw,0.875rem)' }}>
               {byDepartment.map(([dept, count]) => (
                 <div key={dept} className="flex flex-col items-center justify-end" style={{ flex: 1, minWidth: 0, height: '100%' }}>
-                  <span className="text-[11.5px] mb-1.5" style={{ color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
+                  <span className="text-[0.71875rem] mb-1.5" style={{ color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
                   <div
                     style={{
                       width: '100%',
@@ -328,7 +328,7 @@ export const Analytics: React.FC = () => {
                     }}
                   />
                   <span
-                    className="text-[10px] font-bold uppercase tracking-[.1em] mt-2 truncate w-full text-center"
+                    className="text-[0.625rem] font-bold uppercase tracking-[.1em] mt-2 truncate w-full text-center"
                     style={{ color: 'var(--tk-muted)' }}
                     title={dept}
                   >
@@ -343,18 +343,18 @@ export const Analytics: React.FC = () => {
 
       {/* Score tier breakdown */}
       <div className="tk-panel">
-        <h3 className="text-[14px] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
+        <h3 className="text-[0.875rem] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
           <Award className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
           {t('matchQualityDistribution')}
         </h3>
-        <p className="text-[11px] mb-3" style={{ color: 'var(--tk-muted)' }}>{t('matchQualitySub')}</p>
+        <p className="text-[0.6875rem] mb-3" style={{ color: 'var(--tk-muted)' }}>{t('matchQualitySub')}</p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: 10 }}>
           {tierCards.map(({ label, count, hint }) => (
             <div key={label} style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
-              <span className="text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>{label}</span>
-              <p style={{ fontSize: 21, fontWeight: 500, letterSpacing: '-.03em', color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>{count}</p>
-              <p className="text-[11px]" style={{ color: 'var(--tk-dim)' }}>{hint}</p>
+              <span className="text-[0.625rem] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>{label}</span>
+              <p style={{ fontSize: '1.3125rem', fontWeight: 500, letterSpacing: '-.03em', color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>{count}</p>
+              <p className="text-[0.6875rem]" style={{ color: 'var(--tk-dim)' }}>{hint}</p>
             </div>
           ))}
         </div>
@@ -365,7 +365,7 @@ export const Analytics: React.FC = () => {
             { label: t('avgExperience'), value: scoreAnalytics.avgExp },
             { label: t('avgCultural'), value: scoreAnalytics.avgCult }
           ].map(({ label, value }) => (
-            <div key={label} className="flex items-center justify-between gap-3 text-[12px]">
+            <div key={label} className="flex items-center justify-between gap-3 text-[0.75rem]">
               <span style={{ color: 'var(--tk-muted)' }}>{label}</span>
               <span style={{ color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>{value}%</span>
             </div>
@@ -376,17 +376,17 @@ export const Analytics: React.FC = () => {
       {/* Top matched skills & common gaps */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(270px, 100%), 1fr))', gap: 10 }}>
         <div className="tk-panel">
-          <h3 className="text-[14px] font-medium flex items-center gap-2 mb-2.5" style={{ color: 'var(--tk-text)' }}>
+          <h3 className="text-[0.875rem] font-medium flex items-center gap-2 mb-2.5" style={{ color: 'var(--tk-text)' }}>
             <CheckCircle2 className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
             {t('topMatchedSkills')}
           </h3>
           {topSkillsAndGaps.topSkills.length === 0 ? (
-            <p className="text-[12px] py-4 text-center" style={{ color: 'var(--tk-muted)' }}>{t('noSkillData')}</p>
+            <p className="text-[0.75rem] py-4 text-center" style={{ color: 'var(--tk-muted)' }}>{t('noSkillData')}</p>
           ) : (
             <div className="tk-row-list">
               {topSkillsAndGaps.topSkills.map(([skill, cnt]) => (
                 <div key={skill} className="flex items-center justify-between gap-2 flex-wrap">
-                  <span className="text-[12px]" style={{ color: 'var(--tk-text)' }}>{skill}</span>
+                  <span className="text-[0.75rem]" style={{ color: 'var(--tk-text)' }}>{skill}</span>
                   <span className="tk-pill is-active">{cnt}</span>
                 </div>
               ))}
@@ -395,17 +395,17 @@ export const Analytics: React.FC = () => {
         </div>
 
         <div className="tk-panel">
-          <h3 className="text-[14px] font-medium flex items-center gap-2 mb-2.5" style={{ color: 'var(--tk-text)' }}>
+          <h3 className="text-[0.875rem] font-medium flex items-center gap-2 mb-2.5" style={{ color: 'var(--tk-text)' }}>
             <XCircle className="w-4 h-4" style={{ color: 'var(--tk-muted)' }} />
             {t('commonGaps')}
           </h3>
           {topSkillsAndGaps.topGaps.length === 0 ? (
-            <p className="text-[12px] py-4 text-center" style={{ color: 'var(--tk-muted)' }}>{t('noGapData')}</p>
+            <p className="text-[0.75rem] py-4 text-center" style={{ color: 'var(--tk-muted)' }}>{t('noGapData')}</p>
           ) : (
             <div className="tk-row-list">
               {topSkillsAndGaps.topGaps.map(([gap, cnt]) => (
                 <div key={gap} className="flex items-center justify-between gap-2 flex-wrap">
-                  <span className="text-[12px]" style={{ color: 'var(--tk-soft)' }}>{gap}</span>
+                  <span className="text-[0.75rem]" style={{ color: 'var(--tk-soft)' }}>{gap}</span>
                   <span className="tk-pill">{cnt}</span>
                 </div>
               ))}

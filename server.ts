@@ -2658,9 +2658,9 @@ async function analyzeCv(opts: {
   }
 
   // Hybrid: give the model the facts we already resolved for free.
-  let payload = jobData;
+  let payload = { ...jobData, output_language: lang === 'en' ? 'English' : 'Arabic' };
   if (mode === 'hybrid' && prepared.plainText) {
-    payload = { ...jobData, already_extracted: extractLocalFacts(prepared.plainText, jobData) };
+    payload = { ...payload, already_extracted: extractLocalFacts(prepared.plainText, jobData) };
   }
 
   const cvContent = { text: prepared.text, buffer: prepared.buffer, mimeType: prepared.mimeType };

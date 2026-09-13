@@ -117,11 +117,11 @@ export const NotificationsBell: React.FC = () => {
             className="flex items-center justify-between gap-2"
             style={{ borderBottom: '1px solid var(--tk-border)', paddingBottom: 10, marginBottom: 10 }}
           >
-            <span className="text-[10.5px] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-accent-text)' }}>
+            <span className="text-[0.65625rem] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-accent-text)' }}>
               {t('notifications')}
             </span>
             {unread > 0 && (
-              <button type="button" onClick={markAllRead} className="tk-btn-neutral tk-focusable" style={{ height: 26, padding: '0 10px', fontSize: 11 }}>
+              <button type="button" onClick={markAllRead} className="tk-btn-neutral tk-focusable" style={{ height: 26, padding: '0 10px', fontSize: '0.6875rem' }}>
                 {t('markAllRead')}
               </button>
             )}
@@ -145,9 +145,9 @@ export const NotificationsBell: React.FC = () => {
                     border: '1px solid var(--tk-border)'
                   }}
                 >
-                  <p className="text-[12.5px] font-medium truncate" style={{ color: 'var(--tk-text)' }}>{n.title}</p>
-                  <p className="text-[11px] leading-relaxed" style={{ color: 'var(--tk-muted)' }}>{n.body}</p>
-                  <p className="text-[10px] mt-1" style={{ color: 'var(--tk-dim)' }}>
+                  <p className="text-[0.78125rem] font-medium truncate" style={{ color: 'var(--tk-text)' }}>{n.title}</p>
+                  <p className="text-[0.6875rem] leading-relaxed" style={{ color: 'var(--tk-muted)' }}>{n.body}</p>
+                  <p className="text-[0.625rem] mt-1" style={{ color: 'var(--tk-dim)' }}>
                     {new Date(n.createdAt).toLocaleString(language === 'ar' ? 'ar' : 'en')}
                   </p>
                 </button>

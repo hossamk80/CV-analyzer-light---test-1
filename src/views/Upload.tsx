@@ -155,6 +155,7 @@ export const Upload: React.FC = () => {
           // We use native fetch here to support multipart FormData uploads
           const response = await fetch('/api/upload', {
             method: 'POST',
+            headers: { 'Accept-Language': language },
             body: formData,
             credentials: 'same-origin'
           });
@@ -171,8 +172,8 @@ export const Upload: React.FC = () => {
               status: 'error',
               progress: 100,
               errorCode: data.errorCode || undefined,
-              errorDetail: data.error || `HTTP ${response.status}`,
-              error: data.error || `HTTP ${response.status}`
+              errorDetail: data.errorCode ? data.error : t('uploadFailed'),
+              error: data.errorCode ? data.error : t('uploadFailed')
             }));
             continue;
           }
@@ -257,14 +258,14 @@ export const Upload: React.FC = () => {
   const ForwardArrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
 
   if (loadingJobs) {
-    return <div className="text-center py-16 text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>{t('loadingJobsList')}</div>;
+    return <div className="text-center py-16 text-[0.78125rem]" style={{ color: 'var(--tk-muted)' }}>{t('loadingJobsList')}</div>;
   }
 
   if (jobs.length === 0) {
     return (
       <div className="tk-panel text-center" style={{ padding: 32 }}>
         <UploadCloud className="w-9 h-9 mx-auto mb-3" style={{ color: 'var(--tk-dim)' }} />
-        <p className="text-[13px] font-medium" style={{ color: 'var(--tk-text)' }}>
+        <p className="text-[0.8125rem] font-medium" style={{ color: 'var(--tk-text)' }}>
           {t('needJobFirst')}
         </p>
         <button
@@ -292,10 +293,10 @@ export const Upload: React.FC = () => {
           <div className="flex items-center gap-2.5" style={{ minWidth: 0 }}>
             <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: 'var(--tk-accent-text)' }} />
             <div style={{ minWidth: 0 }}>
-              <p className="text-[12.5px] font-medium" style={{ color: 'var(--tk-text)' }}>
+              <p className="text-[0.78125rem] font-medium" style={{ color: 'var(--tk-text)' }}>
                 {t('uploadCompleteTitle', { count: String(analyzedCount) })}
               </p>
-              <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>{t('uploadCompleteHint')}</p>
+              <p className="text-[0.6875rem]" style={{ color: 'var(--tk-muted)' }}>{t('uploadCompleteHint')}</p>
             </div>
           </div>
           <button
@@ -323,10 +324,10 @@ export const Upload: React.FC = () => {
 
       {/* Right column — screening setup */}
       <div className="tk-panel" style={{ display: 'grid', gap: 13 }}>
-        <h3 className="text-[14px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('screeningSetup')}</h3>
+        <h3 className="text-[0.875rem] font-medium" style={{ color: 'var(--tk-text)' }}>{t('screeningSetup')}</h3>
 
         <div>
-          <label className="block text-[10.5px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: 'var(--tk-muted)' }}>
+          <label className="block text-[0.65625rem] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: 'var(--tk-muted)' }}>
             {t('selectJob')}
           </label>
           <select
@@ -342,7 +343,7 @@ export const Upload: React.FC = () => {
             ))}
           </select>
           {jobIsPaused && (
-            <p className="text-[11px] mt-1.5" style={{ color: '#f5b301' }}>
+            <p className="text-[0.6875rem] mt-1.5" style={{ color: '#f5b301' }}>
               {t('jobPausedNotice')}
             </p>
           )}
@@ -351,7 +352,7 @@ export const Upload: React.FC = () => {
         {/* Analysis mode — the single biggest lever on token spend, so it lives
             right next to the upload zone rather than buried in Settings. */}
         <div>
-          <label className="block text-[10.5px] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: 'var(--tk-muted)' }}>
+          <label className="block text-[0.65625rem] font-bold uppercase tracking-[.1em] mb-1.5" style={{ color: 'var(--tk-muted)' }}>
             {t('analysisMode')}
           </label>
           <div className="flex gap-1.5 flex-wrap">
@@ -367,7 +368,7 @@ export const Upload: React.FC = () => {
                 }}
                 className="tk-focusable"
                 style={{
-                  height: 28, borderRadius: 8, paddingInline: 10, fontSize: 11, fontWeight: 600,
+                  height: 28, borderRadius: 8, paddingInline: 10, fontSize: '0.6875rem', fontWeight: 600,
                   cursor: canChangeScreening ? 'pointer' : 'not-allowed',
                   opacity: canChangeScreening ? 1 : 0.5,
                   ...(analysisMode === mode
@@ -379,11 +380,11 @@ export const Upload: React.FC = () => {
               </button>
             ))}
           </div>
-          <p className="text-[11px] mt-1.5 leading-relaxed" style={{ color: 'var(--tk-muted)' }}>
+          <p className="text-[0.6875rem] mt-1.5 leading-relaxed" style={{ color: 'var(--tk-muted)' }}>
             {t(`analysisMode_${analysisMode}_desc` as any)}
           </p>
           {analysisMode === 'local' && (
-            <p className="text-[11px] mt-1" style={{ color: '#f5b301' }}>
+            <p className="text-[0.6875rem] mt-1" style={{ color: '#f5b301' }}>
               {t('analysisModeLocalNote')}
             </p>
           )}
@@ -395,12 +396,12 @@ export const Upload: React.FC = () => {
           <div className="flex items-center justify-between gap-2 mb-2">
             <label
               htmlFor="match-threshold"
-              className="text-[10.5px] font-bold uppercase tracking-[.1em]"
+              className="text-[0.65625rem] font-bold uppercase tracking-[.1em]"
               style={{ color: 'var(--tk-muted)' }}
             >
               {t('matchThreshold')}
             </label>
-            <span className="text-[12px]" style={{ color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>
+            <span className="text-[0.75rem]" style={{ color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>
               {matchThreshold}%
             </span>
           </div>
@@ -417,7 +418,7 @@ export const Upload: React.FC = () => {
             className="w-full tk-focusable"
             style={{ cursor: canChangeScreening ? 'pointer' : 'not-allowed', opacity: canChangeScreening ? 1 : 0.5 }}
           />
-          <p className="text-[11px] mt-1.5" style={{ color: 'var(--tk-muted)' }}>
+          <p className="text-[0.6875rem] mt-1.5" style={{ color: 'var(--tk-muted)' }}>
             {t('matchThresholdHint')}
           </p>
         </div>
@@ -426,8 +427,8 @@ export const Upload: React.FC = () => {
             immediately), so it is shown as a locked-on state rather than a toggle that lies. */}
         <div className="flex items-start justify-between gap-3">
           <div style={{ minWidth: 0 }}>
-            <p className="text-[12px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('autoScreenTitle')}</p>
-            <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>{t('autoScreenHint')}</p>
+            <p className="text-[0.75rem] font-medium" style={{ color: 'var(--tk-text)' }}>{t('autoScreenTitle')}</p>
+            <p className="text-[0.6875rem]" style={{ color: 'var(--tk-muted)' }}>{t('autoScreenHint')}</p>
           </div>
           <span className="tk-switch is-on" role="img" aria-label={t('alwaysOn')} title={t('alwaysOnHint')}>
             <span className="tk-switch-knob" />
@@ -437,8 +438,8 @@ export const Upload: React.FC = () => {
         {/* Bound to the header anonymization toggle. */}
         <div className="flex items-start justify-between gap-3">
           <div style={{ minWidth: 0 }}>
-            <p className="text-[12px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('anonymizeTitle')}</p>
-            <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>{t('anonymizeHint')}</p>
+            <p className="text-[0.75rem] font-medium" style={{ color: 'var(--tk-text)' }}>{t('anonymizeTitle')}</p>
+            <p className="text-[0.6875rem]" style={{ color: 'var(--tk-muted)' }}>{t('anonymizeHint')}</p>
           </div>
           <button
             type="button"
@@ -457,8 +458,8 @@ export const Upload: React.FC = () => {
         {/* Raises a real in-app notification (header bell) when a CV lands at/above the threshold. */}
         <div className="flex items-start justify-between gap-3">
           <div style={{ minWidth: 0 }}>
-            <p className="text-[12px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('notifyStrongTitle')}</p>
-            <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>
+            <p className="text-[0.75rem] font-medium" style={{ color: 'var(--tk-text)' }}>{t('notifyStrongTitle')}</p>
+            <p className="text-[0.6875rem]" style={{ color: 'var(--tk-muted)' }}>
               {t('notifyStrongHint', { threshold: String(matchThreshold) })}
             </p>
           </div>
@@ -482,7 +483,7 @@ export const Upload: React.FC = () => {
         </div>
 
         <div style={{ borderTop: '1px solid var(--tk-border)', paddingTop: 12 }}>
-          <p className="text-[11px] leading-relaxed" style={{ color: 'var(--tk-dim)' }}>
+          <p className="text-[0.6875rem] leading-relaxed" style={{ color: 'var(--tk-dim)' }}>
             {t('uploadFooterNote')}
           </p>
         </div>

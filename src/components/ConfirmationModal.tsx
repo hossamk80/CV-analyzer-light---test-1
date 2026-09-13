@@ -62,19 +62,19 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           <div className={`p-2 rounded-xl ${danger ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-brand/10 text-brand border border-brand/20'}`}>
             <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
           </div>
-          <h3 id="confirmation-modal-title" className="text-[14px] font-semibold text-start" style={{ color: 'var(--tk-text)' }}>
+          <h3 id="confirmation-modal-title" className="text-[0.875rem] font-semibold text-start" style={{ color: 'var(--tk-text)' }}>
             {title}
           </h3>
         </div>
 
-        <div className="space-y-3 text-[11.5px] text-start">
+        <div className="space-y-3 text-[0.71875rem] text-start">
           <p className="text-text-main font-medium leading-relaxed">
             {description}
           </p>
 
           {warningText && (
             <div id="confirmation-modal-warning" className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 font-semibold space-y-1">
-              <p className="flex items-center gap-1.5 text-[11px]">
+              <p className="flex items-center gap-1.5 text-[0.6875rem]">
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                 <span>{warningText}</span>
               </p>
@@ -83,7 +83,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
           {confirmWord && (
             <div className="space-y-1.5 pt-1">
-              <label className="block text-[11px] font-bold text-text-muted">
+              <label className="block text-[0.6875rem] font-bold text-text-muted">
                 {t('confirmTypeWord', { word: confirmWord })}
               </label>
               <input
@@ -112,7 +112,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             disabled={!isConfirmed || loading}
             className="tk-focusable flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
-              height: 32, borderRadius: 9, paddingInline: 13, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              height: 32, borderRadius: 9, paddingInline: 13, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
               ...(danger
                 ? { background: 'rgba(239,68,68,.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,.2)' }
                 : { background: 'var(--tk-accent)', color: 'var(--tk-on-accent)', border: '1px solid transparent' })

@@ -1,4 +1,15 @@
 export const en = {
+  purgeSuccess: "Cleanup completed successfully.",
+  auditPurgeSuccess: "Audit cleanup completed; {count} record(s) deleted.",
+  notificationSent: "Outreach message prepared successfully.",
+  interviewScheduled: "Interview event prepared successfully.",
+
+  fontSize: "Font size",
+  fontSize_small: "Small",
+  fontSize_normal: "Normal",
+  fontSize_large: "Large",
+  fontSize_xlarge: "Extra large",
+
   customModelHelp: "Enter the exact API model ID (e.g. gemini-3-flash-preview). Custom saves an unverified ID; use Test Connection to check access.",
   workflowType: "Workflow",
   workflowRecruitment: "Internal recruitment",

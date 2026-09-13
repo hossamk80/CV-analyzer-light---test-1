@@ -143,7 +143,7 @@ export const PromptSettings: React.FC = () => {
     return <AccessDenied message={error} onRetry={fetchPrompts} />;
   }
 
-  const microLabel = 'block text-[10.5px] font-bold uppercase tracking-[.1em] mb-1.5 text-text-muted';
+  const microLabel = 'block text-[0.65625rem] font-bold uppercase tracking-[.1em] mb-1.5 text-text-muted';
 
   return (
     <div className="space-y-4">
@@ -153,8 +153,8 @@ export const PromptSettings: React.FC = () => {
             <MessageSquareCode className="w-4 h-4" />
           </div>
           <div className="space-y-0.5">
-            <h2 className="text-[15px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('promptTitle')}</h2>
-            <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>{t('promptSubtitle')}</p>
+            <h2 className="text-[0.9375rem] font-medium" style={{ color: 'var(--tk-text)' }}>{t('promptTitle')}</h2>
+            <p className="text-[0.6875rem]" style={{ color: 'var(--tk-muted)' }}>{t('promptSubtitle')}</p>
           </div>
         </div>
 
@@ -241,9 +241,9 @@ export const PromptSettings: React.FC = () => {
       {/* Prompts Versions List */}
       <div className="tk-panel overflow-hidden">
         {loading ? (
-          <div className="py-12 text-center text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>{t('loadingPrompts')}</div>
+          <div className="py-12 text-center text-[0.78125rem]" style={{ color: 'var(--tk-muted)' }}>{t('loadingPrompts')}</div>
         ) : promptsList.length === 0 ? (
-          <div className="py-12 text-center text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>{t('noPromptVersions')}</div>
+          <div className="py-12 text-center text-[0.78125rem]" style={{ color: 'var(--tk-muted)' }}>{t('noPromptVersions')}</div>
         ) : (
           <div className="divide-y divide-border-main/50">
             {promptsList.map(p => {
@@ -259,8 +259,8 @@ export const PromptSettings: React.FC = () => {
                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </button>
                       <div>
-                        <h4 className="text-[13px] font-semibold" style={{ color: 'var(--tk-text)' }}>{p.name}</h4>
-                        <span className="text-[10px]" style={{ color: 'var(--tk-muted)' }}>{t('versionId', { id: String(p.id) })}</span>
+                        <h4 className="text-[0.8125rem] font-semibold" style={{ color: 'var(--tk-text)' }}>{p.name}</h4>
+                        <span className="text-[0.625rem]" style={{ color: 'var(--tk-muted)' }}>{t('versionId', { id: String(p.id) })}</span>
                       </div>
                     </div>
 
@@ -273,7 +273,7 @@ export const PromptSettings: React.FC = () => {
                       ) : (
                         <button
                           onClick={() => handleActivatePrompt(p.id)}
-                          className="text-[11.5px] text-brand hover:underline font-bold cursor-pointer"
+                          className="text-[0.71875rem] text-brand hover:underline font-bold cursor-pointer"
                         >
                           {t('activateVersion')}
                         </button>
@@ -295,14 +295,14 @@ export const PromptSettings: React.FC = () => {
                   {isExpanded && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-bg-main/50 rounded-xl border border-border-main/50 animate-in slide-in-from-top-1 duration-150">
                       <div>
-                        <span className="block text-[10px] font-bold text-text-muted uppercase mb-1.5 px-0.5">{t('analysisPrompt')}</span>
-                        <pre className="p-3 bg-bg-card border border-border-main rounded-lg text-[10px] text-text-muted overflow-auto max-h-72 font-mono whitespace-pre-wrap">
+                        <span className="block text-[0.625rem] font-bold text-text-muted uppercase mb-1.5 px-0.5">{t('analysisPrompt')}</span>
+                        <pre className="p-3 bg-bg-card border border-border-main rounded-lg text-[0.625rem] text-text-muted overflow-auto max-h-72 font-mono whitespace-pre-wrap">
                           {p.analysisPrompt}
                         </pre>
                       </div>
                       <div>
-                        <span className="block text-[10px] font-bold text-text-muted uppercase mb-1.5 px-0.5">{t('reanalysisPrompt')}</span>
-                        <pre className="p-3 bg-bg-card border border-border-main rounded-lg text-[10px] text-text-muted overflow-auto max-h-72 font-mono whitespace-pre-wrap">
+                        <span className="block text-[0.625rem] font-bold text-text-muted uppercase mb-1.5 px-0.5">{t('reanalysisPrompt')}</span>
+                        <pre className="p-3 bg-bg-card border border-border-main rounded-lg text-[0.625rem] text-text-muted overflow-auto max-h-72 font-mono whitespace-pre-wrap">
                           {p.reanalysisPrompt}
                         </pre>
                       </div>

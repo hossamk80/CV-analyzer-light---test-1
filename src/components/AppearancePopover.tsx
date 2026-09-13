@@ -11,11 +11,13 @@ interface AppearancePopoverProps {
   accent: string;
   onThemeChange: (theme: ThemeMode) => void;
   onAccentChange: (hex: string) => void;
+  fontScale: import('../utils/theme.js').FontScale;
+  onFontScaleChange: (scale: import('../utils/theme.js').FontScale) => void;
 }
 
 /** Header palette button + its anchored popover — des-2.txt §4/§4.1. */
 export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
-  open, onOpenChange, themeMode, accent, onThemeChange, onAccentChange
+  open, onOpenChange, themeMode, accent, onThemeChange, onAccentChange, fontScale, onFontScaleChange
 }) => {
   const { t } = useI18n();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -75,11 +77,11 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
             style={{ borderBottom: '1px solid var(--tk-border)', paddingBottom: 10, marginBottom: 14 }}
           >
             <Palette className="w-4 h-4" style={{ color: 'var(--tk-accent-text)' }} />
-            <span className="text-[10.5px] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-accent-text)' }}>
+            <span className="text-[0.65625rem] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-accent-text)' }}>
               {t('visualAppearance')}
             </span>
           </div>
-          <AppearancePanel themeMode={themeMode} accent={accent} onThemeChange={onThemeChange} onAccentChange={onAccentChange} />
+          <AppearancePanel themeMode={themeMode} accent={accent} onThemeChange={onThemeChange} onAccentChange={onAccentChange} fontScale={fontScale} onFontScaleChange={onFontScaleChange} />
         </div>
       )}
     </div>
