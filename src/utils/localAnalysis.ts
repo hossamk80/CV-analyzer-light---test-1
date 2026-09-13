@@ -12,6 +12,8 @@
  * stay with the model — which is exactly why the hybrid mode exists.
  */
 
+import type { ScreeningRequirement } from './requirementRules.js';
+
 export interface JobData {
   title?: string;
   experience?: number;
@@ -22,7 +24,7 @@ export interface JobData {
   requiredCerts?: string;
   languages?: string;
   specialization?: string;
-  checklist?: { id: string; requirement: string; importance?: string }[];
+  checklist?: ScreeningRequirement[];
 }
 
 export interface AnalysisResult {
@@ -159,10 +161,9 @@ export function matchTerms(cvText: string, terms: string[]): string[] {
   return Array.from(new Set(terms.filter(term => term.trim() && sentencesOf(cvText).some(line => {
     const norm = normalizeText(line);
     const needle = normalizeText(term);
-    const at = norm.indexOf(needle);
-    if (at < 0) return false;
-    if (/[\p{L}\p{N}]/u.test(norm[at - 1] || '') || /[\p{L}\p{N}]/u.test(norm[at + needle.length] || '')) return false;
-    return !/(?:\bno\b|\bnot\b|without|planned|pursuing|studying|لا احمل|غير حاصل|لم احصل|قيد الدراسه)/.test(norm);
+    const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (!new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'u').test(norm)) return false;
+    return !/(?:\bno\b|\bnot\b|without|planned|pursuing|studying|expired|in progress|\brequired\b|\bpreferred\b|لا احمل|غير حاصل|لم احصل|قيد الدراسه|منتهيه|اخطط|مطلوب|يشترط)/.test(norm);
   })).map(t => t.trim())));
 }
 
@@ -246,6 +247,23 @@ export function evaluateChecklist(cvText: string, checklist: JobData['checklist'
   const sentences = sentencesOf(cvText);
 
   return (checklist || []).map(item => {
+    if (item.ruleType && item.ruleType !== 'manual') {
+      const terms = item.acceptedTerms || [];
+      let source = sentences;
+      // A credential must appear as an education/credential statement, not a job requirement.
+      if (item.ruleType === 'certificate') source = sentences.filter(s => /certif|credential|شهاد|معتمد/i.test(s));
+      if (item.ruleType === 'degree') source = sentences.filter(s => DEGREE_PATTERNS.some(p => p.re.test(s)));
+      const evidence = source.find(s => matchTerms(s, terms).length > 0) || '';
+      let status = evidence ? 'met' : 'unknown';
+      let proof = evidence;
+      if (item.ruleType === 'years') {
+        // Total years must be explicitly stated; domain-specific years need manual review.
+        proof = sentences.find(s => /\d.*(?:years?.*experience|سنوات.*خبر|سنة.*خبر)/i.test(normalizeText(s))) || '';
+        const years = proof ? extractTotalYears(proof) : null;
+        status = years === null ? 'unknown' : years >= (item.minimumYears ?? Infinity) ? 'met' : 'not_met';
+      }
+      return { id: item.id, status, matched: status === 'met', evidence: proof, coverage: status === 'met' ? 1 : 0, keywords: terms, hits: proof ? matchTerms(proof, terms) : [] };
+    }
     const keywords = keywordsOf(item.requirement || '');
     if (keywords.length === 0) {
       return { id: item.id, status: 'unknown', matched: false, evidence: '', coverage: 0, keywords: [] as string[], hits: [] as string[] };
@@ -273,8 +291,8 @@ export function evaluateChecklist(cvText: string, checklist: JobData['checklist'
     const matched = (keywords.length <= 2 ? hits.length === keywords.length : coverage >= 0.6)
       && (!requiredYears || (years !== null && years >= Number(requiredYears[1])));
     const status = requiredYears && years !== null && years < Number(requiredYears[1]) ? 'not_met'
-      : matched ? (requiredYears || keywords.length > 2 ? 'partial' : 'met') : 'unknown';
-    return { id: item.id, status, matched: status === 'met', evidence: evidence || '', coverage, keywords, hits };
+      : matched ? 'partial' : 'unknown';
+    return { id: item.id, status, matched: false, evidence: evidence || '', coverage, keywords, hits };
   });
 }
 
@@ -343,9 +361,13 @@ export function analyzeLocally(
 
   // Overall: technical dominates, then experience. Cultural only contributes
   // when the job actually declared soft skills or languages to look for.
-  const overall = culturalTerms > 0
-    ? technical * 0.55 + experience * 0.30 + cultural * 0.15
-    : technical * 0.65 + experience * 0.35;
+  const dimensions = [
+    { active: checklist.length > 0 || declaredSkills.length > 0, score: technical, weight: 0.55 },
+    { active: requiredYears > 0, score: experience, weight: 0.30 },
+    { active: culturalTerms > 0, score: cultural, weight: 0.15 }
+  ].filter(d => d.active);
+  const weightSum = dimensions.reduce((sum, d) => sum + d.weight, 0);
+  const overall = weightSum ? dimensions.reduce((sum, d) => sum + d.score * d.weight, 0) / weightSum : 0;
 
   const { degreeKey, fieldKey } = extractEducation(cvText);
 
@@ -362,6 +384,8 @@ export function analyzeLocally(
   missingRequirements.slice(0, 6).forEach(r => gaps.push(t('localGapRequirement', { requirement: r })));
 
   const checklist_eval = evaluated.map((ev, i) => ({
+    requirementSnapshot: { ...checklist[i], acceptedTerms: checklist[i]?.acceptedTerms?.slice() },
+    engineVersion: 'local-rules-v2',
     id: ev.id,
     status: ev.status,
     matched: ev.matched,

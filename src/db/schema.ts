@@ -23,7 +23,7 @@ export const settings = sqliteTable('settings', {
   // How much of the screening the AI does: 'ai' (model does everything),
   // 'hybrid' (local extraction feeds the model — fewer tokens, same output),
   // 'local' (deterministic matching only, zero tokens).
-  analysisMode: text('analysis_mode').notNull().default('hybrid'),
+  analysisMode: text('analysis_mode').notNull().default('local'),
 });
 
 export const jobs = sqliteTable('jobs', {

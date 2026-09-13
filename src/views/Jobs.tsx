@@ -1,4 +1,6 @@
 import WorkflowFields, { type Workflow } from '../components/WorkflowFields.js';
+import RequirementRuleFields from '../components/RequirementRuleFields.js';
+import { validRequirements, type ScreeningRequirement } from '../utils/requirementRules.js';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext.js';
@@ -11,7 +13,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
-interface ChecklistItem {
+interface ChecklistItem extends ScreeningRequirement {
   id: string;
   requirement: string;
   importance: 'Mandatory' | 'Important' | 'Additional';
@@ -71,9 +73,10 @@ export const Jobs: React.FC = () => {
     setError(null);
 
     // Validate checklist items are not empty
-    const invalidItems = checklist.some(item => !item.requirement.trim());
+    const preparedChecklist = checklist.map(item => ({ ...item, acceptedTerms: item.acceptedTerms?.map(s => s.trim()).filter(Boolean) }));
+    const invalidItems = !validRequirements(preparedChecklist);
     if (invalidItems) {
-      setError(t('emptyChecklistError'));
+      setError(t('invalidRule'));
       setLoading(false);
       return;
     }
@@ -88,7 +91,7 @@ export const Jobs: React.FC = () => {
         experience,
         degree,
         skills: skillsArray,
-        checklist,
+        checklist: preparedChecklist,
         specialization,
         technicalSkills: technicalSkills ? technicalSkills.split(',').map(s => s.trim()).filter(Boolean) : [],
         nationality,
@@ -257,6 +260,7 @@ export const Jobs: React.FC = () => {
                 </button>
               </div>
 
+              <RequirementRuleFields item={item} onChange={value => setChecklist(current => current.map(r => r.id === item.id ? { ...r, ...value } as ChecklistItem : r))} />
               <div className="flex items-center gap-2 mt-2.5">
                 <span className="text-[0.625rem] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>
                   {t('importanceLevel')}

@@ -18,6 +18,12 @@ try {
  const body={title:'Network engineer',department:'IT',location:'Riyadh',experience:5,degree:'Bachelor',checklist:[],workflowType:'tender',projectName:'Synthetic project',requiredCount:3};
  const created=await call('/api/jobs','POST',body);assert.equal(created.status,201);const job=await created.json();assert.equal(job.workflowType,'tender');assert.equal(job.requiredCount,3);
  assert.equal((await call('/api/jobs','POST',{...body,requiredCount:-1})).status,400);
+ assert.equal((await call('/api/screening-settings')).status,200);
+ assert.equal((await (await call('/api/screening-settings')).json()).analysisMode,'local');
+ assert.equal((await call('/api/jobs','POST',{...body,checklist:[{id:'x',requirement:'Certificate',ruleType:'certificate',acceptedTerms:[]}]})).status,400);
+ const rules=[{id:'cert',requirement:'Certificate',importance:'Mandatory',ruleType:'certificate',acceptedTerms:['CSSA','CLSA']}];
+ const ruled=await call('/api/jobs','POST',{...body,checklist:rules});assert.equal(ruled.status,201);
+ assert.deepEqual(JSON.parse((await ruled.json()).checklist),rules);
  assert.equal((await call('/api/jobs/'+job.id,'PUT',{workflowType:'invalid'})).status,400);
  const updated=await (await call('/api/jobs/'+job.id,'PUT',{workflowType:'recruitment'})).json();assert.equal(updated.projectName,'Synthetic project');assert.equal(updated.workflowType,'recruitment');
  const db=new DatabaseSync(join(cwd,'sqlite.db'));

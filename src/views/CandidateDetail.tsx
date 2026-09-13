@@ -37,6 +37,7 @@ interface TimelineItem {
 }
 
 interface ChecklistEvalItem {
+  requirementSnapshot?: { id: string; requirement: string; importance?: string };
   id: string;
   matched: boolean;
   evidence: string;
@@ -229,8 +230,10 @@ export const CandidateDetail: React.FC = () => {
   const activeCand = anonymizeCandidate(candidate, gdprActive);
 
   // Map checklists to display description
-  const jobChecklist = job?.checklist ? JSON.parse(job.checklist) : [];
   const checklistMatchMap = activeCand.checklistEval || [];
+  const snapshots = checklistMatchMap.map(item => item.requirementSnapshot).filter(Boolean);
+  const jobChecklist = snapshots.length === checklistMatchMap.length && snapshots.length > 0
+    ? snapshots : job?.checklist ? JSON.parse(job.checklist) : [];
 
   return (
     <div className="space-y-6 print-container">

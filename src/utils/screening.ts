@@ -1,6 +1,6 @@
 export type RequirementStatus = 'met' | 'partial' | 'not_met' | 'unknown';
 export interface Requirement { id: string; importance?: string; requirement?: string }
-export interface Evaluation { id: string; matched?: boolean; status?: string; evidence?: string }
+export interface Evaluation { id: string; matched?: boolean; status?: string; evidence?: string; requirementSnapshot?: Requirement }
 
 export function requirementStatus(ev?: Evaluation): RequirementStatus {
   if (!ev) return 'unknown';
@@ -10,6 +10,8 @@ export function requirementStatus(ev?: Evaluation): RequirementStatus {
 }
 
 export function mandatorySummary(requirements: Requirement[], evaluations: Evaluation[]): { total: number; met: number; status: 'unconfigured' | 'not_met' | 'met' | 'review' } {
+  const snapshots = evaluations.map(e => e.requirementSnapshot).filter((r): r is Requirement => !!r);
+  if (snapshots.length > 0 && snapshots.length === evaluations.length) requirements = snapshots;
   const mandatory = requirements.filter(r => r.importance === 'Mandatory');
   const statuses = mandatory.map(r => requirementStatus(evaluations.find(e => e.id === r.id)));
   return {

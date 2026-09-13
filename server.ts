@@ -20,6 +20,7 @@ import { eq, and, ne, desc, sql } from 'drizzle-orm';
 import { DEFAULT_ANALYSIS_PROMPT, DEFAULT_REANALYSIS_PROMPT } from './src/prompts.js';
 import { classifyAiError } from './src/utils/aiErrors.js';
 import { analyzeLocally, extractLocalFacts, extractTotalYears, extractEmail, extractPhone, matchTerms } from './src/utils/localAnalysis.js';
+import { validRequirements } from './src/utils/requirementRules.js';
 import { en } from './src/i18n/en.js';
 import { ar } from './src/i18n/ar.js';
 
@@ -303,7 +304,7 @@ function initDbSchema() {
   try { sqlite.exec(`ALTER TABLE settings ADD COLUMN notify_on_high_match INTEGER DEFAULT 0;`); } catch {}
   // 'ai' = model does everything, 'hybrid' = local extraction feeds the model,
   // 'local' = deterministic matching only and no tokens at all.
-  try { sqlite.exec(`ALTER TABLE settings ADD COLUMN analysis_mode TEXT DEFAULT 'hybrid';`); } catch {}
+  try { sqlite.exec(`ALTER TABLE settings ADD COLUMN analysis_mode TEXT DEFAULT 'local';`); } catch {}
   // Jobs table new optional fields
   try { sqlite.exec(`ALTER TABLE jobs ADD COLUMN specialization TEXT;`); } catch {}
   try { sqlite.exec(`ALTER TABLE jobs ADD COLUMN technical_skills TEXT;`); } catch {}
@@ -749,6 +750,7 @@ app.get('/api/jobs/:id', authenticateToken, (req, res) => {
 });
 
 app.post('/api/jobs', authenticateToken, requireCapability('manage_jobs'), (req: AuthRequest, res) => {
+  if (!validRequirements(req.body.checklist)) return res.status(400).json({ error: serverT(req.headers['accept-language'])('invalidRule') });
   if (req.body.workflowType !== undefined && !['recruitment', 'tender'].includes(req.body.workflowType)) return res.status(400).json({ error: 'Invalid workflow type' });
   if (req.body.requiredCount !== undefined && (!Number.isInteger(req.body.requiredCount) || req.body.requiredCount < 1)) return res.status(400).json({ error: 'Required count must be a positive integer' });
   if (req.body.projectName !== undefined && typeof req.body.projectName !== 'string') return res.status(400).json({ error: 'Invalid project name' });
@@ -799,6 +801,7 @@ app.post('/api/jobs', authenticateToken, requireCapability('manage_jobs'), (req:
 });
 
 app.put('/api/jobs/:id', authenticateToken, requireCapability('manage_jobs'), (req: AuthRequest, res) => {
+  if (req.body.checklist !== undefined && !validRequirements(req.body.checklist)) return res.status(400).json({ error: serverT(req.headers['accept-language'])('invalidRule') });
   if (req.body.workflowType !== undefined && !['recruitment', 'tender'].includes(req.body.workflowType)) return res.status(400).json({ error: 'Invalid workflow type' });
   if (req.body.requiredCount !== undefined && (!Number.isInteger(req.body.requiredCount) || req.body.requiredCount < 1)) return res.status(400).json({ error: 'Required count must be a positive integer' });
   if (req.body.projectName !== undefined && typeof req.body.projectName !== 'string') return res.status(400).json({ error: 'Invalid project name' });
@@ -2754,7 +2757,7 @@ app.post('/api/upload', authenticateToken, requireCapability('upload_cvs'), uplo
   const activePrompt = db.select().from(aiPrompts).where(eq(aiPrompts.isActive, 1)).get();
 
   const appSettings = db.select().from(settings).where(eq(settings.id, 1)).get() as any;
-  const analysisMode: AnalysisMode = (appSettings?.analysisMode as AnalysisMode) || 'hybrid';
+  const analysisMode: AnalysisMode = (appSettings?.analysisMode as AnalysisMode) || 'local';
   const lang = typeof req.body.lang === 'string' ? req.body.lang : undefined;
 
   // Local mode needs no provider at all; the other two do.
@@ -3065,7 +3068,7 @@ app.post('/api/candidates/:id/reanalyze', authenticateToken, requireRole(['admin
   const activePrompt = db.select().from(aiPrompts).where(eq(aiPrompts.isActive, 1)).get();
 
   const appSettings = db.select().from(settings).where(eq(settings.id, 1)).get() as any;
-  const analysisMode: AnalysisMode = (appSettings?.analysisMode as AnalysisMode) || 'hybrid';
+  const analysisMode: AnalysisMode = (appSettings?.analysisMode as AnalysisMode) || 'local';
   const lang = typeof (req as any).body?.lang === 'string' ? (req as any).body.lang : undefined;
 
   if (analysisMode !== 'local' && (!activeProv || !activeProv.apiKey)) {
@@ -3176,7 +3179,7 @@ app.get('/api/screening-settings', authenticateToken, (req, res) => {
   res.json({
     matchThreshold: s?.matchThreshold ?? 80,
     notifyOnHighMatch: (s?.notifyOnHighMatch ?? 0) === 1,
-    analysisMode: s?.analysisMode ?? 'hybrid'
+    analysisMode: s?.analysisMode ?? 'local'
   });
 });
 
@@ -3194,7 +3197,7 @@ app.put('/api/screening-settings', authenticateToken, requireCapability('upload_
   db.update(settings).set({
     matchThreshold: matchThreshold !== undefined ? parseInt(matchThreshold) : (current?.matchThreshold ?? 80),
     notifyOnHighMatch: notifyOnHighMatch !== undefined ? (notifyOnHighMatch ? 1 : 0) : (current?.notifyOnHighMatch ?? 0),
-    analysisMode: analysisMode !== undefined ? analysisMode : (current?.analysisMode ?? 'hybrid')
+    analysisMode: analysisMode !== undefined ? analysisMode : (current?.analysisMode ?? 'local')
   }).where(eq(settings.id, 1)).run();
 
   logAuditEvent(

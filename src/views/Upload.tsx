@@ -45,7 +45,7 @@ export const Upload: React.FC = () => {
   // Screening knobs, persisted server-side via /api/screening-settings.
   const [matchThreshold, setMatchThreshold] = useState(80);
   const [notifyOnHighMatch, setNotifyOnHighMatch] = useState(false);
-  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('hybrid');
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('local');
   const canChangeScreening = !!role && hasPermission(role, 'upload_cvs', capabilities);
 
   // Files the user removed mid-flight. An upload already in the air cannot be
