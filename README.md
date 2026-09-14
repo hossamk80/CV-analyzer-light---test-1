@@ -12,7 +12,7 @@ Arabic-first · Fully bilingual (AR / EN, RTL / LTR) · Self-hosted · Zero mand
 
 ## Development update
 
-### Latest development: evidence review, staffing coverage and local OCR
+### Latest development: evidence review, staffing coverage, local OCR and unified profiles
 
 Branch: `feature/evidence-project-coverage` (PR #4). These features are in the development branch until merged.
 
@@ -20,6 +20,19 @@ Branch: `feature/evidence-project-coverage` (PR #4). These features are in the d
 2. Open a candidate report → **Evidence review**. Record status, original evidence, reviewer note and optionally a manually verified page number for each condition.
 3. For an active tender job with a project name, review all mandatory conditions as met, enter the same verified internal candidate reference across CV versions, then approve project staffing.
 4. The dashboard shows required, reviewed, approved and shortage counts per active tender job. Refresh after changes. Data changes invalidate prior reviews/approvals; automated scores remain separate from human review.
+
+### Unified profiles — ملف المرشح الموحد
+
+Open a candidate report → **Unified candidate profile**. The table lists linked CV versions and their job assessments, contact details, dates and scores, with links to each report and original CV download.
+
+1. Search by name or email and choose **Preview identity**. Search results are only candidates for review; no link is inferred from names or shared contact details.
+2. Compare every member of both groups, enter a verification reason, confirm that you checked the identities, then choose **Link reviewed groups**.
+3. To correct a link, choose **Separate this CV version**. All assessments using the same exact CV move together into a separate identity; originals are never rewritten.
+4. Review project assignments again: linking or unlinking clears staffing approvals for all affected candidates, while preserving automated scores and evidence reviews. Approved identity links prevent allocating the same person twice within a named project even with different manually entered staffing references.
+
+من تقرير المرشح افتح **ملف المرشح الموحد**، وابحث عن النسخة الأخرى بالاسم أو البريد، ثم عاين المجموعتين وسجل سبب التحقق قبل الربط. لفصل نسخة مرتبطة بالخطأ اختر **فصل نسخة السيرة**؛ تُفصل جميع تقييمات الملف المتطابق معاً. بعد أي ربط أو فصل، أعد اعتماد تخصيصات المشاريع المتأثرة.
+
+Permissions follow `change_status`. Link/unlink actions are logged in the audit log. Stale previews are rejected; refresh before retrying. Anonymized candidates are excluded from search and profile views. This is an aggregate view of existing CV versions and assessments, not a canonical editable contact/education record, and not an archive of each re-analysis. Profile-link history is available in the audit log; page-level OCR citations and comprehensive visual QA remain pending.
 
 ### Local OCR setup — إعداد القراءة المحلية
 
@@ -427,8 +440,8 @@ coverage; a high match score is not an eligibility approval. Requirement states 
 partial, not met, and unknown. Complex local keyword matches remain partial for review.
 
 Identical CV files uploaded for different jobs share a persistent profile ID and the report
-links their assessments. This first implementation deliberately does not merge different
-CV versions by name/email. It is not yet a complete person master-data or project staffing module.
+links their assessments. Different CV versions can now be linked manually after identity review;
+names/emails are search hints only. It is not yet a complete editable person master-data module.
 No automatic rejection or external messaging is introduced.
 
 `npm test` runs screening regressions. `npm run test:integration` builds and starts production
@@ -441,5 +454,5 @@ and activate the updated built-in defaults through Prompt Management. Existing c
 assessments need re-analysis to receive new evaluation states. Local assessments now store
 requirement snapshots; accepted alternatives, human evidence review and per-job project coverage
 are implemented in the development branch described above. Full job-version history, manual
-profile merging, Docker and external Drive/Dropbox/Odoo/recruitment connectors remain subsequent work. No live AI
+profile fact editing, Docker and external Drive/Dropbox/Odoo/recruitment connectors remain subsequent work. No live AI
 provider or external connector was exercised by the automated tests.

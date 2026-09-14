@@ -23,6 +23,8 @@ import { analyzeLocally, extractLocalFacts, extractTotalYears, extractEmail, ext
 import { validRequirements } from './src/utils/requirementRules.js';
 import { registerReviewApi } from './src/reviewApi.js';
 import { extractLocalOcr, LocalOcrError } from './src/utils/localOcr.js';
+import { initializeIdentity, identitySnapshot } from './src/utils/profileIdentity.js';
+import { registerProfileApi } from './src/profileApi.js';
 import { en } from './src/i18n/en.js';
 import { ar } from './src/i18n/ar.js';
 
@@ -933,11 +935,13 @@ app.delete('/api/jobs/:id', authenticateToken, requireCapability('delete_data'),
 });
 
 // Profile membership uses exact document hashes, never name similarity.
+initializeIdentity(sqlite);
+registerProfileApi(app,sqlite,authenticateToken,requireCapability('change_status'),serverT,logAuditEvent);
 app.get('/api/candidates/:id/applications', authenticateToken, (req, res) => {
   const candidate = db.select().from(candidates).where(eq(candidates.id, Number(req.params.id))).get();
-  if (!candidate) return res.status(404).json({ error: 'Candidate not found' });
-  const applications = candidate.profileId ? db.select().from(candidates).where(eq(candidates.profileId, candidate.profileId)).all() : [candidate];
-  res.json(applications.map(c => ({ id: c.id, jobId: c.jobId, matchScore: c.matchScore, status: c.status })));
+  if (!candidate || candidate.gdprAnonymized) return res.status(404).json({ error: 'Candidate not found' });
+  const applications = identitySnapshot(sqlite,candidate.id).members;
+  res.json(applications.map(c => ({ id: c.id, jobId: c.jobId, matchScore: c.score, status: c.status })));
 });
 
 // 3. Candidates API

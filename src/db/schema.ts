@@ -86,6 +86,11 @@ export const candidates = sqliteTable('candidates', {
   createdAt: text('created_at').notNull().default(''),
 });
 
+export const profileIdentityGroups = sqliteTable('profile_identity_groups', {
+  profileId: integer('profile_id').primaryKey().references(() => candidateProfiles.id, { onDelete: 'cascade' }),
+  groupKey: text('group_key').notNull(),
+});
+
 export const evidenceReviews = sqliteTable('evidence_reviews', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   candidateId: integer('candidate_id').notNull().references(() => candidates.id, { onDelete: 'cascade' }),

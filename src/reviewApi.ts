@@ -1,5 +1,6 @@
 import type { Express } from 'express';
 import { reviewRevision, projectKey, allMandatoryReviewed } from './utils/reviewWorkflow.js';
+import { identityKey } from './utils/profileIdentity.js';
 
 export function registerReviewApi(app: Express, sqlite: any, auth: any, writeAccess: any, translate: any, audit: any) {
   sqlite.exec(`CREATE TABLE IF NOT EXISTS evidence_reviews (
@@ -70,7 +71,8 @@ export function registerReviewApi(app: Express, sqlite: any, auth: any, writeAcc
     const active = activeApprovals().filter((a: any) => a.candidate_id !== ctx.candidate.id);
     const duplicate = active.some((a: any) => {
       const other = context(a.candidate_id)!.candidate;
-      return a.project_key === key && (a.identity_key === identity || (ctx.candidate.profile_id && other.profile_id === ctx.candidate.profile_id) || (ctx.candidate.file_hash && other.file_hash === ctx.candidate.file_hash));
+      const person=identityKey(sqlite,ctx.candidate.profile_id);
+      return a.project_key === key && (a.identity_key === identity || (person && person===identityKey(sqlite,other.profile_id)) || (ctx.candidate.file_hash && other.file_hash === ctx.candidate.file_hash));
     });
     if (duplicate) return fail(req,res,409,'approvalDuplicate');
     if (active.filter((a: any) => context(a.candidate_id)!.candidate.job_id === ctx.job.id).length >= ctx.job.required_count) return fail(req,res,409,'approvalFull');
@@ -91,7 +93,7 @@ export function registerReviewApi(app: Express, sqlite: any, auth: any, writeAcc
       const reviewed = pool.filter((c: any) => { const ctx = context(c.id)!; return allMandatoryReviewed(ctx.requirements,ctx.reviews); });
       const approved = active.filter((a: any) => pool.some((c: any) => c.id === a.candidate_id)).length;
       return { jobId: job.id, projectName: job.project_name || '', title: job.title, required: job.required_count,
-        reviewed: new Set(reviewed.map((c: any) => c.profile_id ? `p:${c.profile_id}` : c.file_hash ? `h:${c.file_hash}` : `c:${c.id}`)).size,
+        reviewed: new Set(reviewed.map((c: any) => identityKey(sqlite,c.profile_id) || `c:${c.id}`)).size,
         approved, shortage: Math.max(0,job.required_count-approved) };
     });
     res.json({ rows, updatedAt: new Date().toISOString() });
