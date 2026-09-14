@@ -21,6 +21,7 @@ import { DEFAULT_ANALYSIS_PROMPT, DEFAULT_REANALYSIS_PROMPT } from './src/prompt
 import { classifyAiError } from './src/utils/aiErrors.js';
 import { analyzeLocally, extractLocalFacts, extractTotalYears, extractEmail, extractPhone, matchTerms } from './src/utils/localAnalysis.js';
 import { validRequirements } from './src/utils/requirementRules.js';
+import { registerReviewApi } from './src/reviewApi.js';
 import { en } from './src/i18n/en.js';
 import { ar } from './src/i18n/ar.js';
 
@@ -939,6 +940,7 @@ app.get('/api/candidates/:id/applications', authenticateToken, (req, res) => {
 });
 
 // 3. Candidates API
+registerReviewApi(app, sqlite, authenticateToken, requireCapability('change_status'), serverT, logAuditEvent);
 app.get('/api/candidates', authenticateToken, (req, res) => {
   const allCandidates = db.select().from(candidates).all();
   // Map JSON strings back to objects

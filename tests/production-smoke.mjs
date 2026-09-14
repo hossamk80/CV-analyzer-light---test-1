@@ -36,6 +36,37 @@ try {
  assert.equal((await call('/api/ai-providers/'+providerId,'PUT',{modelName:'gemini-custom-updated',isCustomModel:true})).status,200);
  assert.equal(db.prepare('SELECT api_key FROM ai_providers WHERE id=?').get(providerId).api_key,'synthetic-key-only');
  assert.equal((await call('/api/ai-providers/'+providerId,'PUT',{modelName:'Gemini 3 Flash',isCustomModel:true})).status,400);
+ // Review and staffing workflow: no provider calls or real candidate data.
+ const tender=await (await call('/api/jobs','POST',{...body,requiredCount:1,checklist:rules})).json();
+ const tender2=await (await call('/api/jobs','POST',{...body,title:'Second role',requiredCount:1,checklist:rules})).json();
+ const first=Number(add.run(tender.id,'Synthetic Reviewer A',90,'review-cv-a').lastInsertRowid);
+ const second=Number(add.run(tender2.id,'Synthetic Reviewer A',90,'review-cv-b').lastInsertRowid);
+ const endpoint=id=>'/api/candidates/'+id+'/evidence-reviews';
+ assert.equal((await fetch(base+endpoint(first))).status,401);
+ const review=await (await call(endpoint(first))).json();
+ assert.equal((await call('/api/candidates/'+first+'/staffing-approval','POST',{revision:review.revision,identityKey:'person-a'})).status,400);
+ const payload={revision:review.revision,requirementId:'cert',status:'met',evidence:'Verified certificate',note:'Synthetic test review',page:1};
+ assert.equal((await call(endpoint(first),'POST',{...payload,evidence:''})).status,400);
+ assert.equal((await call(endpoint(first),'POST',payload)).status,201);
+ assert.equal((await call('/api/candidates/'+first+'/staffing-approval','POST',{revision:review.revision,identityKey:'person-a'})).status,201);
+ let coverage=await (await call('/api/project-coverage')).json();
+ assert.equal(coverage.rows.find(r=>r.jobId===tender.id).shortage,0);
+ const next=await (await call(endpoint(second))).json();
+ assert.equal((await call(endpoint(second),'POST',{...payload,revision:next.revision})).status,201);
+ assert.equal((await call('/api/candidates/'+second+'/staffing-approval','POST',{revision:next.revision,identityKey:' PERSON-A '})).status,409);
+ await call('/api/jobs/'+tender.id,'PUT',{checklist:[{...rules[0],requirement:'Changed requirement'}]});
+ assert.equal((await call(endpoint(first),'POST',payload)).status,409);
+ coverage=await (await call('/api/project-coverage')).json();
+ assert.equal(coverage.rows.find(r=>r.jobId===tender.id).shortage,1);
+ assert.equal((await (await call(endpoint(first))).json()).history[0].stale,true);
+ db.prepare('UPDATE candidates SET gdpr_anonymized=1 WHERE id=?').run(first);
+ assert.equal(db.prepare('SELECT count(*) AS n FROM evidence_reviews WHERE candidate_id=?').get(first).n,0);
+ const permission=db.prepare("SELECT * FROM role_capabilities WHERE role='admin' AND capability='change_status'").get();
+ if(permission) db.prepare('UPDATE role_capabilities SET is_enabled=0 WHERE id=?').run(permission.id);
+ else db.prepare("INSERT INTO role_capabilities(role,capability,is_enabled) VALUES('admin','change_status',0)").run();
+ assert.equal((await call(endpoint(second),'POST',{...payload,revision:next.revision})).status,403);
+ assert.equal((await call('/api/candidates/'+second+'/staffing-approval','POST',{revision:next.revision,identityKey:'person-b'})).status,403);
+ assert.equal((await call('/api/candidates/'+second+'/staffing-approval','DELETE')).status,403);
  db.close();
  console.log('PASS: production frontend, auth, workflow CRUD/validation, conservative profile linking, configurable dashboard threshold.');
 } finally {

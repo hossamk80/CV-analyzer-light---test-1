@@ -7,6 +7,7 @@ import { apiRequest } from '../utils/api.js';
 import { anonymizeCandidate } from '../utils/gdpr.js';
 import { resolveCandidateDetails } from '../utils/candidateExtraction.js';
 import Bidi from '../components/Bidi.js';
+import EvidenceReview from '../components/EvidenceReview.js';
 import { 
   ArrowLeft, 
   Printer, 
@@ -315,6 +316,7 @@ export const CandidateDetail: React.FC = () => {
 
       <div className="tk-panel p-4" role="status">{t(`mandatory_${mandatorySummary(jobChecklist, checklistMatchMap).status}`)} — {mandatorySummary(jobChecklist, checklistMatchMap).met}/{mandatorySummary(jobChecklist, checklistMatchMap).total}</div>
       {/* SVG Score Gauges */}
+      {!gdprActive && !activeCand.gdprAnonymized && <EvidenceReview candidateId={activeCand.id} />}
       <div className="tk-panel grid grid-cols-2 md:grid-cols-4 gap-6">
         <CircularGauge percentage={activeCand.matchScore} label={t('overallMatch')} color="stroke-brand" />
         <CircularGauge percentage={activeCand.scoreTechnical} label={t('technicalFit')} color="stroke-emerald-500" />
