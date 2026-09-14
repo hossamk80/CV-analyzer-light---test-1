@@ -23,10 +23,13 @@ export const settings = sqliteTable('settings', {
   // How much of the screening the AI does: 'ai' (model does everything),
   // 'hybrid' (local extraction feeds the model — fewer tokens, same output),
   // 'local' (deterministic matching only, zero tokens).
-  analysisMode: text('analysis_mode').notNull().default('hybrid'),
+  analysisMode: text('analysis_mode').notNull().default('local'),
 });
 
 export const jobs = sqliteTable('jobs', {
+  workflowType: text('workflow_type').notNull().default('recruitment'),
+  projectName: text('project_name'),
+  requiredCount: integer('required_count').notNull().default(1),
   id: integer('id').primaryKey({ autoIncrement: true }),
   title: text('title').notNull(),
   department: text('department').notNull(),
@@ -48,7 +51,13 @@ export const jobs = sqliteTable('jobs', {
   createdAt: text('created_at').notNull().default(''),
 });
 
+export const candidateProfiles = sqliteTable('candidate_profiles', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  documentKey: text('document_key').unique().notNull(),
+});
+
 export const candidates = sqliteTable('candidates', {
+  profileId: integer('profile_id'),
   id: integer('id').primaryKey({ autoIncrement: true }),
   jobId: integer('job_id').notNull().references(() => jobs.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),

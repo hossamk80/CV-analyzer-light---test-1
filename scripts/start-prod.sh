@@ -11,4 +11,4 @@ fi
 
 echo "[INFO] Starting production server..."
 export NODE_ENV=production
-node dist/server.cjs
+node dist/server.mjs

@@ -105,8 +105,8 @@ export const RbacSettingsView: React.FC = () => {
             <Shield className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-[15px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('rbacTitle')}</h2>
-            <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>{t('rbacSubtitle')}</p>
+            <h2 className="text-[0.9375rem] font-medium" style={{ color: 'var(--tk-text)' }}>{t('rbacTitle')}</h2>
+            <p className="text-[0.6875rem]" style={{ color: 'var(--tk-muted)' }}>{t('rbacSubtitle')}</p>
           </div>
         </div>
 
@@ -150,8 +150,8 @@ export const RbacSettingsView: React.FC = () => {
                 return (
                   <tr key={cap}>
                     <td>
-                      <div className="font-semibold text-[12px]" style={{ color: 'var(--tk-text)' }}>{t(`cap_${cap}` as any)}</div>
-                      <div className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>{t(`cap_${cap}_desc` as any)}</div>
+                      <div className="font-semibold text-[0.75rem]" style={{ color: 'var(--tk-text)' }}>{t(`cap_${cap}` as any)}</div>
+                      <div className="text-[0.6875rem]" style={{ color: 'var(--tk-muted)' }}>{t(`cap_${cap}_desc` as any)}</div>
                     </td>
 
                     {roles.map(r => {

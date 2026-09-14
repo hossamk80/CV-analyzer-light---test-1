@@ -5,13 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --target=node18 --outfile=dist/server.cjs --format=cjs --external:framer-motion --external:mammoth --external:pdf-parse",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --target=node22 --packages=external --outfile=dist/server.mjs --format=esm",
     "build:fe": "vite build",
-    "build:server": "esbuild server.ts --bundle --platform=node --target=node18 --outfile=dist/server.cjs --format=cjs --external:framer-motion --external:mammoth --external:pdf-parse",
-    "start": "node dist/server.cjs",
+    "build:server": "esbuild server.ts --bundle --platform=node --target=node22 --packages=external --outfile=dist/server.mjs --format=esm",
+    "start": "node dist/server.mjs",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:integration": "npm run build && node tests/production-smoke.mjs"
   },
   "engines": {
     "node": ">=22.5.0"

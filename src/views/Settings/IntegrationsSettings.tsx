@@ -156,7 +156,7 @@ export const IntegrationsSettings: React.FC = () => {
       const res = await apiRequest('POST', '/api/integrations/test-connection', payload);
       setTestResult(prev => ({
         ...prev,
-        [platform]: { success: res.success, message: res.message || t('testConnectionSuccess') }
+        [platform]: { success: res.success, message: res.success ? t('testConnectionSuccess') : t('testConnectionFailed') }
       }));
     } catch (err: any) {
       setTestResult(prev => ({
@@ -224,7 +224,7 @@ export const IntegrationsSettings: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[300px] space-y-4">
         <Loader2 className="w-7 h-7 text-brand animate-spin" />
-        <p className="text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>{t('loadingIntegrations')}</p>
+        <p className="text-[0.78125rem]" style={{ color: 'var(--tk-muted)' }}>{t('loadingIntegrations')}</p>
       </div>
     );
   }
@@ -236,11 +236,11 @@ export const IntegrationsSettings: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex flex-col space-y-1 pb-3" style={{ borderBottom: '1px solid var(--tk-border)' }}>
-        <h2 className="text-[15px] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
+        <h2 className="text-[0.9375rem] font-medium flex items-center gap-2" style={{ color: 'var(--tk-text)' }}>
           <Link2 className="w-4 h-4 text-brand" />
           {t('integrationsTitle')}
         </h2>
-        <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>
+        <p className="text-[0.6875rem]" style={{ color: 'var(--tk-muted)' }}>
           {t('integrationsSub')}
         </p>
       </div>
@@ -258,15 +258,15 @@ export const IntegrationsSettings: React.FC = () => {
                 <Linkedin className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-[13px] font-semibold" style={{ color: 'var(--tk-text)' }}>{t('linkedInSourcing')}</h3>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--tk-muted)' }}>{t('linkedInDesc')}</p>
+                <h3 className="text-[0.8125rem] font-semibold" style={{ color: 'var(--tk-text)' }}>{t('linkedInSourcing')}</h3>
+                <p className="text-[0.6875rem] mt-0.5" style={{ color: 'var(--tk-muted)' }}>{t('linkedInDesc')}</p>
               </div>
             </div>
             
             <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
               {/* Enable toggle switch */}
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-text-muted">{liActive ? t('enabled') : t('disabled')}</span>
+                <span className="text-[0.6875rem] font-bold text-text-muted">{liActive ? t('enabled') : t('disabled')}</span>
                 <button
                   onClick={() => handleToggleActive('LinkedIn', liActive)}
                   className={`tk-switch tk-focusable ${liActive ? 'is-on' : ''}`}
@@ -290,7 +290,7 @@ export const IntegrationsSettings: React.FC = () => {
             <div className="space-y-4" style={{ padding: 14, borderTop: '1px solid var(--tk-border)' }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                  <label className="block text-[0.65625rem] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
                     {t('linkedInClientId')}
                   </label>
                   <input
@@ -302,7 +302,7 @@ export const IntegrationsSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                  <label className="block text-[0.65625rem] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
                     {t('linkedInClientSecret')}
                   </label>
                   <input
@@ -314,7 +314,7 @@ export const IntegrationsSettings: React.FC = () => {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                  <label className="block text-[0.65625rem] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
                     {t('linkedInRedirectUri')}
                   </label>
                   <input
@@ -350,7 +350,7 @@ export const IntegrationsSettings: React.FC = () => {
               )}
 
               <div className="flex justify-between items-center pt-2 border-t border-border-main/50">
-                <span className="text-[10px]" style={{ color: 'var(--tk-muted)' }}>{t('lastSync', { date: liSyncDate || t('neverSynced') })}</span>
+                <span className="text-[0.625rem]" style={{ color: 'var(--tk-muted)' }}>{t('lastSync', { date: liSyncDate || t('neverSynced') })}</span>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleTestConnection('LinkedIn')}
@@ -386,14 +386,14 @@ export const IntegrationsSettings: React.FC = () => {
                 <Database className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-[13px] font-semibold" style={{ color: 'var(--tk-text)' }}>{t('odooErp')}</h3>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--tk-muted)' }}>{t('odooDesc')}</p>
+                <h3 className="text-[0.8125rem] font-semibold" style={{ color: 'var(--tk-text)' }}>{t('odooErp')}</h3>
+                <p className="text-[0.6875rem] mt-0.5" style={{ color: 'var(--tk-muted)' }}>{t('odooDesc')}</p>
               </div>
             </div>
             
             <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-text-muted">{odActive ? t('enabled') : t('disabled')}</span>
+                <span className="text-[0.6875rem] font-bold text-text-muted">{odActive ? t('enabled') : t('disabled')}</span>
                 <button
                   onClick={() => handleToggleActive('Odoo', odActive)}
                   className={`tk-switch tk-focusable ${odActive ? 'is-on' : ''}`}
@@ -417,7 +417,7 @@ export const IntegrationsSettings: React.FC = () => {
             <div className="space-y-4" style={{ padding: 14, borderTop: '1px solid var(--tk-border)' }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                  <label className="block text-[0.65625rem] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
                     {t('odooUrl')}
                   </label>
                   <input
@@ -429,7 +429,7 @@ export const IntegrationsSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                  <label className="block text-[0.65625rem] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
                     {t('odooDb')}
                   </label>
                   <input
@@ -441,7 +441,7 @@ export const IntegrationsSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                  <label className="block text-[0.65625rem] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
                     {t('odooEmail')}
                   </label>
                   <input
@@ -453,7 +453,7 @@ export const IntegrationsSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                  <label className="block text-[0.65625rem] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
                     {t('odooPassword')}
                   </label>
                   <input
@@ -489,7 +489,7 @@ export const IntegrationsSettings: React.FC = () => {
               )}
 
               <div className="flex justify-between items-center pt-2 border-t border-border-main/50">
-                <span className="text-[10px]" style={{ color: 'var(--tk-muted)' }}>{t('lastSync', { date: odSyncDate || t('neverSynced') })}</span>
+                <span className="text-[0.625rem]" style={{ color: 'var(--tk-muted)' }}>{t('lastSync', { date: odSyncDate || t('neverSynced') })}</span>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleTestConnection('Odoo')}
@@ -525,14 +525,14 @@ export const IntegrationsSettings: React.FC = () => {
                 <Webhook className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-[13px] font-semibold" style={{ color: 'var(--tk-text)' }}>{custPlatformName || t('customPlatform')}</h3>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--tk-muted)' }}>{t('customDesc')}</p>
+                <h3 className="text-[0.8125rem] font-semibold" style={{ color: 'var(--tk-text)' }}>{custPlatformName || t('customPlatform')}</h3>
+                <p className="text-[0.6875rem] mt-0.5" style={{ color: 'var(--tk-muted)' }}>{t('customDesc')}</p>
               </div>
             </div>
             
             <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-text-muted">{custActive ? t('enabled') : t('disabled')}</span>
+                <span className="text-[0.6875rem] font-bold text-text-muted">{custActive ? t('enabled') : t('disabled')}</span>
                 <button
                   onClick={() => handleToggleActive('Custom', custActive)}
                   className={`tk-switch tk-focusable ${custActive ? 'is-on' : ''}`}
@@ -556,7 +556,7 @@ export const IntegrationsSettings: React.FC = () => {
             <div className="space-y-4" style={{ padding: 14, borderTop: '1px solid var(--tk-border)' }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                  <label className="block text-[0.65625rem] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
                     {t('customPlatformName')}
                   </label>
                   <input
@@ -568,7 +568,7 @@ export const IntegrationsSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                  <label className="block text-[0.65625rem] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
                     {t('customBaseUrl')}
                   </label>
                   <input
@@ -580,7 +580,7 @@ export const IntegrationsSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                  <label className="block text-[0.65625rem] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
                     {t('customAuthType')}
                   </label>
                   <select
@@ -594,7 +594,7 @@ export const IntegrationsSettings: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                  <label className="block text-[0.65625rem] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
                     {t('customAuthValue')}
                   </label>
                   <input
@@ -606,7 +606,7 @@ export const IntegrationsSettings: React.FC = () => {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-[10.5px] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
+                  <label className="block text-[0.65625rem] font-bold text-text-muted uppercase tracking-[.1em] mb-1.5">
                     {t('customPayloadMapping')}
                   </label>
                   <textarea
@@ -642,7 +642,7 @@ export const IntegrationsSettings: React.FC = () => {
               )}
 
               <div className="flex justify-between items-center pt-2 border-t border-border-main/50">
-                <span className="text-[10px]" style={{ color: 'var(--tk-muted)' }}>{t('lastSync', { date: custSyncDate || t('neverSynced') })}</span>
+                <span className="text-[0.625rem]" style={{ color: 'var(--tk-muted)' }}>{t('lastSync', { date: custSyncDate || t('neverSynced') })}</span>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleTestConnection('Custom')}

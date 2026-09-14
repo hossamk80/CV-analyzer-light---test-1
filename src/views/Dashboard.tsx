@@ -1,3 +1,4 @@
+import WorkflowFields, { type Workflow } from '../components/WorkflowFields.js';
 import React, { useState, useEffect } from 'react';
 import { useI18n } from '../i18n/I18nContext.js';
 import { useRole } from '../context/RoleContext.js';
@@ -24,6 +25,9 @@ import {
 import { useNavigate, Link } from 'react-router-dom';
 
 interface Job {
+  workflowType?: string;
+  projectName?: string;
+  requiredCount?: number;
   id: number;
   title: string;
   department: string;
@@ -113,6 +117,7 @@ export const Dashboard: React.FC = () => {
   const [editingJob, setEditingJob] = useState<Job | null>(null);
 
   // Edit fields
+  const [editWorkflow, setEditWorkflow] = useState<Workflow>({workflowType:'recruitment', projectName:'', requiredCount:1});
   const [editTitle, setEditTitle] = useState('');
   const [editDept, setEditDept] = useState('');
   const [editLoc, setEditLoc] = useState('');
@@ -204,6 +209,7 @@ export const Dashboard: React.FC = () => {
 
   const handleOpenEdit = (job: Job) => {
     setEditingJob(job);
+    setEditWorkflow({ workflowType: job.workflowType || 'recruitment', projectName: job.projectName || '', requiredCount: job.requiredCount || 1 });
     setEditTitle(job.title || '');
     setEditDept(job.department || '');
     setEditLoc(job.location || '');
@@ -266,6 +272,7 @@ export const Dashboard: React.FC = () => {
         val ? val.split(',').map(s => s.trim()).filter(Boolean) : [];
 
       await apiRequest('PUT', `/api/jobs/${editingJob.id}`, {
+        ...editWorkflow,
         title: editTitle,
         department: editDept,
         location: editLoc,
@@ -299,7 +306,7 @@ export const Dashboard: React.FC = () => {
   const strongMatches = stats.topCandidates.filter(c => c.matchScore >= 90).length;
 
   // Shared micro-label styling for the modal forms.
-  const modalLabel = 'block text-[10.5px] font-bold uppercase tracking-[.1em] mb-1.5 text-text-muted';
+  const modalLabel = 'block text-[0.65625rem] font-bold uppercase tracking-[.1em] mb-1.5 text-text-muted';
 
   const kpiTiles = [
     { label: t('kpiTotalCvs'), value: String(stats.totalCvs), series: cvSeries, icon: FileText },
@@ -315,7 +322,7 @@ export const Dashboard: React.FC = () => {
         {kpiTiles.map(({ label, value, series, icon: Icon }) => (
           <div key={label} className="tk-tile tk-focusable" style={{ transition: 'border-color 180ms ease' }}>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[10.5px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
+              <span className="text-[0.65625rem] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
                 <Icon className="w-3.5 h-3.5" />
                 {label}
               </span>
@@ -334,7 +341,7 @@ export const Dashboard: React.FC = () => {
 
       {/* AI Assistant hero panel + Top candidates — des-2.txt §5 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 10 }}>
-        <div className="tk-hero" style={{ flex: '1 1 0', padding: 'clamp(12px,1.15vw,16px)' }}>
+        <div className="tk-hero" style={{ flex: '1 1 0', padding: 'clamp(0.75rem,1.15vw,1rem)' }}>
           <div
             style={{
               position: 'absolute', top: -60, insetInlineEnd: -60, width: 180, height: 180, borderRadius: '50%',
@@ -369,16 +376,16 @@ export const Dashboard: React.FC = () => {
                   className="absolute inset-0 flex flex-col items-center justify-center"
                   style={{ color: 'var(--tk-text)' }}
                 >
-                  <span style={{ fontSize: 20, fontWeight: 500, letterSpacing: '-.03em', fontVariantNumeric: 'tabular-nums' }}>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 500, letterSpacing: '-.03em', fontVariantNumeric: 'tabular-nums' }}>
                     {reliability?.hasData ? `${reliability.successRate}%` : '—'}
                   </span>
-                  <span className="text-[9px] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-muted)' }}>
+                  <span className="text-[0.5625rem] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-muted)' }}>
                     {t('reliability')}
                   </span>
                 </div>
               </div>
             </div>
-            <p className="text-[11px] text-center" style={{ color: 'var(--tk-dim)' }}>
+            <p className="text-[0.6875rem] text-center" style={{ color: 'var(--tk-dim)' }}>
               {reliability?.hasData
                 ? t('reliabilityRuns', { success: String(reliability.successRuns), total: String(reliability.totalRuns) })
                 : t('reliabilityNoRuns')}
@@ -389,7 +396,7 @@ export const Dashboard: React.FC = () => {
               <span>·</span>
               <span><strong style={{ color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>{strongMatches}</strong> {t('atOrAbove90')}</span>
             </p>
-            <p className="text-[12.5px] font-medium leading-relaxed" style={{ color: 'var(--tk-text)' }}>
+            <p className="text-[0.78125rem] font-medium leading-relaxed" style={{ color: 'var(--tk-text)' }}>
               {role === 'admin' ? t('assistant_admin') : role === 'manager' ? t('assistant_manager') : t('assistant_recruiter')}
             </p>
 
@@ -398,14 +405,14 @@ export const Dashboard: React.FC = () => {
               return (
                 <div key={c.id} className="flex items-center gap-2.5">
                   <span
-                    className="flex items-center justify-center shrink-0 font-bold text-[11px]"
+                    className="flex items-center justify-center shrink-0 font-bold text-[0.6875rem]"
                     style={{ width: 27, height: 27, borderRadius: 9, background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' }}
                   >
                     {c.matchScore}
                   </span>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <p className="text-[11.5px] font-semibold truncate" style={{ color: 'var(--tk-text)' }}><Bidi>{displayName}</Bidi></p>
-                    <p className="text-[11px] truncate" style={{ color: 'var(--tk-muted)' }}><Bidi>{c.jobTitle}</Bidi></p>
+                    <p className="text-[0.71875rem] font-semibold truncate" style={{ color: 'var(--tk-text)' }}><Bidi>{displayName}</Bidi></p>
+                    <p className="text-[0.6875rem] truncate" style={{ color: 'var(--tk-muted)' }}><Bidi>{c.jobTitle}</Bidi></p>
                   </div>
                 </div>
               );
@@ -426,38 +433,38 @@ export const Dashboard: React.FC = () => {
         <div className="tk-panel" style={{ flex: '1.6 1 0' }}>
           <div className="flex items-center justify-between gap-2 mb-2.5">
             <div>
-              <h4 className="text-[14px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('navResults')}</h4>
-              <p className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>{t('rankedByMatch')}</p>
+              <h4 className="text-[0.875rem] font-medium" style={{ color: 'var(--tk-text)' }}>{t('navResults')}</h4>
+              <p className="text-[0.6875rem]" style={{ color: 'var(--tk-muted)' }}>{t('rankedByMatch')}</p>
             </div>
-            <Link to="/results" className="text-[11.5px] font-semibold tk-focusable" style={{ color: 'var(--tk-accent-text)' }}>
+            <Link to="/results" className="text-[0.71875rem] font-semibold tk-focusable" style={{ color: 'var(--tk-accent-text)' }}>
               {t('viewResults')}
             </Link>
           </div>
 
           {stats.topCandidates.length === 0 ? (
-            <p className="text-[12px] py-6 text-center" style={{ color: 'var(--tk-muted)' }}>{t('noCandidatesYet')}</p>
+            <p className="text-[0.75rem] py-6 text-center" style={{ color: 'var(--tk-muted)' }}>{t('noCandidatesYet')}</p>
           ) : (
             <div className="tk-row-list">
               {stats.topCandidates.map((c, idx) => {
                 const displayName = c.gdprAnonymized ? t('candidateAnonymous', { id: String(c.id) }) : c.name;
                 return (
                   <div key={c.id} className="flex items-center gap-2.5 flex-wrap">
-                    <span className="text-[12px] font-bold" style={{ width: 18, color: 'var(--tk-dim)' }}>{String(idx + 1).padStart(2, '0')}</span>
+                    <span className="text-[0.75rem] font-bold" style={{ width: 18, color: 'var(--tk-dim)' }}>{String(idx + 1).padStart(2, '0')}</span>
                     <span
-                      className="flex items-center justify-center shrink-0 rounded-full font-bold text-[11px]"
+                      className="flex items-center justify-center shrink-0 rounded-full font-bold text-[0.6875rem]"
                       style={{ width: 28, height: 28, background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)' }}
                     >
                       {displayName.charAt(0).toUpperCase()}
                     </span>
                     <div style={{ flex: '1 1 140px', minWidth: 0 }}>
-                      <p className="text-[11.5px] font-semibold truncate" style={{ color: 'var(--tk-text)' }}><Bidi>{displayName}</Bidi></p>
-                      <p className="text-[11px] truncate" style={{ color: 'var(--tk-muted)' }}><Bidi>{c.jobTitle}</Bidi></p>
+                      <p className="text-[0.71875rem] font-semibold truncate" style={{ color: 'var(--tk-text)' }}><Bidi>{displayName}</Bidi></p>
+                      <p className="text-[0.6875rem] truncate" style={{ color: 'var(--tk-muted)' }}><Bidi>{c.jobTitle}</Bidi></p>
                     </div>
                     <div className="tk-progress-track" style={{ flex: '1 1 80px' }}>
                       <div className="tk-progress-fill" style={{ width: `${c.matchScore}%` }} />
                     </div>
-                    <span className="text-[12px] font-bold text-end" style={{ width: 42, color: 'var(--tk-accent-text)' }}>{c.matchScore}%</span>
-                    <Link to={`/candidate/${c.id}`} className="tk-btn-primary tk-focusable" style={{ height: 27, padding: '0 10px', fontSize: 11 }}>
+                    <span className="text-[0.75rem] font-bold text-end" style={{ width: 42, color: 'var(--tk-accent-text)' }}>{c.matchScore}%</span>
+                    <Link to={`/candidate/${c.id}`} className="tk-btn-primary tk-focusable" style={{ height: 27, padding: '0 10px', fontSize: '0.6875rem' }}>
                       {t('openReport')}
                     </Link>
                   </div>
@@ -471,7 +478,7 @@ export const Dashboard: React.FC = () => {
       {/* Actions and Jobs Table Section */}
       <div className="space-y-3">
         <div className="flex justify-between items-center gap-4">
-          <h3 className="text-[14px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('activeJobsList')}</h3>
+          <h3 className="text-[0.875rem] font-medium" style={{ color: 'var(--tk-text)' }}>{t('activeJobsList')}</h3>
 
           {canEditJobs && (
             <button
@@ -485,11 +492,11 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="py-16 text-center text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>{t('loadingDashboard')}</div>
+          <div className="py-16 text-center text-[0.78125rem]" style={{ color: 'var(--tk-muted)' }}>{t('loadingDashboard')}</div>
         ) : jobsList.length === 0 ? (
           <div className="tk-panel text-center" style={{ padding: 36 }}>
             <Briefcase className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--tk-dim)' }} />
-            <p className="text-[12.5px] font-semibold" style={{ color: 'var(--tk-muted)' }}>{t('noJobsYet')}</p>
+            <p className="text-[0.78125rem] font-semibold" style={{ color: 'var(--tk-muted)' }}>{t('noJobsYet')}</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 10 }}>
@@ -500,6 +507,8 @@ export const Dashboard: React.FC = () => {
                   <div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="tk-pill is-active">{job.department}</span>
+                      <span className="tk-pill">{t(job.workflowType === "tender" ? "workflowTender" : "workflowRecruitment")} · {job.requiredCount || 1}</span>
+                      {job.projectName && <span className="tk-pill"><Bidi>{job.projectName}</Bidi></span>}
                       {job.status === 'Paused' && (
                         <span className="tk-pill">
                           <Pause className="w-3 h-3" />
@@ -507,19 +516,19 @@ export const Dashboard: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <h4 className="text-[14px] font-medium mt-2.5" style={{ color: 'var(--tk-text)', lineHeight: 1.35 }} title={job.title}>
+                    <h4 className="text-[0.875rem] font-medium mt-2.5" style={{ color: 'var(--tk-text)', lineHeight: 1.35 }} title={job.title}>
                       <Bidi>{job.title}</Bidi>
                     </h4>
-                    <p className="text-[11px] mt-1" style={{ color: 'var(--tk-muted)' }}>
+                    <p className="text-[0.6875rem] mt-1" style={{ color: 'var(--tk-muted)' }}>
                       {job.location} • {t('experienceYearsShort', { years: String(job.experience) })}
                     </p>
 
                     <div className="mt-3 pt-3 space-y-1.5" style={{ borderTop: '1px solid var(--tk-border)' }}>
-                      <p className="text-[10.5px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
+                      <p className="text-[0.65625rem] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-muted)' }}>
                         <ListTodo className="w-3.5 h-3.5" />
                         {t('checklistPreview', { count: String(checklistItems.length) })}
                       </p>
-                      <ul className="text-[11.5px] space-y-1 max-h-[75px] overflow-y-auto" style={{ color: 'var(--tk-text)' }}>
+                      <ul className="text-[0.71875rem] space-y-1 max-h-[75px] overflow-y-auto" style={{ color: 'var(--tk-text)' }}>
                         {checklistItems.slice(0, 3).map((item: any) => (
                           <li key={item.id} className="truncate flex items-center gap-1">
                             <span className="w-1 h-1 rounded-full shrink-0" style={{ background: 'var(--tk-accent)' }}></span>
@@ -527,7 +536,7 @@ export const Dashboard: React.FC = () => {
                           </li>
                         ))}
                         {checklistItems.length > 3 && (
-                          <li className="text-[10px] font-semibold italic" style={{ color: 'var(--tk-muted)' }}>
+                          <li className="text-[0.625rem] font-semibold italic" style={{ color: 'var(--tk-muted)' }}>
                             {t('moreItems', { count: String(checklistItems.length - 3) })}
                           </li>
                         )}
@@ -539,7 +548,7 @@ export const Dashboard: React.FC = () => {
                     <button
                       onClick={() => navigate(`/results?job=${job.id}`)}
                       className="tk-btn-neutral tk-focusable"
-                      style={{ flex: 1, height: 30, fontSize: 11 }}
+                      style={{ flex: 1, height: 30, fontSize: '0.6875rem' }}
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>{t('viewResults')}</span>
@@ -604,9 +613,10 @@ export const Dashboard: React.FC = () => {
               <X className="w-4 h-4" />
             </button>
 
-            <h3 className="text-[15px] font-medium mb-4" style={{ color: 'var(--tk-text)' }}>{t('editJob')}</h3>
+            <h3 className="text-[0.9375rem] font-medium mb-4" style={{ color: 'var(--tk-text)' }}>{t('editJob')}</h3>
 
             <form onSubmit={handleSaveJobEdit} className="space-y-3">
+              <WorkflowFields value={editWorkflow} onChange={setEditWorkflow}/>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={modalLabel}>{t('jobTitle')}</label>
@@ -730,7 +740,7 @@ export const Dashboard: React.FC = () => {
                     type="button"
                     onClick={handleAddChecklistItem}
                     className="tk-btn-primary tk-focusable"
-                    style={{ height: 28, padding: '0 10px', fontSize: 11 }}
+                    style={{ height: 28, padding: '0 10px', fontSize: '0.6875rem' }}
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>{t('addChecklistItem')}</span>
@@ -806,12 +816,12 @@ export const Dashboard: React.FC = () => {
               <X className="w-4 h-4" />
             </button>
 
-            <h3 className="text-[15px] font-medium mb-4 flex items-center gap-2" style={{ color: 'var(--tk-accent-text)' }}>
+            <h3 className="text-[0.9375rem] font-medium mb-4 flex items-center gap-2" style={{ color: 'var(--tk-accent-text)' }}>
               <Sparkles className="w-4 h-4" />
               <span>{t('aiStrategicSummary')}</span>
             </h3>
 
-            <div className="space-y-3.5 text-[12.5px] leading-relaxed">
+            <div className="space-y-3.5 text-[0.78125rem] leading-relaxed">
               <div>
                 <h5 className={modalLabel}>{t('summaryHealthTitle')}</h5>
                 <p style={{ color: 'var(--tk-muted)' }}>
@@ -855,21 +865,21 @@ export const Dashboard: React.FC = () => {
                 <Trash2 className="w-5 h-5" />
               </div>
               <div className="space-y-1" style={{ minWidth: 0 }}>
-                <h3 className="text-[14px] font-semibold" style={{ color: 'var(--tk-text)' }}>
+                <h3 className="text-[0.875rem] font-semibold" style={{ color: 'var(--tk-text)' }}>
                   {t('deleteJobTitle')}
                 </h3>
-                <p className="text-[11.5px] leading-relaxed" style={{ color: 'var(--tk-muted)' }}>
+                <p className="text-[0.71875rem] leading-relaxed" style={{ color: 'var(--tk-muted)' }}>
                   {t('deleteJobConfirm', { title: deletingJob.title, department: deletingJob.department })}
                 </p>
               </div>
             </div>
 
             <div className="space-y-1" style={{ padding: 12, borderRadius: 11, background: 'rgba(239,68,68,.05)', border: '1px solid rgba(239,68,68,.2)' }}>
-              <div className="flex items-center gap-1.5 text-[11.5px] font-bold" style={{ color: '#ef4444' }}>
+              <div className="flex items-center gap-1.5 text-[0.71875rem] font-bold" style={{ color: '#ef4444' }}>
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                 <span>{t('deleteJobDataLoss')}</span>
               </div>
-              <p className="text-[11px] leading-relaxed ps-5" style={{ color: 'var(--tk-muted)' }}>
+              <p className="text-[0.6875rem] leading-relaxed ps-5" style={{ color: 'var(--tk-muted)' }}>
                 {t('deleteJobCascade', { count: String(deletingCandidateCount) })}
               </p>
             </div>
@@ -891,7 +901,7 @@ export const Dashboard: React.FC = () => {
                 disabled={deletingInProgress}
                 className="tk-focusable flex items-center gap-1.5 disabled:opacity-50"
                 style={{
-                  height: 32, borderRadius: 9, paddingInline: 13, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  height: 32, borderRadius: 9, paddingInline: 13, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
                   background: 'rgba(239,68,68,.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,.2)'
                 }}
               >

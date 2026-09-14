@@ -1,3 +1,4 @@
+import { mandatorySummary } from '../utils/screening.js';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext.js';
@@ -65,6 +66,8 @@ interface Candidate {
 interface Job {
   id: number;
   title: string;
+  checklist?: string;
+  workflowType?: string;
 }
 
 export const Results: React.FC = () => {
@@ -77,6 +80,8 @@ export const Results: React.FC = () => {
   const [candidatesList, setCandidatesList] = useState<Candidate[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<string>(queryJobId || '');
+  const [matchThreshold, setMatchThreshold] = useState(80);
+  useEffect(() => { apiRequest('GET', '/api/screening-settings').then(s => setMatchThreshold(s.matchThreshold)).catch(() => {}); }, []);
   const [loading, setLoading] = useState(true);
 
   const [pendingConfirm, setPendingConfirm] = useState<{
@@ -563,7 +568,7 @@ export const Results: React.FC = () => {
   };
 
   const getMatchClassification = (score: number) => {
-    if (score >= 80) return { label: t('matchFull'), isStrong: true };
+    if (score >= matchThreshold) return { label: t('matchFull'), isStrong: true };
     if (score >= 50) return { label: t('matchPartial'), isStrong: false };
     return { label: t('matchNone'), isStrong: false };
   };
@@ -599,7 +604,7 @@ export const Results: React.FC = () => {
     <div style={{ display: 'grid', gap: 10, minWidth: 0 }}>
       {/* Filter bar — job select */}
       <div className="flex items-center gap-2.5 flex-wrap">
-        <label className="text-[10.5px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>
+        <label className="text-[0.65625rem] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>
           {t('selectJob')}
         </label>
         <select
@@ -631,7 +636,7 @@ export const Results: React.FC = () => {
             { label: t('avgMatchScore'), value: `${statsSummary.averageScore}%` }
           ].map(({ label, value }) => (
             <div key={label} className="tk-tile">
-              <span className="text-[10.5px] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>{label}</span>
+              <span className="text-[0.65625rem] font-bold uppercase tracking-[.1em]" style={{ color: 'var(--tk-muted)' }}>{label}</span>
               <p className="tk-stat-value">{value}</p>
             </div>
           ))}
@@ -644,7 +649,7 @@ export const Results: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-2.5" style={{ borderBottom: '1px solid var(--tk-border)' }}>
           <div className="flex items-center gap-2">
             <Filter className="w-3.5 h-3.5" style={{ color: 'var(--tk-accent-text)' }} />
-            <h3 className="text-[10.5px] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-accent-text)' }}>{t('advancedFilters')}</h3>
+            <h3 className="text-[0.65625rem] font-bold uppercase tracking-[.14em]" style={{ color: 'var(--tk-accent-text)' }}>{t('advancedFilters')}</h3>
           </div>
 
           {/* Global Search Input */}
@@ -667,7 +672,7 @@ export const Results: React.FC = () => {
           <button
             onClick={handleClearFilters}
             className="tk-btn-neutral tk-focusable shrink-0"
-            style={{ height: 30, padding: '0 11px', fontSize: 11 }}
+            style={{ height: 30, padding: '0 11px', fontSize: '0.6875rem' }}
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>{t('clearAllFilters')}</span>
@@ -724,7 +729,7 @@ export const Results: React.FC = () => {
             { label: t('minMatchScore'), value: minScore, set: setMinScore, max: 100, suffix: '%' }
           ].map(({ label, value, set, max, suffix }) => (
             <div key={label} className="space-y-1.5">
-              <div className="flex justify-between text-[11.5px]">
+              <div className="flex justify-between text-[0.71875rem]">
                 <span style={{ color: 'var(--tk-muted)' }}>{label}</span>
                 <span style={{ color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}>{value}{suffix}</span>
               </div>
@@ -749,7 +754,7 @@ export const Results: React.FC = () => {
           <div className="tk-panel flex flex-wrap justify-between items-center gap-2.5" style={{ padding: 11 }}>
             <div className="flex items-center gap-3 flex-wrap">
               {/* Bulk Select count */}
-              <span className="text-[11.5px] flex items-center gap-1.5" style={{ color: selectedForBulk.length > 0 ? 'var(--tk-accent-text)' : 'var(--tk-muted)' }}>
+              <span className="text-[0.71875rem] flex items-center gap-1.5" style={{ color: selectedForBulk.length > 0 ? 'var(--tk-accent-text)' : 'var(--tk-muted)' }}>
                 <CheckSquare className="w-3.5 h-3.5" />
                 {selectedForBulk.length > 0
                   ? t('candidatesSelected', { count: String(selectedForBulk.length) })
@@ -758,7 +763,7 @@ export const Results: React.FC = () => {
 
               {/* Dual Compare slots */}
               {(dualCompareLeft || dualCompareRight) && (
-                <div className="flex gap-2 items-center text-[11.5px] ps-3" style={{ borderInlineStart: '1px solid var(--tk-border)' }}>
+                <div className="flex gap-2 items-center text-[0.71875rem] ps-3" style={{ borderInlineStart: '1px solid var(--tk-border)' }}>
                   <span style={{ color: 'var(--tk-muted)' }}>{t('dualCompare')}</span>
                   {dualCompareLeft && (
                     <span className="tk-pill is-active">
@@ -789,7 +794,7 @@ export const Results: React.FC = () => {
                   defaultValue=""
                   className="tk-focusable"
                   style={{
-                    height: 30, borderRadius: 9, paddingInline: 11, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    height: 30, borderRadius: 9, paddingInline: 11, fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer',
                     background: 'var(--tk-accent-soft)', color: 'var(--tk-accent-text)', border: '1px solid var(--tk-accent-line)'
                   }}
                 >
@@ -807,7 +812,7 @@ export const Results: React.FC = () => {
                   onClick={handleBulkDelete}
                   className="tk-focusable flex items-center gap-1"
                   style={{
-                    height: 30, borderRadius: 9, paddingInline: 11, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    height: 30, borderRadius: 9, paddingInline: 11, fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer',
                     background: 'rgba(239,68,68,.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,.2)'
                   }}
                 >
@@ -820,7 +825,7 @@ export const Results: React.FC = () => {
               <button
                 onClick={handleExportCSV}
                 className="tk-btn-neutral tk-focusable"
-                style={{ height: 30, padding: '0 11px', fontSize: 11 }}
+                style={{ height: 30, padding: '0 11px', fontSize: '0.6875rem' }}
                 title={selectedForBulk.length > 0 ? t('exportCsvSelectedTitle') : t('exportCsvAllTitle')}
               >
                 <Download className="w-3.5 h-3.5" />
@@ -832,7 +837,7 @@ export const Results: React.FC = () => {
                 <button
                   onClick={() => setBulkCompareOpen(true)}
                   className="tk-btn-primary tk-focusable"
-                  style={{ height: 30, padding: '0 11px', fontSize: 11 }}
+                  style={{ height: 30, padding: '0 11px', fontSize: '0.6875rem' }}
                 >
                   {t('compareCount', { count: String(selectedForBulk.length) })}
                 </button>
@@ -841,7 +846,7 @@ export const Results: React.FC = () => {
                 <button
                   onClick={() => setBulkCompareOpen(true)}
                   className="tk-btn-primary tk-focusable"
-                  style={{ height: 30, padding: '0 11px', fontSize: 11 }}
+                  style={{ height: 30, padding: '0 11px', fontSize: '0.6875rem' }}
                 >
                   {t('compareSideBySide')}
                 </button>
@@ -852,9 +857,9 @@ export const Results: React.FC = () => {
           {/* Table Container */}
           <div className="tk-panel" style={{ padding: 0, overflow: 'hidden' }}>
             {loading ? (
-              <div className="py-16 text-center text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>{t('loadingLeaderboard')}</div>
+              <div className="py-16 text-center text-[0.78125rem]" style={{ color: 'var(--tk-muted)' }}>{t('loadingLeaderboard')}</div>
             ) : filteredCandidates.length === 0 ? (
-              <div className="py-16 text-center text-[12.5px]" style={{ color: 'var(--tk-muted)' }}>
+              <div className="py-16 text-center text-[0.78125rem]" style={{ color: 'var(--tk-muted)' }}>
                 {t('noCandidatesMatch')}
               </div>
             ) : (
@@ -887,6 +892,9 @@ export const Results: React.FC = () => {
                       const isSelected = selectedForBulk.includes(c.id);
                       const isDualCompare = dualCompareLeft?.id === c.id || dualCompareRight?.id === c.id;
                       const classification = getMatchClassification(c.matchScore);
+                      const candidateJob = jobs.find(j => j.id === c.jobId);
+                      const mandatory = mandatorySummary(JSON.parse(candidateJob?.checklist || '[]'), c.checklistEval || []);
+                      if (mandatory.status !== 'met') classification.isStrong = false;
                       const isTopThree = index < 3;
 
                       return (
@@ -912,19 +920,20 @@ export const Results: React.FC = () => {
 
                           <td>
                             <div style={{ color: 'var(--tk-text)' }}><Bidi>{c.name}</Bidi></div>
-                            <div className="text-[9.5px] truncate" dir="ltr" style={{ color: 'var(--tk-dim)', maxWidth: 150 }}>
+                            <div className="text-[0.59375rem] truncate" dir="ltr" style={{ color: 'var(--tk-dim)', maxWidth: 150 }}>
                               {c.originalFilename}
                             </div>
+                            <div className="text-[0.625rem] mt-1">{t(`mandatory_${mandatory.status}`)}</div>
                           </td>
 
                           {(() => {
                             const ext = getExtractedCandidateDetails(c);
                             return (
                               <>
-                                <td className="text-[11.5px]" style={{ color: 'var(--tk-soft)' }}>{ext.nationality}</td>
-                                <td className="text-[11.5px]" style={{ color: 'var(--tk-soft)' }}>{ext.educationDegree}</td>
-                                <td className="text-[11.5px]" style={{ color: 'var(--tk-soft)' }}>{ext.specialization}</td>
-                                <td className="text-[11.5px]" style={{ color: 'var(--tk-soft)', fontVariantNumeric: 'tabular-nums' }}>{ext.totalExp}</td>
+                                <td className="text-[0.71875rem]" style={{ color: 'var(--tk-soft)' }}>{ext.nationality}</td>
+                                <td className="text-[0.71875rem]" style={{ color: 'var(--tk-soft)' }}>{ext.educationDegree}</td>
+                                <td className="text-[0.71875rem]" style={{ color: 'var(--tk-soft)' }}>{ext.specialization}</td>
+                                <td className="text-[0.71875rem]" style={{ color: 'var(--tk-soft)', fontVariantNumeric: 'tabular-nums' }}>{ext.totalExp}</td>
                               </>
                             );
                           })()}
@@ -932,7 +941,7 @@ export const Results: React.FC = () => {
                           <td>
                             <div className="flex items-center gap-2">
                               <span
-                                className="text-[12.5px]"
+                                className="text-[0.78125rem]"
                                 style={{ width: 36, color: 'var(--tk-accent-text)', fontVariantNumeric: 'tabular-nums' }}
                               >
                                 {c.matchScore}%
@@ -954,7 +963,7 @@ export const Results: React.FC = () => {
                                 value={c.status}
                                 onChange={(e) => handleStatusChange(c.id, e.target.value)}
                                 className="tk-focusable"
-                                style={{ height: 27, borderRadius: 8, paddingInline: 8, fontSize: 11, background: 'var(--tk-inset)', color: 'var(--tk-text)', border: '1px solid var(--tk-border-strong)', cursor: 'pointer' }}
+                                style={{ height: 27, borderRadius: 8, paddingInline: 8, fontSize: '0.6875rem', background: 'var(--tk-inset)', color: 'var(--tk-text)', border: '1px solid var(--tk-border-strong)', cursor: 'pointer' }}
                               >
                                 <option value="Pending">{t('status_Pending')}</option>
                                 <option value="Shortlisted">{t('status_Shortlisted')}</option>
@@ -1068,7 +1077,7 @@ export const Results: React.FC = () => {
               <X className="w-4 h-4" />
             </button>
 
-            <h3 className="text-[15px] font-medium mb-4" style={{ color: 'var(--tk-text)' }}>{t('compareTitle')}</h3>
+            <h3 className="text-[0.9375rem] font-medium mb-4" style={{ color: 'var(--tk-text)' }}>{t('compareTitle')}</h3>
 
             {/* Comparison Grid */}
             <div className="tk-table-scroll">
@@ -1084,9 +1093,9 @@ export const Results: React.FC = () => {
                 <tbody>
                   {comparisonRows.map(({ label, render }) => (
                     <tr key={label}>
-                      <td className="text-[9.5px] font-bold uppercase tracking-[.08em]" style={{ color: 'var(--tk-muted)' }}>{label}</td>
+                      <td className="text-[0.59375rem] font-bold uppercase tracking-[.08em]" style={{ color: 'var(--tk-muted)' }}>{label}</td>
                       {comparedCandidates.map(cand => (
-                        <td key={cand.id} className="text-[11.5px] leading-relaxed" style={{ color: 'var(--tk-soft)' }}>
+                        <td key={cand.id} className="text-[0.71875rem] leading-relaxed" style={{ color: 'var(--tk-soft)' }}>
                           {render(cand)}
                         </td>
                       ))}

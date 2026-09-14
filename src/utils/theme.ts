@@ -3,6 +3,9 @@
 // applied as the single --tk-accent custom property everything else is color-mix()'d from).
 
 export type ThemeMode = 'light' | 'dark' | 'midnight';
+export type FontScale = 'small' | 'normal' | 'large' | 'xlarge';
+export const FONT_SCALES: Record<FontScale, number> = { small: .9, normal: 1, large: 1.125, xlarge: 1.25 };
+const FONT_SCALE_STORAGE_KEY = 'talenta_font_scale';
 
 export interface AccentSwatch {
   name: string;
@@ -24,6 +27,17 @@ const MIDNIGHT_DEFAULT_ACCENT = '#f5b301'; // amber
 
 const THEME_STORAGE_KEY = 'talenta_theme';
 const ACCENT_STORAGE_KEY = 'talenta_accent';
+
+export function getSavedFontScale(): FontScale {
+  const saved = localStorage.getItem(FONT_SCALE_STORAGE_KEY);
+  return saved && saved in FONT_SCALES ? saved as FontScale : 'normal';
+}
+
+export function applyFontScale(scale: FontScale) {
+  document.documentElement.style.setProperty('--font-scale', String(FONT_SCALES[scale]));
+  document.documentElement.style.fontSize = `${16 * FONT_SCALES[scale]}px`;
+  localStorage.setItem(FONT_SCALE_STORAGE_KEY, scale);
+}
 
 export function getSavedTheme(): ThemeMode {
   const saved = localStorage.getItem(THEME_STORAGE_KEY);
@@ -72,6 +86,7 @@ export function applyTheme(theme: ThemeMode) {
 }
 
 export function initTheme() {
+  applyFontScale(getSavedFontScale());
   applyAccent(getSavedAccent());
   applyTheme(getSavedTheme());
 }

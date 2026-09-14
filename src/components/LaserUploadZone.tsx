@@ -102,7 +102,7 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
           }
         }}
         style={{
-          padding: 'clamp(18px,2.2vw,32px) clamp(14px,1.6vw,22px)',
+          padding: 'clamp(1.125rem,2.2vw,2rem) clamp(0.875rem,1.6vw,1.375rem)',
           borderRadius: 14,
           border: `1.5px dashed ${isDragActive ? 'var(--tk-accent)' : 'var(--tk-accent-line)'}`,
           background: 'var(--tk-dropzone)',
@@ -131,16 +131,16 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
           <UploadCloud className="w-6 h-6" />
         </div>
 
-        <p className="font-medium mt-3" style={{ fontSize: 'clamp(15px,1.6vw,18px)', color: 'var(--tk-text)' }}>
+        <p className="font-medium mt-3" style={{ fontSize: 'clamp(0.9375rem,1.6vw,1.125rem)', color: 'var(--tk-text)' }}>
           {t('dragDropCVs')}
         </p>
-        <p className="text-[11.5px] mt-1.5" style={{ color: 'var(--tk-muted)' }}>
+        <p className="text-[0.71875rem] mt-1.5" style={{ color: 'var(--tk-muted)' }}>
           {t('supportedFiles')}
         </p>
         <span className="tk-btn-primary mt-3.5" style={{ pointerEvents: 'none' }}>
           {t('browseFiles')}
         </span>
-        <p className="text-[11px] mt-2.5" style={{ color: 'var(--tk-dim)' }}>
+        <p className="text-[0.6875rem] mt-2.5" style={{ color: 'var(--tk-dim)' }}>
           {t('parallelProcessNotice')}
         </p>
       </div>
@@ -149,16 +149,16 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
       {files.length > 0 && (
         <div className="tk-panel">
           <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-            <h4 className="text-[14px] font-medium" style={{ color: 'var(--tk-text)' }}>{t('processingCvs')}</h4>
+            <h4 className="text-[0.875rem] font-medium" style={{ color: 'var(--tk-text)' }}>{t('processingCvs')}</h4>
             <div className="flex items-center gap-3">
-              <span className="text-[11px]" style={{ color: 'var(--tk-muted)', fontVariantNumeric: 'tabular-nums' }}>
+              <span className="text-[0.6875rem]" style={{ color: 'var(--tk-muted)', fontVariantNumeric: 'tabular-nums' }}>
                 {t('filesDoneCount', { total: String(files.length), done: String(doneCount) })}
               </span>
               <button
                 type="button"
                 onClick={onClear}
                 className="tk-btn-neutral tk-focusable"
-                style={{ height: 28, padding: '0 10px', fontSize: 11 }}
+                style={{ height: 28, padding: '0 10px', fontSize: '0.6875rem' }}
               >
                 {t('clearList')}
               </button>
@@ -172,14 +172,14 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
                   <FileText className="w-4 h-4 shrink-0" style={{ color: 'var(--tk-muted)' }} />
                   <div style={{ flex: '1 1 140px', minWidth: 0 }}>
                     <p
-                      className="text-[12.5px] truncate"
+                      className="text-[0.78125rem] truncate"
                       dir="ltr"
                       title={file.name}
                       style={{ color: 'var(--tk-text)', fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}
                     >
                       {file.name}
                     </p>
-                    <p className="text-[11px]" style={{ color: 'var(--tk-dim)', fontVariantNumeric: 'tabular-nums' }}>
+                    <p className="text-[0.6875rem]" style={{ color: 'var(--tk-dim)', fontVariantNumeric: 'tabular-nums' }}>
                       {formatBytes(file.size)}
                     </p>
                   </div>
@@ -230,7 +230,7 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
                 </div>
 
                 {file.status === 'skipped' && (
-                  <p className="text-[11px] mt-1.5 leading-relaxed" style={{ color: 'var(--tk-dim)' }}>
+                  <p className="text-[0.6875rem] mt-1.5 leading-relaxed" style={{ color: 'var(--tk-dim)' }}>
                     {t('duplicateAlready')}
                     {file.existingCandidateName && <> {t('duplicateAs', { name: file.existingCandidateName })}</>}
                     {'. '}
@@ -240,25 +240,25 @@ export const LaserUploadZone: React.FC<LaserUploadZoneProps> = ({
 
                 {file.status === 'error' && (
                   <div className="mt-1.5" style={{ display: 'grid', gap: 4 }}>
-                    <p className="text-[11px] leading-relaxed" style={{ color: '#ef4444' }}>
+                    <p className="text-[0.6875rem] leading-relaxed" style={{ color: '#ef4444' }}>
                       {file.errorCode ? t(`aiError_${file.errorCode}` as any) : (file.error || t('aiError_unknown'))}
                     </p>
                     {/* A failed call bills nothing — worth saying, since a quota
                         error is exactly when people worry about that. */}
-                    <p className="text-[10px]" style={{ color: 'var(--tk-dim)' }}>{t('aiErrorNoTokensSpent')}</p>
+                    <p className="text-[0.625rem]" style={{ color: 'var(--tk-dim)' }}>{t('aiErrorNoTokensSpent')}</p>
                     {file.errorDetail && (
                       <div>
                         <button
                           type="button"
                           onClick={() => setExpandedDetail(expandedDetail === file.id ? null : file.id)}
-                          className="tk-focusable text-[10px] font-semibold"
+                          className="tk-focusable text-[0.625rem] font-semibold"
                           style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--tk-muted)' }}
                         >
                           {t('technicalDetails')}
                         </button>
                         {expandedDetail === file.id && (
                           <p
-                            className="text-[10px] mt-1 leading-relaxed"
+                            className="text-[0.625rem] mt-1 leading-relaxed"
                             dir="ltr"
                             style={{
                               padding: 8, borderRadius: 8, background: 'var(--tk-inset)',

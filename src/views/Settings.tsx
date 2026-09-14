@@ -37,7 +37,7 @@ interface Provider {
 
 export const Settings: React.FC = () => {
   const { t } = useI18n();
-  const { themeMode, accent, setThemeMode, setAccent } = useTheme();
+  const { themeMode, accent, fontScale, setThemeMode, setAccent, setFontScale } = useTheme();
 
   // General Settings
   const [quota, setQuota] = useState(1000000);
@@ -72,6 +72,7 @@ export const Settings: React.FC = () => {
   // New Provider Fields
   const [newProvName, setNewProvName] = useState('Google Gemini');
   const [newModelName, setNewModelName] = useState('gemini-2.0-flash');
+  const [newCustomModel, setNewCustomModel] = useState(false);
   const [newApiKey, setNewApiKey] = useState('');
   const [newBaseUrl, setNewBaseUrl] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -84,6 +85,7 @@ export const Settings: React.FC = () => {
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
   const [editProvName, setEditProvName] = useState('');
   const [editModelName, setEditModelName] = useState('');
+  const [editCustomModel, setEditCustomModel] = useState(false);
   const [editApiKey, setEditApiKey] = useState('');
   const [editBaseUrl, setEditBaseUrl] = useState('');
   const [editSaving, setEditSaving] = useState(false);
@@ -179,7 +181,7 @@ export const Settings: React.FC = () => {
         setPurgeRunning(true);
         try {
           const res = await apiRequest('POST', '/api/gdpr/purge');
-          alert(res.message);
+          alert(t('purgeSuccess'));
         } catch (e: any) {
           alert(t('purgeFailed', { reason: e.message }));
         } finally {
@@ -206,8 +208,9 @@ export const Settings: React.FC = () => {
         setAuditPurgeResult(null);
         try {
           const res = await apiRequest('POST', '/api/audit-logs/purge', { retentionDays: auditLogRetentionDays });
-          setAuditPurgeResult(res.message || `Audit purge completed: deleted ${res.purgedCount} record(s).`);
-          alert(res.message);
+          const purgeMessage = t('auditPurgeSuccess', { count: String(res.purgedCount || 0) });
+          setAuditPurgeResult(purgeMessage);
+          alert(purgeMessage);
         } catch (e: any) {
           alert(t('purgeFailed', { reason: e.message }));
         } finally {
@@ -240,6 +243,7 @@ export const Settings: React.FC = () => {
       const result = await apiRequest('POST', '/api/ai-providers', {
         providerName: newProvName,
         modelName: newModelName,
+        isCustomModel: newCustomModel,
         apiKey: newApiKey,
         baseUrl: newBaseUrl || null
       });
@@ -282,6 +286,7 @@ export const Settings: React.FC = () => {
       await apiRequest('PUT', `/api/ai-providers/${editingProvider.id}`, {
         providerName: editProvName,
         modelName: editModelName,
+        isCustomModel: editCustomModel,
         // Only send apiKey if user actually typed something new
         ...(editApiKey ? { apiKey: editApiKey } : {}),
         baseUrl: editBaseUrl || null
@@ -326,7 +331,7 @@ export const Settings: React.FC = () => {
       
       setTestResult(prev => ({
         ...prev,
-        [p.id]: { success: data.success, message: data.message || t('connectionSuccess') }
+        [p.id]: { success: data.success, message: data.success ? t('connectionSuccess') : t('connectionFailed') }
       }));
     } catch (err: any) {
       setTestResult(prev => ({
@@ -341,8 +346,8 @@ export const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'general' | 'audit' | 'rbac'>('general');
 
   const sectionHeading =
-    'text-[10.5px] font-bold uppercase tracking-[.14em] flex items-center gap-1.5 pb-2.5 text-brand border-b border-border-main/50';
-  const microLabel = 'block text-[10.5px] font-bold uppercase tracking-[.1em] mb-1.5 text-text-muted';
+    'text-[0.65625rem] font-bold uppercase tracking-[.14em] flex items-center gap-1.5 pb-2.5 text-brand border-b border-border-main/50';
+  const microLabel = 'block text-[0.65625rem] font-bold uppercase tracking-[.1em] mb-1.5 text-text-muted';
 
   // Guard against a zero/unset budget producing NaN or Infinity in the meter.
   const tokenPercentage = quota > 0 ? Math.min(Math.round((tokensUsed / quota) * 100), 100) : 0;
@@ -363,7 +368,7 @@ export const Settings: React.FC = () => {
           <button
             key={id}
             onClick={() => setActiveTab(id)}
-            className="tk-focusable flex items-center gap-2 px-3 py-2 text-[11.5px] font-bold cursor-pointer"
+            className="tk-focusable flex items-center gap-2 px-3 py-2 text-[0.71875rem] font-bold cursor-pointer"
             style={{
               borderBottom: `2px solid ${activeTab === id ? 'var(--tk-accent)' : 'transparent'}`,
               color: activeTab === id ? 'var(--tk-accent-text)' : 'var(--tk-muted)',
@@ -389,7 +394,7 @@ export const Settings: React.FC = () => {
           <Palette className="w-3.5 h-3.5" />
           {t('visualAppearance')}
         </h3>
-        <AppearancePanel themeMode={themeMode} accent={accent} onThemeChange={setThemeMode} onAccentChange={setAccent} />
+        <AppearancePanel themeMode={themeMode} accent={accent} onThemeChange={setThemeMode} onAccentChange={setAccent} fontScale={fontScale} onFontScaleChange={setFontScale} />
       </div>
 
       {/* 2. Token Consumption Meter */}
@@ -400,7 +405,7 @@ export const Settings: React.FC = () => {
         </h3>
 
         <div className="space-y-2.5">
-          <div className="flex justify-between items-center gap-3 flex-wrap text-[11.5px] font-semibold">
+          <div className="flex justify-between items-center gap-3 flex-wrap text-[0.71875rem] font-semibold">
             <span style={{ color: 'var(--tk-muted)' }}>{t('monthlyConsumption')}</span>
             <span style={{ color: 'var(--tk-text)', fontVariantNumeric: 'tabular-nums' }}>
               {t('tokenCounterOf', {
@@ -457,15 +462,15 @@ export const Settings: React.FC = () => {
               <span>{t('resetUsage')}</span>
             </button>
           </div>
-          <p className="text-[11px]" style={{ color: 'var(--tk-dim)' }}>{t('resetUsageHint')}</p>
+          <p className="text-[0.6875rem]" style={{ color: 'var(--tk-dim)' }}>{t('resetUsageHint')}</p>
 
           {/* What the counter actually measures, and what it does not. */}
           <div style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
-            <p className="text-[10.5px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5 mb-1" style={{ color: 'var(--tk-accent-text)' }}>
+            <p className="text-[0.65625rem] font-bold uppercase tracking-[.1em] flex items-center gap-1.5 mb-1" style={{ color: 'var(--tk-accent-text)' }}>
               <AlertTriangle className="w-3.5 h-3.5" />
               {t('tokenHelpTitle')}
             </p>
-            <p className="text-[11px] leading-relaxed" style={{ color: 'var(--tk-muted)' }}>
+            <p className="text-[0.6875rem] leading-relaxed" style={{ color: 'var(--tk-muted)' }}>
               {t('tokenHelpBody')}
             </p>
           </div>
@@ -475,7 +480,7 @@ export const Settings: React.FC = () => {
       {/* 3. AI Providers List */}
       <div className="tk-panel space-y-4">
         <div className="flex justify-between items-center gap-3 flex-wrap pb-2.5" style={{ borderBottom: '1px solid var(--tk-border)' }}>
-          <h3 className="text-[10.5px] font-bold uppercase tracking-[.14em] flex items-center gap-1.5 text-brand">
+          <h3 className="text-[0.65625rem] font-bold uppercase tracking-[.14em] flex items-center gap-1.5 text-brand">
             <Database className="w-3.5 h-3.5" />
             {t('aiProvidersList')}
           </h3>
@@ -490,7 +495,7 @@ export const Settings: React.FC = () => {
 
         {/* Active Model Health Warning Banner (Requirement 6) */}
         {health && (
-          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-2.5 text-[11.5px] text-amber-500 font-bold">
+          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-2.5 text-[0.71875rem] text-amber-500 font-bold">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>
               {health.code
@@ -511,6 +516,7 @@ export const Settings: React.FC = () => {
               apiKey={newApiKey}
               onChangeProvider={setNewProvName}
               onChangeModel={setNewModelName}
+              onChangeCustom={setNewCustomModel}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -572,18 +578,18 @@ export const Settings: React.FC = () => {
                     <td className="font-semibold" style={{ color: 'var(--tk-text)' }}>{p.providerName}</td>
                     <td style={{ color: 'var(--tk-muted)' }} dir="ltr">{p.modelName}</td>
                     <td className="font-mono" style={{ color: 'var(--tk-muted)' }} dir="ltr">
-                      {p.apiKey || <span className="italic text-[10px]" style={{ color: 'var(--tk-dim)' }}>{t('apiKeyNotSet')}</span>}
+                      {p.apiKey || <span className="italic text-[0.625rem]" style={{ color: 'var(--tk-dim)' }}>{t('apiKeyNotSet')}</span>}
                     </td>
 
                     <td style={{ textAlign: 'center' }}>
                       {p.isActive === 1 ? (
-                        <span className="bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full border border-green-500/20 font-bold text-[10.5px]">
+                        <span className="bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full border border-green-500/20 font-bold text-[0.65625rem]">
                           {t('active')}
                         </span>
                       ) : (
                         <button
                           onClick={() => handleActivateProvider(p.id)}
-                          className="text-[11.5px] text-brand hover:underline font-bold cursor-pointer"
+                          className="text-[0.71875rem] text-brand hover:underline font-bold cursor-pointer"
                         >
                           {t('activate')}
                         </button>
@@ -629,7 +635,7 @@ export const Settings: React.FC = () => {
                       </div>
                       
                       {testResult[p.id] && (
-                        <div className={`text-[10px] mt-1 text-center font-bold ${
+                        <div className={`text-[0.625rem] mt-1 text-center font-bold ${
                           testResult[p.id].success ? 'text-green-500' : 'text-red-500'
                         }`}>
                           {testResult[p.id].message}
@@ -643,7 +649,7 @@ export const Settings: React.FC = () => {
                     <tr style={{ background: 'var(--tk-accent-soft)' }}>
                       <td colSpan={5} style={{ padding: '4px 10px 14px' }}>
                         <form onSubmit={handleSaveEdit} className="space-y-3">
-                          <p className="text-[10px] font-bold text-brand uppercase tracking-wider flex items-center gap-1">
+                          <p className="text-[0.625rem] font-bold text-brand uppercase tracking-wider flex items-center gap-1">
                             <Pencil className="w-3 h-3" />
                             {t('editingProvider', { name: p.providerName })}
                           </p>
@@ -655,6 +661,7 @@ export const Settings: React.FC = () => {
                             providerId={p.id}
                             onChangeProvider={setEditProvName}
                             onChangeModel={setEditModelName}
+                            onChangeCustom={setEditCustomModel}
                           />
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -754,11 +761,11 @@ export const Settings: React.FC = () => {
 
           {/* Placeholders Help Notice */}
           <div className="space-y-1" style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
-            <span className="text-[10px] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-accent-text)' }}>
+            <span className="text-[0.625rem] font-bold uppercase tracking-[.1em] flex items-center gap-1.5" style={{ color: 'var(--tk-accent-text)' }}>
               <AlertTriangle className="w-3.5 h-3.5" />
               {t('placeholderTagsTitle')}
             </span>
-            <p className="text-[11px] leading-relaxed" style={{ color: 'var(--tk-muted)' }}>
+            <p className="text-[0.6875rem] leading-relaxed" style={{ color: 'var(--tk-muted)' }}>
               {t('placeholderTagsBody')}
               <span dir="ltr" className="font-mono text-brand font-bold mx-1">
                 {"{name}"} {"{job}"} {"{score}"} {"{status}"} {"{degree}"} {"{experience}"}
@@ -769,10 +776,10 @@ export const Settings: React.FC = () => {
           <div className="space-y-2.5" style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
             <div className="flex justify-between items-start gap-3 flex-wrap">
               <div style={{ minWidth: 0, flex: '1 1 240px' }}>
-                <span className="text-[11.5px] font-semibold block" style={{ color: 'var(--tk-text)' }}>
+                <span className="text-[0.71875rem] font-semibold block" style={{ color: 'var(--tk-text)' }}>
                   {t('gdprRetentionTitle')}
                 </span>
-                <span className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>
+                <span className="text-[0.6875rem]" style={{ color: 'var(--tk-muted)' }}>
                   {t('gdprRetentionHint')}
                 </span>
               </div>
@@ -782,7 +789,7 @@ export const Settings: React.FC = () => {
                 onClick={handleRunGdprPurge}
                 disabled={purgeRunning}
                 className="tk-focusable shrink-0 disabled:opacity-50"
-                style={{ height: 30, borderRadius: 9, paddingInline: 11, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: 'rgba(239,68,68,.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,.2)' }}
+                style={{ height: 30, borderRadius: 9, paddingInline: 11, fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer', background: 'rgba(239,68,68,.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,.2)' }}
               >
                 {purgeRunning ? t('purging') : t('runPurgeNow')}
               </button>
@@ -806,10 +813,10 @@ export const Settings: React.FC = () => {
           <div className="space-y-2.5" style={{ padding: 12, borderRadius: 11, background: 'var(--tk-inset)', border: '1px solid var(--tk-border)' }}>
             <div className="flex justify-between items-start gap-3 flex-wrap">
               <div style={{ minWidth: 0, flex: '1 1 240px' }}>
-                <span className="text-[11.5px] font-semibold block" style={{ color: 'var(--tk-text)' }}>
+                <span className="text-[0.71875rem] font-semibold block" style={{ color: 'var(--tk-text)' }}>
                   {t('auditRetentionTitle')}
                 </span>
-                <span className="text-[11px]" style={{ color: 'var(--tk-muted)' }}>
+                <span className="text-[0.6875rem]" style={{ color: 'var(--tk-muted)' }}>
                   {t('auditRetentionHint')}
                 </span>
               </div>
@@ -819,7 +826,7 @@ export const Settings: React.FC = () => {
                 onClick={handleRunAuditPurge}
                 disabled={auditPurgeRunning}
                 className="tk-focusable shrink-0 disabled:opacity-50"
-                style={{ height: 30, borderRadius: 9, paddingInline: 11, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: 'rgba(245,158,11,.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,.2)' }}
+                style={{ height: 30, borderRadius: 9, paddingInline: 11, fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer', background: 'rgba(245,158,11,.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,.2)' }}
               >
                 {auditPurgeRunning ? t('purging') : t('runAuditPurgeNow')}
               </button>
@@ -838,7 +845,7 @@ export const Settings: React.FC = () => {
               />
             </div>
             {auditPurgeResult && (
-              <p className="text-[11.5px] font-semibold text-emerald-500">{auditPurgeResult}</p>
+              <p className="text-[0.71875rem] font-semibold text-emerald-500">{auditPurgeResult}</p>
             )}
           </div>
         </div>

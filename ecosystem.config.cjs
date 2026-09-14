@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'cv-analyzer-suite',
-      script: './dist/server.cjs',
+      script: './dist/server.mjs',
       instances: 1,
       autorestart: true,
       watch: false,

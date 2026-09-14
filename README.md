@@ -329,7 +329,7 @@ For a **fully offline, step-by-step Arabic guide**, see [`INSTALL_AR.md`](INSTAL
 ## 📦 Production Deployment
 
 ```bash
-npm run build     # builds the SPA (dist/) and bundles the server (dist/server.cjs)
+npm run build     # builds the SPA (dist/) and bundles the server (dist/server.mjs)
 npm start         # runs the production server
 ```
 
@@ -376,3 +376,29 @@ Seeded automatically on first run. **Change these before any real deployment.**
 Full Arabic documentation: [`HANDOVER.md`](HANDOVER.md) · Offline install: [`INSTALL_AR.md`](INSTALL_AR.md)
 
 </div>
+
+
+## Dual-workflow screening — first implementation
+
+Jobs now support internal recruitment or tender/project screening, a project/reference name,
+and a required position count, in both create and edit forms. Existing jobs default to
+recruitment. The results table and individual report separately show mandatory-requirement
+coverage; a high match score is not an eligibility approval. Requirement states support met,
+partial, not met, and unknown. Complex local keyword matches remain partial for review.
+
+Identical CV files uploaded for different jobs share a persistent profile ID and the report
+links their assessments. This first implementation deliberately does not merge different
+CV versions by name/email. It is not yet a complete person master-data or project staffing module.
+No automatic rejection or external messaging is introduced.
+
+`npm test` runs screening regressions. `npm run test:integration` builds and starts production
+against a temporary database, then checks workflow CRUD, authentication, document-profile
+linking, and dashboard thresholds. Node 22.5+ is required. Production uses an ESM server bundle
+and serves the frontend from the project dist directory; npm start chooses production mode.
+
+Existing custom AI prompts remain unchanged. To use the new four-state instructions, review
+and activate the updated built-in defaults through Prompt Management. Existing candidate
+assessments need re-analysis to receive new evaluation states. Job-definition versioning,
+manual profile merging, certificate-equivalence rules, project coverage dashboards, Docker,
+and external Drive/Dropbox/Odoo/recruitment connectors remain subsequent work. No live AI
+provider or external connector was exercised by the automated tests.

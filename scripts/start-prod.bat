@@ -10,5 +10,5 @@ call "C:\Users\hossa\AppData\Local\pnpm\bin\pnpm.cmd" run build
 
 echo [INFO] Starting production server...
 set NODE_ENV=production
-node dist/server.cjs
+node dist/server.mjs
 pause

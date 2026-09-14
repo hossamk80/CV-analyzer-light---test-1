@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ThemeMode, getSavedTheme, getSavedAccent, applyTheme, applyAccentAndSave, initTheme } from '../utils/theme.js';
+import { ThemeMode, FontScale, getSavedTheme, getSavedAccent, getSavedFontScale, applyTheme, applyAccentAndSave, applyFontScale, initTheme } from '../utils/theme.js';
 
 interface ThemeContextType {
   themeMode: ThemeMode;
   accent: string;
+  fontScale: FontScale;
   setThemeMode: (theme: ThemeMode) => void;
   setAccent: (hex: string) => void;
+  setFontScale: (scale: FontScale) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -17,6 +19,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
  */
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [themeMode, setThemeModeState] = useState<ThemeMode>(getSavedTheme);
+  const [fontScale, setFontScaleState] = useState<FontScale>(getSavedFontScale);
   const [accent, setAccentState] = useState<string>(getSavedAccent);
 
   useEffect(() => {
@@ -30,13 +33,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setAccentState(getSavedAccent());
   };
 
+  const setFontScale = (scale: FontScale) => { setFontScaleState(scale); applyFontScale(scale); };
+
   const setAccent = (hex: string) => {
     setAccentState(hex);
     applyAccentAndSave(hex);
   };
 
   return (
-    <ThemeContext.Provider value={{ themeMode, accent, setThemeMode, setAccent }}>
+    <ThemeContext.Provider value={{ themeMode, accent, fontScale, setThemeMode, setAccent, setFontScale }}>
       {children}
     </ThemeContext.Provider>
   );

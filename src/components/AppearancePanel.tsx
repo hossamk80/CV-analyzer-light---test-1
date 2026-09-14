@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check } from 'lucide-react';
-import { ThemeMode, ACCENT_SWATCHES, computeOnAccent } from '../utils/theme.js';
+import { ThemeMode, FontScale, ACCENT_SWATCHES, computeOnAccent } from '../utils/theme.js';
 import { useI18n } from '../i18n/I18nContext.js';
 
 interface AppearancePanelProps {
@@ -8,6 +8,8 @@ interface AppearancePanelProps {
   accent: string;
   onThemeChange: (theme: ThemeMode) => void;
   onAccentChange: (hex: string) => void;
+  fontScale: FontScale;
+  onFontScaleChange: (scale: FontScale) => void;
 }
 
 const THEME_KEYS = ['light', 'dark', 'midnight'] as const;
@@ -18,13 +20,20 @@ const THEME_LABEL_KEY = {
 } as const;
 
 /** Theme pills + accent swatches — des-2.txt §4.1, reused in the header popover and Settings → General. */
-export const AppearancePanel: React.FC<AppearancePanelProps> = ({ themeMode, accent, onThemeChange, onAccentChange }) => {
+export const AppearancePanel: React.FC<AppearancePanelProps> = ({ themeMode, accent, onThemeChange, onAccentChange, fontScale, onFontScaleChange }) => {
   const { t } = useI18n();
 
   return (
   <div className="flex flex-wrap gap-6">
     <div>
-      <span className="block text-[10.5px] font-bold uppercase tracking-[.1em] mb-2.5" style={{ color: 'var(--tk-muted)' }}>
+      <span className="block text-[0.65625rem] font-bold uppercase tracking-[.1em] mb-2.5" style={{ color: 'var(--tk-muted)' }}>{t('fontSize')}</span>
+      <div className="flex flex-wrap gap-2">
+        {(['small', 'normal', 'large', 'xlarge'] as FontScale[]).map(size => <button key={size} type="button" onClick={() => onFontScaleChange(size)} aria-pressed={fontScale === size} className={`tk-focusable px-3 py-2 rounded-lg font-semibold ${fontScale === size ? 'tk-btn-primary' : 'tk-btn-neutral'}`}>{t(`fontSize_${size}` as any)}</button>)}
+      </div>
+    </div>
+
+    <div>
+      <span className="block text-[0.65625rem] font-bold uppercase tracking-[.1em] mb-2.5" style={{ color: 'var(--tk-muted)' }}>
         {t('themeSelection')}
       </span>
       <div className="flex flex-wrap gap-2">
@@ -33,7 +42,7 @@ export const AppearancePanel: React.FC<AppearancePanelProps> = ({ themeMode, acc
             key={id}
             type="button"
             onClick={() => onThemeChange(id)}
-            className="px-[13px] py-[7px] rounded-[9px] text-[12px] font-semibold cursor-pointer transition-all tk-focusable"
+            className="px-[13px] py-[7px] rounded-[9px] text-[0.75rem] font-semibold cursor-pointer transition-all tk-focusable"
             style={
               themeMode === id
                 ? {
@@ -52,7 +61,7 @@ export const AppearancePanel: React.FC<AppearancePanelProps> = ({ themeMode, acc
     </div>
 
     <div>
-      <span className="block text-[10.5px] font-bold uppercase tracking-[.1em] mb-2.5" style={{ color: 'var(--tk-muted)' }}>
+      <span className="block text-[0.65625rem] font-bold uppercase tracking-[.1em] mb-2.5" style={{ color: 'var(--tk-muted)' }}>
         {t('primaryColor')}
       </span>
       <div className="flex flex-wrap gap-2">
