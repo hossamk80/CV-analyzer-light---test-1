@@ -1,4 +1,11 @@
 export const en = {
+  aiError_ocr_unavailable: "Local OCR needs Tesseract with Arabic and English language packs and Poppler. See README installation instructions.",
+  aiError_ocr_busy: "Local OCR is processing another CV. Retry this file once that analysis finishes.",
+  aiError_ocr_limit: "Local OCR accepts up to 10 PDF pages and 20 MB per file. Split the document and retry.",
+  aiError_ocr_timeout: "Local OCR exceeded its processing time limit. Try a smaller or clearer file.",
+  aiError_ocr_failed: "Local OCR could not read this file. Check that it is a valid unencrypted PDF, PNG or JPEG.",
+  aiError_ocr_no_text: "Local OCR found too little readable text. Upload a clearer scan or a text-based CV.",
+  localOcrNotice: "Text was read using local OCR. Verify names, dates and certificates against the original file before approving the analysis.",
   reviewTitle: "Evidence review",
   reviewHelp: "Review the current job requirements against the CV. This human review is separate from the automated score. Changes to job or candidate data require renewed review.",
   reviewMissing: "Candidate is unavailable.",
@@ -255,7 +262,7 @@ export const en = {
   analysisMode_hybrid_desc: "The system extracts contacts, years, skills and certificates locally, then the AI adds the judgement. Text-layer PDFs are sent as text instead of as page images, which is where most of the saving comes from.",
   analysisMode_ai: "AI only",
   analysisMode_ai_desc: "The AI does everything, including what the system could extract for free. Highest token cost.",
-  analysisModeLocalNote: "Scanned or image CVs have no text layer and cannot be screened in this mode.",
+  analysisModeLocalNote: "Scanned PDFs and images use local OCR when installed (Arabic + English). Maximum 10 PDF pages / 20 MB; no automatic AI fallback.",
 
   autoScreenTitle: "Auto-screen on upload",
   autoScreenHint: "Score each CV as soon as it lands",

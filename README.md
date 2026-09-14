@@ -2,13 +2,53 @@
 
 # 🧠 Smart Recruitment Suite — CV Analyzer
 
-**AI-powered Applicant Tracking System (ATS) for analyzing, scoring, and matching CVs against job requirements.**
+**Local-first Applicant Tracking System (ATS) for evidence-based CV screening, with optional AI assistance.**
 
 Arabic-first · Fully bilingual (AR / EN, RTL / LTR) · Self-hosted · Zero mandatory cloud cost
 
 </div>
 
 ---
+
+## Development update
+
+### Latest development: evidence review, staffing coverage and local OCR
+
+Branch: `feature/evidence-project-coverage` (PR #4). These features are in the development branch until merged.
+
+1. Edit an existing job from the dashboard to configure structured matching rules and accepted alternatives.
+2. Open a candidate report → **Evidence review**. Record status, original evidence, reviewer note and optionally a manually verified page number for each condition.
+3. For an active tender job with a project name, review all mandatory conditions as met, enter the same verified internal candidate reference across CV versions, then approve project staffing.
+4. The dashboard shows required, reviewed, approved and shortage counts per active tender job. Refresh after changes. Data changes invalidate prior reviews/approvals; automated scores remain separate from human review.
+
+### Local OCR setup — إعداد القراءة المحلية
+
+No API key is needed in **Local** analysis mode. Text PDFs and DOCX keep the existing local extraction path. Scanned PDFs (with insufficient extracted text), PNG and JPEG use Tesseract with `ara+eng`; PDF pages are rendered locally by Poppler. Hybrid/AI modes retain their existing provider behavior.
+
+For an existing Codespace or Debian/Ubuntu server:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y tesseract-ocr tesseract-ocr-ara tesseract-ocr-eng poppler-utils
+tesseract --list-langs
+npm run check:ocr
+```
+
+Both `ara` and `eng` must appear. New/rebuilt Codespaces install these packages through `.devcontainer/devcontainer.json`. Windows users can run the application in WSL Ubuntu with the same packages; native Windows requires the same executables on PATH and both language packs.
+
+```bash
+git fetch origin
+git switch feature/evidence-project-coverage
+git pull --ff-only origin feature/evidence-project-coverage
+npm install
+npm run dev
+```
+
+اختر **التحليل المحلي** من شاشة رفع السير. لا تحتاج مفتاح Gemini. عند تثبيت الحزم أعلاه يمكن قراءة الصور وPDF الممسوح بالعربية والإنجليزية دون إرسال الملفات إلى مزود AI. راجع النص الأصلي قبل اعتماد الأسماء والتواريخ والشهادات؛ جودة OCR تعتمد على وضوح الصورة والتنسيق.
+
+Limits: 10 PDF pages, 20 MB input, one OCR operation at a time per server process, 30-second timeout per external command. Busy files return a retryable user-facing message; they are not silently sent to AI. Temporary OCR files are removed after each attempt. No automatic page citations or identity merging is claimed. Mixed PDFs with a substantial text layer may contain scanned pages that this initial fallback does not detect; review those manually. A successful OCR read does not establish certification validity.
+
+Verification: `npm test`, `npm run lint`, `npm run test:integration`. OCR orchestration tests use controlled process results; actual OCR availability and accuracy also depend on the installed system tools and language packs.
 
 ## 📖 Table of Contents
 
@@ -398,7 +438,8 @@ and serves the frontend from the project dist directory; npm start chooses produ
 
 Existing custom AI prompts remain unchanged. To use the new four-state instructions, review
 and activate the updated built-in defaults through Prompt Management. Existing candidate
-assessments need re-analysis to receive new evaluation states. Job-definition versioning,
-manual profile merging, certificate-equivalence rules, project coverage dashboards, Docker,
-and external Drive/Dropbox/Odoo/recruitment connectors remain subsequent work. No live AI
+assessments need re-analysis to receive new evaluation states. Local assessments now store
+requirement snapshots; accepted alternatives, human evidence review and per-job project coverage
+are implemented in the development branch described above. Full job-version history, manual
+profile merging, Docker and external Drive/Dropbox/Odoo/recruitment connectors remain subsequent work. No live AI
 provider or external connector was exercised by the automated tests.

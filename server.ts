@@ -22,6 +22,7 @@ import { classifyAiError } from './src/utils/aiErrors.js';
 import { analyzeLocally, extractLocalFacts, extractTotalYears, extractEmail, extractPhone, matchTerms } from './src/utils/localAnalysis.js';
 import { validRequirements } from './src/utils/requirementRules.js';
 import { registerReviewApi } from './src/reviewApi.js';
+import { extractLocalOcr, LocalOcrError } from './src/utils/localOcr.js';
 import { en } from './src/i18n/en.js';
 import { ar } from './src/i18n/ar.js';
 
@@ -2652,10 +2653,19 @@ async function analyzeCv(opts: {
   const t = serverT(lang);
 
   if (mode === 'local') {
+    const usedOcr = !prepared.plainText;
     if (!prepared.plainText) {
-      throw new AnalysisError('local_no_text', 'Local analysis needs a CV with a text layer.');
+      if (!prepared.buffer) throw new AnalysisError('local_no_text', 'No readable content');
+      try {
+        prepared.plainText = condenseCvText(await extractLocalOcr(prepared.buffer, prepared.mimeType || ''));
+      } catch (error) {
+        const code = error instanceof LocalOcrError ? error.code : 'ocr_failed';
+        throw new AnalysisError(code, code);
+      }
     }
-    return { result: analyzeLocally(prepared.plainText, jobData, t), tokensUsed: 0, usedAi: false };
+    const result = analyzeLocally(prepared.plainText, jobData, t);
+    if (usedOcr) result.recommendation = t('localOcrNotice') + '\n' + result.recommendation;
+    return { result, tokensUsed: 0, usedAi: false };
   }
 
   if (!activeProv || !activeProv.apiKey) {
