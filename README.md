@@ -2,13 +2,76 @@
 
 # 🧠 Smart Recruitment Suite — CV Analyzer
 
-**AI-powered Applicant Tracking System (ATS) for analyzing, scoring, and matching CVs against job requirements.**
+**Local-first Applicant Tracking System (ATS) for evidence-based CV screening, with optional AI assistance.**
 
 Arabic-first · Fully bilingual (AR / EN, RTL / LTR) · Self-hosted · Zero mandatory cloud cost
 
 </div>
 
 ---
+
+## Development update
+
+### Latest development: evidence review, staffing coverage, local OCR and unified profiles
+
+Branch: `feature/evidence-project-coverage` (PR #4). These features are in the development branch until merged.
+
+1. Edit an existing job from the dashboard to configure structured matching rules and accepted alternatives.
+2. Open a candidate report → **Evidence review**. Record status, original evidence, reviewer note and optionally a manually verified page number for each condition.
+3. For an active tender job with a project name, review all mandatory conditions as met, enter the same verified internal candidate reference across CV versions, then approve project staffing.
+4. The dashboard shows required, reviewed, approved and shortage counts per active tender job. Refresh after changes. Data changes invalidate prior reviews/approvals; automated scores remain separate from human review.
+
+### Project readiness, primary candidates and backups
+
+From **Evidence review → Staffing assignment**, select **Primary** or **Backup** before approving. Existing approvals default to Primary. Both types require reviewed mandatory evidence and cannot duplicate a verified identity in the same project. Primary assignments are limited to the required headcount; backups do not count toward readiness and are not automatically promoted. Change the assignment explicitly when a primary seat becomes available.
+
+The project dashboard aggregates active jobs by normalized project name. Readiness is the total primary headcount divided by total required headcount (rounded down); backups and reviewed-but-unassigned candidates never fill shortages. Unnamed jobs remain separate. Project names currently act as grouping identifiers: use distinct names for distinct projects.
+
+Use **Export coverage CSV** to download the displayed snapshot with job counts and primary/backup names. Headers follow the interface language, UTF-8 BOM supports Arabic in Excel, and spreadsheet formula prefixes are neutralized. When the interface privacy toggle is active, candidate names are omitted from the display and export. The file is a coverage matrix, not a full per-requirement evidence report. Refresh the dashboard before exporting after staffing changes.
+
+من مراجعة الأدلة اختر نوع التخصيص **أساسي أو احتياطي**. نسبة جاهزية المشروع تعتمد على الأساسيين المعتمدين فقط؛ الاحتياطي لا يسد النقص ولا تتم ترقيته تلقائياً. زر **تصدير التغطية CSV** ينتج جدولاً يفتح في Excel بلغة الواجهة. حدّث اللوحة بعد تعديل التخصيصات. اسم المشروع هو مفتاح التجميع حالياً، فاستخدم اسماً مميزاً لكل مشروع.
+
+### Unified profiles — ملف المرشح الموحد
+
+Open a candidate report → **Unified candidate profile**. The table lists linked CV versions and their job assessments, contact details, dates and scores, with links to each report and original CV download.
+
+1. Search by name or email and choose **Preview identity**. Search results are only candidates for review; no link is inferred from names or shared contact details.
+2. Compare every member of both groups, enter a verification reason, confirm that you checked the identities, then choose **Link reviewed groups**.
+3. To correct a link, choose **Separate this CV version**. All assessments using the same exact CV move together into a separate identity; originals are never rewritten.
+4. Review project assignments again: linking or unlinking clears staffing approvals for all affected candidates, while preserving automated scores and evidence reviews. Approved identity links prevent allocating the same person twice within a named project even with different manually entered staffing references.
+
+من تقرير المرشح افتح **ملف المرشح الموحد**، وابحث عن النسخة الأخرى بالاسم أو البريد، ثم عاين المجموعتين وسجل سبب التحقق قبل الربط. لفصل نسخة مرتبطة بالخطأ اختر **فصل نسخة السيرة**؛ تُفصل جميع تقييمات الملف المتطابق معاً. بعد أي ربط أو فصل، أعد اعتماد تخصيصات المشاريع المتأثرة.
+
+Permissions follow `change_status`. Link/unlink actions are logged in the audit log. Stale previews are rejected; refresh before retrying. Anonymized candidates are excluded from search and profile views. This is an aggregate view of existing CV versions and assessments, not a canonical editable contact/education record, and not an archive of each re-analysis. Profile-link history is available in the audit log; page-level OCR citations and comprehensive visual QA remain pending.
+
+### Local OCR setup — إعداد القراءة المحلية
+
+No API key is needed in **Local** analysis mode. Text PDFs and DOCX keep the existing local extraction path. Scanned PDFs (with insufficient extracted text), PNG and JPEG use Tesseract with `ara+eng`; PDF pages are rendered locally by Poppler. Hybrid/AI modes retain their existing provider behavior.
+
+For an existing Codespace or Debian/Ubuntu server:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y tesseract-ocr tesseract-ocr-ara tesseract-ocr-eng poppler-utils
+tesseract --list-langs
+npm run check:ocr
+```
+
+Both `ara` and `eng` must appear. New/rebuilt Codespaces install these packages through `.devcontainer/devcontainer.json`. Windows users can run the application in WSL Ubuntu with the same packages; native Windows requires the same executables on PATH and both language packs.
+
+```bash
+git fetch origin
+git switch feature/evidence-project-coverage
+git pull --ff-only origin feature/evidence-project-coverage
+npm install
+npm run dev
+```
+
+اختر **التحليل المحلي** من شاشة رفع السير. لا تحتاج مفتاح Gemini. عند تثبيت الحزم أعلاه يمكن قراءة الصور وPDF الممسوح بالعربية والإنجليزية دون إرسال الملفات إلى مزود AI. راجع النص الأصلي قبل اعتماد الأسماء والتواريخ والشهادات؛ جودة OCR تعتمد على وضوح الصورة والتنسيق.
+
+Limits: 10 PDF pages, 20 MB input, one OCR operation at a time per server process, 30-second timeout per external command. Busy files return a retryable user-facing message; they are not silently sent to AI. Temporary OCR files are removed after each attempt. No automatic page citations or identity merging is claimed. Mixed PDFs with a substantial text layer may contain scanned pages that this initial fallback does not detect; review those manually. A successful OCR read does not establish certification validity.
+
+Verification: `npm test`, `npm run lint`, `npm run test:integration`. Includes weighted readiness, formula-safe CSV, backup/primary transitions and vacancy checks. OCR orchestration tests use controlled process results; actual OCR availability and accuracy also depend on the installed system tools and language packs.
 
 ## 📖 Table of Contents
 
@@ -387,8 +450,8 @@ coverage; a high match score is not an eligibility approval. Requirement states 
 partial, not met, and unknown. Complex local keyword matches remain partial for review.
 
 Identical CV files uploaded for different jobs share a persistent profile ID and the report
-links their assessments. This first implementation deliberately does not merge different
-CV versions by name/email. It is not yet a complete person master-data or project staffing module.
+links their assessments. Different CV versions can now be linked manually after identity review;
+names/emails are search hints only. It is not yet a complete editable person master-data module.
 No automatic rejection or external messaging is introduced.
 
 `npm test` runs screening regressions. `npm run test:integration` builds and starts production
@@ -398,7 +461,8 @@ and serves the frontend from the project dist directory; npm start chooses produ
 
 Existing custom AI prompts remain unchanged. To use the new four-state instructions, review
 and activate the updated built-in defaults through Prompt Management. Existing candidate
-assessments need re-analysis to receive new evaluation states. Job-definition versioning,
-manual profile merging, certificate-equivalence rules, project coverage dashboards, Docker,
-and external Drive/Dropbox/Odoo/recruitment connectors remain subsequent work. No live AI
+assessments need re-analysis to receive new evaluation states. Local assessments now store
+requirement snapshots; accepted alternatives, human evidence review and per-job project coverage
+are implemented in the development branch described above. Full job-version history, manual
+profile fact editing, Docker and external Drive/Dropbox/Odoo/recruitment connectors remain subsequent work. No live AI
 provider or external connector was exercised by the automated tests.

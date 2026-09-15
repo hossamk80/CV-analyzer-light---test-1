@@ -7,6 +7,8 @@ import { apiRequest } from '../utils/api.js';
 import { anonymizeCandidate } from '../utils/gdpr.js';
 import { resolveCandidateDetails } from '../utils/candidateExtraction.js';
 import Bidi from '../components/Bidi.js';
+import EvidenceReview from '../components/EvidenceReview.js';
+import CandidateIdentity from '../components/CandidateIdentity.js';
 import { 
   ArrowLeft, 
   Printer, 
@@ -116,7 +118,6 @@ export const CandidateDetail: React.FC = () => {
   const { gdprActive } = useRole();
 
   const [candidate, setCandidate] = useState<Candidate | null>(null);
-  const [applications, setApplications] = useState<{id:number; jobId:number; matchScore:number; status:string}[]>([]);
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -130,7 +131,6 @@ export const CandidateDetail: React.FC = () => {
     try {
       const c = await apiRequest('GET', `/api/candidates/${id}`);
       setCandidate(c);
-      setApplications(await apiRequest('GET', `/api/candidates/${id}/applications`));
       
       const j = await apiRequest('GET', `/api/jobs/${c.jobId}`);
       setJob(j);
@@ -315,6 +315,7 @@ export const CandidateDetail: React.FC = () => {
 
       <div className="tk-panel p-4" role="status">{t(`mandatory_${mandatorySummary(jobChecklist, checklistMatchMap).status}`)} — {mandatorySummary(jobChecklist, checklistMatchMap).met}/{mandatorySummary(jobChecklist, checklistMatchMap).total}</div>
       {/* SVG Score Gauges */}
+      {!gdprActive && !activeCand.gdprAnonymized && <EvidenceReview candidateId={activeCand.id} />}
       <div className="tk-panel grid grid-cols-2 md:grid-cols-4 gap-6">
         <CircularGauge percentage={activeCand.matchScore} label={t('overallMatch')} color="stroke-brand" />
         <CircularGauge percentage={activeCand.scoreTechnical} label={t('technicalFit')} color="stroke-emerald-500" />
@@ -322,10 +323,7 @@ export const CandidateDetail: React.FC = () => {
         <CircularGauge percentage={activeCand.scoreCultural} label={t('culturalFit')} color="stroke-amber-500" />
       </div>
 
-      {applications.length > 1 && <section className="tk-panel p-4">
-        <h2>{t('profileApplications')}</h2><p className="text-xs">{t('profileNote')}</p>
-        <div className="flex flex-wrap gap-3 mt-3">{applications.map(a => <button key={a.id} className="tk-pill" onClick={() => navigate(`/candidate/${a.id}`)}>#{a.jobId} · {a.matchScore}% · {t(`status_${a.status}` as any)}</button>)}</div>
-      </section>}
+      {!gdprActive && !activeCand.gdprAnonymized && <CandidateIdentity candidateId={activeCand.id} onChanged={fetchData} />}
       {/* Executive Summary & Recommendation */}
       <div className="tk-panel space-y-4">
         <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider">{t('executiveSummary')}</h3>

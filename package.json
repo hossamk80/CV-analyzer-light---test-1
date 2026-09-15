@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "check:ocr": "node scripts/check-ocr.mjs",
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --target=node22 --packages=external --outfile=dist/server.mjs --format=esm",
     "build:fe": "vite build",

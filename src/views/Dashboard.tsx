@@ -1,4 +1,7 @@
 import WorkflowFields, { type Workflow } from '../components/WorkflowFields.js';
+import RequirementRuleFields from '../components/RequirementRuleFields.js';
+import ProjectCoverage from '../components/ProjectCoverage.js';
+import { validRequirements, type ScreeningRequirement } from '../utils/requirementRules.js';
 import React, { useState, useEffect } from 'react';
 import { useI18n } from '../i18n/I18nContext.js';
 import { useRole } from '../context/RoleContext.js';
@@ -124,7 +127,7 @@ export const Dashboard: React.FC = () => {
   const [editExp, setEditExp] = useState(0);
   const [editDegree, setEditDegree] = useState('');
   const [editSkills, setEditSkills] = useState(''); // Target Core Skills (comma-separated)
-  const [editChecklist, setEditChecklist] = useState<{ id: string; requirement: string; importance: string }[]>([]);
+  const [editChecklist, setEditChecklist] = useState<ScreeningRequirement[]>([]);
   const [editSpecialization, setEditSpecialization] = useState('');
   const [editTechnicalSkills, setEditTechnicalSkills] = useState('');
   const [editNationality, setEditNationality] = useState('');
@@ -266,6 +269,9 @@ export const Dashboard: React.FC = () => {
     e.preventDefault();
     if (!editingJob) return;
 
+    const preparedRules = editChecklist.map(item => ({ ...item, acceptedTerms: item.acceptedTerms?.map(s => s.trim()).filter(Boolean) }));
+    if (!validRequirements(preparedRules)) { alert(t('invalidRule')); return; }
+
     try {
       // Helper to parse comma-separated text input to array
       const parseCommaSeparated = (val: string) => 
@@ -279,7 +285,7 @@ export const Dashboard: React.FC = () => {
         experience: editExp,
         degree: editDegree,
         skills: parseCommaSeparated(editSkills), // 1. Target Core Skills
-        checklist: editChecklist,
+        checklist: preparedRules,
         specialization: editSpecialization, // 2. Specialization
         technicalSkills: parseCommaSeparated(editTechnicalSkills), // 3. Technical Skills
         nationality: editNationality, // 4. Nationality
@@ -317,6 +323,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      <ProjectCoverage />
       {/* KPI row — des-2.txt §5 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(165px, 100%), 1fr))', gap: 10 }}>
         {kpiTiles.map(({ label, value, series, icon: Icon }) => (
@@ -749,7 +756,8 @@ export const Dashboard: React.FC = () => {
 
                 <div className="space-y-2 max-h-[210px] overflow-y-auto">
                   {editChecklist.map((item, idx) => (
-                    <div key={item.id} className="flex gap-2 items-center">
+                    <div key={item.id} className="grid gap-2 border rounded p-3">
+                      <RequirementRuleFields item={item} onChange={value => setEditChecklist(current => current.map(r => r.id === item.id ? value : r))} />
                       <input
                         type="text"
                         required
