@@ -9,6 +9,7 @@ export default function EvidenceReview({ candidateId }: { candidateId:number }) 
   const [data,setData]=useState<any>(null); const [error,setError]=useState('');const [busy,setBusy]=useState(false);
   const [requirementId,setRequirement]=useState('');const [status,setStatus]=useState('unknown');
   const [evidence,setEvidence]=useState('');const [note,setNote]=useState('');const [page,setPage]=useState('');const [identity,setIdentity]=useState('');
+  const [assignmentType,setAssignmentType]=useState('primary');
   const canWrite=role && hasPermission(role,'change_status',capabilities);
   const load=async()=>{setData(await apiRequest('GET',`/api/candidates/${candidateId}/evidence-reviews`));};
   useEffect(()=>{setData(null);setRequirement('');setError('');void load().catch(e=>setError(e.message));},[candidateId]);
@@ -28,8 +29,9 @@ export default function EvidenceReview({ candidateId }: { candidateId:number }) 
         <button disabled={busy} className="tk-btn-primary">{t('save')}</button>
       </form>}
       {canWrite && <div className="grid gap-2 border-t pt-3"><p>{t('approvalHelp')}</p><label>{t('identityLabel')}<input className="tk-field w-full" dir="auto" value={identity} maxLength={200} onChange={e=>setIdentity(e.target.value)} /></label>
-        <button className="tk-btn-primary" disabled={busy||!identity.trim()} onClick={()=>action('staffing-approval','POST',{revision:data.revision,identityKey:identity})}>{t('approvalSave')}</button>
-        {data.approval && <><p>{t('coverageApproved')}: {data.approval.reviewer}</p><button className="tk-btn-neutral" disabled={busy} onClick={()=>action('staffing-approval','DELETE')}>{t('approvalRelease')}</button></>}
+        <label>{t('assignmentType')}<select className="tk-field w-full" value={assignmentType} onChange={e=>setAssignmentType(e.target.value)}><option value="primary">{t('assignmentPrimary')}</option><option value="backup">{t('assignmentBackup')}</option></select></label>
+        <button className="tk-btn-primary" disabled={busy||!identity.trim()} onClick={()=>action('staffing-approval','POST',{revision:data.revision,identityKey:identity,assignmentType})}>{t('approvalSave')}</button>
+        {data.approval && <><p>{t('coverageApproved')}: {data.approval.reviewer} — {data.approval.assignment_type==='backup'?t('assignmentBackup'):t('assignmentPrimary')}</p><button className="tk-btn-neutral" disabled={busy} onClick={()=>action('staffing-approval','DELETE')}>{t('approvalRelease')}</button></>}
       </div>}
       <details><summary>{t('reviewHistory')}</summary>{data.history.map((r:any)=><article className="border-b py-2" key={r.id}><p>{r.reviewer} — {new Date(r.reviewed_at).toLocaleString()} — {t(`requirement_${r.status}` as any)} {r.stale && t('reviewOld')}</p><p dir="auto">{r.evidence}</p><p dir="auto">{r.note}</p>{r.page && <p>{t('reviewPage')}: {r.page}</p>}</article>)}</details>
     </>}

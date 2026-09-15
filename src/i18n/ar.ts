@@ -1,6 +1,15 @@
 import type { en } from './en.js';
 
 export const ar: typeof en = {
+  assignmentType: "نوع التخصيص",
+  assignmentPrimary: "أساسي",
+  assignmentBackup: "احتياطي",
+  assignmentInvalid: "اختر تخصيصاً أساسياً أو احتياطياً.",
+  primaryCandidates: "المرشحون الأساسيون",
+  backupCandidates: "المرشحون الاحتياطيون",
+  projectReadiness: "جاهزية المشروع",
+  readinessHelp: "الجاهزية = عدد الأساسيين المعتمدين ÷ العدد المطلوب للوظائف النشطة. الاحتياطي لا يسد النقص. لترقية احتياطي غيّر تخصيصه صراحةً بعد إتاحة مقعد أساسي. المشاريع غير المسماة تظهر منفصلة لكل وظيفة.",
+  coverageExport: "تصدير التغطية CSV",
   identityTitle: "ملف المرشح الموحد",
   identityHelp: "تُحفظ نسخ السير والتقييمات بشكل مستقل. تشابه الأسماء أو بيانات الاتصال يساعد على البحث ولا يثبت وحدة الهوية. راجع المجموعتين قبل الربط.",
   identityName: "المرشح",

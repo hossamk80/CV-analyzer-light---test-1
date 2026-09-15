@@ -1,4 +1,13 @@
 export const en = {
+  assignmentType: "Staffing assignment",
+  assignmentPrimary: "Primary",
+  assignmentBackup: "Backup",
+  assignmentInvalid: "Choose primary or backup staffing.",
+  primaryCandidates: "Primary candidates",
+  backupCandidates: "Backup candidates",
+  projectReadiness: "Project readiness",
+  readinessHelp: "Readiness = approved primary candidates / required headcount across active roles. Backups never fill a shortage. Promote a backup explicitly after releasing a primary seat. Unnamed projects are shown separately by job.",
+  coverageExport: "Export coverage CSV",
   identityTitle: "Unified candidate profile",
   identityHelp: "CV versions and assessments are kept separately. Matching names or contact details are search hints, not proof of identity. Review both groups before linking.",
   identityName: "Candidate",

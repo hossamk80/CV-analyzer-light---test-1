@@ -99,6 +99,7 @@ export const evidenceReviews = sqliteTable('evidence_reviews', {
   page: integer('page'), reviewer: text('reviewer').notNull(), reviewedAt: text('reviewed_at').notNull(),
 });
 export const staffingApprovals = sqliteTable('staffing_approvals', {
+  assignmentType: text('assignment_type').notNull().default('primary'),
   candidateId: integer('candidate_id').primaryKey().references(() => candidates.id, { onDelete: 'cascade' }),
   projectKey: text('project_key').notNull(), identityKey: text('identity_key').notNull(),
   revision: text('revision').notNull(), reviewer: text('reviewer').notNull(), approvedAt: text('approved_at').notNull(),

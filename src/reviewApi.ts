@@ -1,6 +1,7 @@
 import type { Express } from 'express';
 import { reviewRevision, projectKey, allMandatoryReviewed } from './utils/reviewWorkflow.js';
 import { identityKey } from './utils/profileIdentity.js';
+import { summarizeProjects } from './utils/projectCoverage.js';
 
 export function registerReviewApi(app: Express, sqlite: any, auth: any, writeAccess: any, translate: any, audit: any) {
   sqlite.exec(`CREATE TABLE IF NOT EXISTS evidence_reviews (
@@ -20,6 +21,8 @@ export function registerReviewApi(app: Express, sqlite: any, auth: any, writeAcc
       DELETE FROM evidence_reviews WHERE candidate_id=NEW.id;
       DELETE FROM staffing_approvals WHERE candidate_id=NEW.id;
     END;`);
+  if(!(sqlite.prepare('PRAGMA table_info(staffing_approvals)').all() as any[]).some(c=>c.name==='assignment_type'))
+    sqlite.exec("ALTER TABLE staffing_approvals ADD COLUMN assignment_type TEXT NOT NULL DEFAULT 'primary'");
   const context = (id: number) => {
     const candidate = sqlite.prepare('SELECT * FROM candidates WHERE id=?').get(id);
     if (!candidate || candidate.gdpr_anonymized) return null;
@@ -62,6 +65,8 @@ export function registerReviewApi(app: Express, sqlite: any, auth: any, writeAcc
     const ctx = context(Number(req.params.id));
     if (!ctx) return fail(req,res,404,'reviewMissing');
     if (req.body.revision !== ctx.revision) return fail(req,res,409,'reviewStale');
+    const assignmentType=req.body.assignmentType ?? 'primary';
+    if(!['primary','backup'].includes(assignmentType)) return fail(req,res,400,'assignmentInvalid');
     if (ctx.job.workflow_type !== 'tender' || !ctx.job.project_name?.trim() || ctx.job.status !== 'Active' || ctx.candidate.status === 'Rejected'
       || !allMandatoryReviewed(ctx.requirements,ctx.reviews)) return fail(req,res,400,'approvalNeedsReview');
     // This identifier is supplied and verified by the reviewer; names are never merged automatically.
@@ -75,10 +80,10 @@ export function registerReviewApi(app: Express, sqlite: any, auth: any, writeAcc
       return a.project_key === key && (a.identity_key === identity || (person && person===identityKey(sqlite,other.profile_id)) || (ctx.candidate.file_hash && other.file_hash === ctx.candidate.file_hash));
     });
     if (duplicate) return fail(req,res,409,'approvalDuplicate');
-    if (active.filter((a: any) => context(a.candidate_id)!.candidate.job_id === ctx.job.id).length >= ctx.job.required_count) return fail(req,res,409,'approvalFull');
-    sqlite.prepare('INSERT OR REPLACE INTO staffing_approvals(candidate_id,project_key,identity_key,revision,reviewer,approved_at) VALUES(?,?,?,?,?,?)')
-      .run(ctx.candidate.id,key,identity,ctx.revision,req.user.username,new Date().toISOString());
-    audit(req,'Staffing Approval','candidates',ctx.candidate.id,null,{ jobId:ctx.job.id },'Approved candidate for project staffing');
+    if (assignmentType==='primary' && active.filter((a: any) => a.assignment_type==='primary' && context(a.candidate_id)!.candidate.job_id === ctx.job.id).length >= ctx.job.required_count) return fail(req,res,409,'approvalFull');
+    sqlite.prepare('INSERT OR REPLACE INTO staffing_approvals(candidate_id,project_key,identity_key,revision,reviewer,approved_at,assignment_type) VALUES(?,?,?,?,?,?,?)')
+      .run(ctx.candidate.id,key,identity,ctx.revision,req.user.username,new Date().toISOString(),assignmentType);
+    audit(req,'Staffing Approval','candidates',ctx.candidate.id,null,{ jobId:ctx.job.id,assignmentType },'Approved candidate for project staffing');
     res.status(201).json({ saved: true });
   });
   app.delete('/api/candidates/:id/staffing-approval', auth, writeAccess, (req,res) => {
@@ -91,11 +96,16 @@ export function registerReviewApi(app: Express, sqlite: any, auth: any, writeAcc
     const rows = sqlite.prepare("SELECT * FROM jobs WHERE workflow_type='tender' AND status='Active' ORDER BY project_name,id").all().map((job: any) => {
       const pool = sqlite.prepare("SELECT * FROM candidates WHERE job_id=? AND gdpr_anonymized=0 AND status!='Rejected'").all(job.id);
       const reviewed = pool.filter((c: any) => { const ctx = context(c.id)!; return allMandatoryReviewed(ctx.requirements,ctx.reviews); });
-      const approved = active.filter((a: any) => pool.some((c: any) => c.id === a.candidate_id)).length;
+      const assigned = active.filter((a: any) => pool.some((c: any) => c.id === a.candidate_id));
+      const primary=assigned.filter((a:any)=>a.assignment_type==='primary');
+      const backup=assigned.filter((a:any)=>a.assignment_type==='backup');
+      const approved=primary.length;
       return { jobId: job.id, projectName: job.project_name || '', title: job.title, required: job.required_count,
         reviewed: new Set(reviewed.map((c: any) => identityKey(sqlite,c.profile_id) || `c:${c.id}`)).size,
-        approved, shortage: Math.max(0,job.required_count-approved) };
+        approved, backups:backup.length, shortage: Math.max(0,job.required_count-approved),
+        primaryNames:primary.map((a:any)=>pool.find((c:any)=>c.id===a.candidate_id).name),
+        backupNames:backup.map((a:any)=>pool.find((c:any)=>c.id===a.candidate_id).name) };
     });
-    res.json({ rows, updatedAt: new Date().toISOString() });
+    res.json({ rows, projects:summarizeProjects(rows), updatedAt: new Date().toISOString() });
   });
 }
