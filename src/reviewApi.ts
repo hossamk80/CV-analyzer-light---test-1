@@ -2,6 +2,7 @@ import type { Express } from 'express';
 import { reviewRevision, projectKey, allMandatoryReviewed } from './utils/reviewWorkflow.js';
 import { identityKey } from './utils/profileIdentity.js';
 import { summarizeProjects } from './utils/projectCoverage.js';
+import { renderEvidenceReport } from './utils/evidenceReport.js';
 
 export function registerReviewApi(app: Express, sqlite: any, auth: any, writeAccess: any, translate: any, audit: any) {
   sqlite.exec(`CREATE TABLE IF NOT EXISTS evidence_reviews (
@@ -39,6 +40,17 @@ export function registerReviewApi(app: Express, sqlite: any, auth: any, writeAcc
     return ctx && ctx.candidate.status !== 'Rejected' && ctx.job.status === 'Active' && a.revision === ctx.revision && allMandatoryReviewed(ctx.requirements, ctx.reviews);
   });
   const fail = (req: any, res: any, status: number, key: string) => res.status(status).json({ error: translate(req.headers['accept-language'])(key) });
+  app.get('/api/candidates/:id/evidence-report',auth,(req,res)=>{
+    const ctx=context(Number(req.params.id));
+    if(!ctx)return fail(req,res,404,'reviewMissing');
+    const language=req.query.lang==='en'?'en':'ar';
+    const approval=activeApprovals().find((a:any)=>a.candidate_id===ctx.candidate.id)||null;
+    res.setHeader('Cache-Control','no-store');
+    res.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'");
+    res.setHeader('X-Content-Type-Options','nosniff');
+    if(req.query.download==='1')res.attachment(`candidate-${ctx.candidate.id}-evidence-${language}.html`);
+    res.type('html').send(renderEvidenceReport(ctx,approval,language,translate(language)));
+  });
   app.get('/api/candidates/:id/evidence-reviews', auth, (req, res) => {
     const ctx = context(Number(req.params.id));
     if (!ctx) return fail(req,res,404,'reviewMissing');

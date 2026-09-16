@@ -24,6 +24,7 @@ try {
  assert.equal((await fetch(base+'/api/job-import',{method:'POST',headers:{Cookie:cookie},body:invalidUpload})).status,400);
  assert.equal((await call('/api/job-import','POST',{text:''})).status,400);
  assert.equal((await fetch(base+'/api/candidates/1/applications')).status,401);
+ assert.equal((await fetch(base+'/api/candidates/1/evidence-report')).status,401);
  const body={title:'Network engineer',department:'IT',location:'Riyadh',experience:5,degree:'Bachelor',checklist:[],workflowType:'tender',projectName:'Synthetic project',requiredCount:3};
  const created=await call('/api/jobs','POST',body);assert.equal(created.status,201);const job=await created.json();assert.equal(job.workflowType,'tender');assert.equal(job.requiredCount,3);
  assert.equal((await call('/api/jobs','POST',{...body,requiredCount:-1})).status,400);
@@ -39,6 +40,9 @@ try {
  const add=db.prepare('INSERT INTO candidates(job_id,name,match_score,file_hash) VALUES(?,?,?,?)');
  const a=Number(add.run(job.id,'Synthetic A',85,'same-document').lastInsertRowid);const b=Number(add.run(job.id,'Synthetic A',90,'same-document').lastInsertRowid);const c=Number(add.run(job.id,'Synthetic A',95,'different-document').lastInsertRowid);
  const apps=await (await call('/api/candidates/'+a+'/applications')).json();assert.deepEqual(apps.map(x=>x.id),[a,b]);assert.ok(!apps.some(x=>x.id===c));
+ const report=await call('/api/candidates/'+a+'/evidence-report?lang=en');assert.equal(report.status,200);assert.equal(report.headers.get('cache-control'),'no-store');assert.match(await report.text(),/Detailed requirement evidence report/);
+ const download=await call('/api/candidates/'+a+'/evidence-report?lang=ar&download=1');assert.match(download.headers.get('content-disposition'),/attachment/);assert.match(await download.text(),/dir="rtl"/);
+ assert.equal((await call('/api/candidates/999999/evidence-report')).status,404);
  const identityPath=id=>'/api/candidates/'+id+'/identity';
  assert.equal((await fetch(base+identityPath(a))).status,401);
  const targetIdentity=await (await call(identityPath(a))).json();
@@ -115,6 +119,7 @@ try {
  assert.equal(coverage.rows.find(r=>r.jobId===tender.id).shortage,1);
  assert.equal((await (await call(endpoint(first))).json()).history[0].stale,true);
  db.prepare('UPDATE candidates SET gdpr_anonymized=1 WHERE id=?').run(first);
+ assert.equal((await call('/api/candidates/'+first+'/evidence-report')).status,404);
  assert.equal(db.prepare('SELECT count(*) AS n FROM evidence_reviews WHERE candidate_id=?').get(first).n,0);
  assert.equal((await call(identityPath(first))).status,404);
  const visibleGroup=await (await call(identityPath(second))).json();

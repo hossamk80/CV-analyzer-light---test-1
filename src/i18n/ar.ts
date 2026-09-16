@@ -1,6 +1,20 @@
 import type { en } from './en.js';
 
 export const ar: typeof en = {
+  evidenceReportTitle: 'تقرير أدلة المطابقة التفصيلي',
+  evidenceReportOpen: 'فتح التقرير / حفظ PDF',
+  evidenceReportDownload: 'تنزيل التقرير بصيغة HTML',
+  evidenceReportPrintHelp: 'استخدم أمر الطباعة في المتصفح (Ctrl+P) واختر الحفظ بصيغة PDF. راجع فواصل الصفحات وأوقف ترويسات وتذييلات المتصفح قبل المشاركة.',
+  evidenceReportGenerated: 'تاريخ الإصدار (بالتوقيت العالمي)',
+  evidenceReportRevision: 'إصدار البيانات',
+  evidenceReportHelp: 'لقطة من المتطلبات الحالية ومراجعاتها البشرية الحالية. تظهر النتائج الآلية المحفوظة فقط إذا طابقت نسخة المتطلب الحالية. غياب النسخة أو تغيرها يحتاج إعادة تحليل. الأدلة الآلية لا تغني عن التحقق. أرقام الصفحات مدخلة يدوياً، والنصوص المقتبسة تبقى بلغتها الأصلية.',
+  evidenceReportUnassigned: 'لا يوجد اعتماد تخصيص ساري',
+  evidenceReportReviewer: 'المراجع',
+  evidenceReportReviewedAt: 'تاريخ المراجعة',
+  evidenceReportAutomatic: 'التقييم الآلي المحفوظ',
+  evidenceReportStale: 'تغيرت نسخة المتطلب أو تعذر التحقق منها — أعد التحليل',
+  evidenceReportNoResult: 'لا يوجد تقييم محفوظ لهذا المتطلب',
+  evidenceReportEmpty: 'لم تُضف معايير تقييم لهذه الوظيفة.',
   suggestTitle: 'قواعد المطابقة المقترحة',
   suggestHelp: 'حدد كل اقتراح توافق عليه. الشروط غير المحددة تبقى يدوية وبأولوية مهم. يمكنك تعديل جميع المعايير بعد التعبئة. اعتماد اقتراح يدوي يؤكد أولويته فقط ولا يفعّل المطابقة الآلية.',
   suggestLocal: 'مطابقة محلية مقترحة',

@@ -35,6 +35,14 @@ Uploads are read in memory (20 MB limit, 100,000 extracted characters); preview 
 
 بصفحة **إضافة وظيفة ← استيراد متطلبات الوظيفة** الصق النص أو الجدول، أو ارفع ملفاً مدعوماً، ثم اختر **قراءة ومعاينة الحقول ← تعبئة نموذج الوظيفة**. راجع الحقول وحدد الشروط الإلزامية وقواعد المطابقة ثم احفظ. جداول Excel تُنسخ مباشرة أو تُصدّر CSV. الصور تحتاج إعداد OCR الموضح أدناه. المعالجة محلية ولا تحتاج مفتاح AI.
 
+### Detailed candidate evidence report — تقرير أدلة المرشح
+
+In a candidate's **Evidence review**, select **Open report / Save as PDF**, then use the browser Print command and Save as PDF. **Download HTML report** saves a standalone report. Interface headings follow Arabic/English; quoted evidence retains its original language. Each requirement shows its rule/priority, saved automated evidence, current human decision, note, manually entered page, reviewer and time. The report includes current staffing approval, generation time and data revision.
+
+Only automated assessments whose stored requirement snapshot matches the current rule are shown. Older/unversioned or changed assessments request re-analysis; stale human reviews are excluded. Exports require authentication, reject anonymized candidates and use no-store caching. The report links are hidden under the interface privacy toggle. An exported file contains personal data; that UI toggle does not redact an already exported copy. This is browser printing, not server-generated PDF or DOCX. Check pagination in print preview; visual PDF QA is still pending.
+
+افتح **مراجعة الأدلة ← فتح التقرير / حفظ PDF** ثم استخدم **Ctrl+P ← الحفظ بصيغة PDF**. يتوفر أيضاً تنزيل HTML. راجع فواصل الصفحات قبل المشاركة. يعرض التقرير النتائج الآلية والمراجعة البشرية كلّاً على حدة، ولا يحتسب النتائج القديمة كدليل على شرط تغير.
+
 ### Project readiness, primary candidates and backups
 
 From **Evidence review → Staffing assignment**, select **Primary** or **Backup** before approving. Existing approvals default to Primary. Both types require reviewed mandatory evidence and cannot duplicate a verified identity in the same project. Primary assignments are limited to the required headcount; backups do not count toward readiness and are not automatically promoted. Change the assignment explicitly when a primary seat becomes available.

@@ -5,7 +5,7 @@ import { useRole } from '../context/RoleContext.js';
 import { hasPermission } from '../utils/rbac.js';
 
 export default function EvidenceReview({ candidateId }: { candidateId:number }) {
-  const {t}=useI18n(); const {role,capabilities}=useRole();
+  const {t,language}=useI18n(); const {role,capabilities}=useRole();
   const [data,setData]=useState<any>(null); const [error,setError]=useState('');const [busy,setBusy]=useState(false);
   const [requirementId,setRequirement]=useState('');const [status,setStatus]=useState('unknown');
   const [evidence,setEvidence]=useState('');const [note,setNote]=useState('');const [page,setPage]=useState('');const [identity,setIdentity]=useState('');
@@ -19,6 +19,7 @@ export default function EvidenceReview({ candidateId }: { candidateId:number }) 
     {error && <p role="alert">{error}</p>}
     {!data && !error && <p>{t('loading')}</p>}
     {data && <>
+      <div className="flex gap-2 flex-wrap"><a className="tk-btn-neutral" target="_blank" rel="noopener noreferrer" href={`/api/candidates/${candidateId}/evidence-report?lang=${language}`}>{t('evidenceReportOpen')}</a><a className="tk-btn-neutral" href={`/api/candidates/${candidateId}/evidence-report?lang=${language}&download=1`}>{t('evidenceReportDownload')}</a></div>
       <ul>{data.requirements.map((r:any)=>{const v=data.reviews.find((x:any)=>x.requirement_id===r.id);return <li key={r.id}><span dir="auto">{r.requirement}</span>: {v ? t(`requirement_${v.status}` as any):t('reviewPending')}{v && <> — {v.reviewer} <time dateTime={v.reviewed_at}>{new Date(v.reviewed_at).toLocaleString()}</time></>}</li>;})}</ul>
       {canWrite && <form className="grid gap-3" onSubmit={e=>{e.preventDefault();void action('evidence-reviews','POST',{revision:data.revision,requirementId,status,evidence,note,page:page?Number(page):null});}}>
         <label>{t('colRequirement')}<select required className="tk-field w-full" value={requirementId} onChange={e=>{setRequirement(e.target.value);setEvidence('');setNote('');setPage('');setStatus('unknown');}}><option value="">{t('reviewSelect')}</option>{data.requirements.map((r:any)=><option key={r.id} value={r.id}>{r.requirement}</option>)}</select></label>
