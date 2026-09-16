@@ -22,6 +22,7 @@ import { classifyAiError } from './src/utils/aiErrors.js';
 import { analyzeLocally, extractLocalFacts, extractTotalYears, extractEmail, extractPhone, matchTerms } from './src/utils/localAnalysis.js';
 import { validRequirements } from './src/utils/requirementRules.js';
 import { registerReviewApi } from './src/reviewApi.js';
+import { registerJobImportApi } from './src/jobImportApi.js';
 import { extractLocalOcr, LocalOcrError } from './src/utils/localOcr.js';
 import { initializeIdentity, identitySnapshot } from './src/utils/profileIdentity.js';
 import { registerProfileApi } from './src/profileApi.js';
@@ -742,6 +743,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // 2. Jobs API (Admin & Recruiter can manage, Manager can only read)
+registerJobImportApi(app,authenticateToken,requireCapability('manage_jobs'),serverT);
 app.get('/api/jobs', authenticateToken, (req, res) => {
   const allJobs = db.select().from(jobs).orderBy(desc(jobs.id)).all();
   res.json(allJobs);

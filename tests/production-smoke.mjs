@@ -14,6 +14,15 @@ try {
  assert.equal(login.status,200);const cookie=login.headers.get('set-cookie')?.split(';')[0];assert.ok(cookie);
  const call=async(path,method='GET',body)=>fetch(base+path,{method,headers:{Cookie:cookie,'content-type':'application/json'},body:body?JSON.stringify(body):undefined});
  assert.equal((await fetch(base)).status,200);
+ assert.equal((await fetch(base+'/api/job-import',{method:'POST'})).status,401);
+ const imported=await call('/api/job-import','POST',{text:'Network Engineer\nEducation\nBachelor degree in Computer Science\nExperience\n5 years\nCertifications\nMCSE'});
+ assert.equal(imported.status,200);const draft=await imported.json();assert.equal(draft.fields.experience,5);assert.equal(draft.fields.title,'Network Engineer');
+ const csvUpload=new FormData();csvUpload.append('file',new Blob(['Position,Experience\nNetwork Engineer,5']),'job.csv');
+ const csvResult=await fetch(base+'/api/job-import',{method:'POST',headers:{Cookie:cookie},body:csvUpload});
+ assert.equal(csvResult.status,200);assert.equal((await csvResult.json()).fields.experience,5);
+ const invalidUpload=new FormData();invalidUpload.append('file',new Blob(['fake PDF']),'job.pdf');
+ assert.equal((await fetch(base+'/api/job-import',{method:'POST',headers:{Cookie:cookie},body:invalidUpload})).status,400);
+ assert.equal((await call('/api/job-import','POST',{text:''})).status,400);
  assert.equal((await fetch(base+'/api/candidates/1/applications')).status,401);
  const body={title:'Network engineer',department:'IT',location:'Riyadh',experience:5,degree:'Bachelor',checklist:[],workflowType:'tender',projectName:'Synthetic project',requiredCount:3};
  const created=await call('/api/jobs','POST',body);assert.equal(created.status,201);const job=await created.json();assert.equal(job.workflowType,'tender');assert.equal(job.requiredCount,3);

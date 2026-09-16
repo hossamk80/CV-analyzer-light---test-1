@@ -21,6 +21,16 @@ Branch: `feature/evidence-project-coverage` (PR #4). These features are in the d
 3. For an active tender job with a project name, review all mandatory conditions as met, enter the same verified internal candidate reference across CV versions, then approve project staffing.
 4. The dashboard shows required, reviewed, approved and shortage counts per active tender job. Refresh after changes. Data changes invalidate prior reviews/approvals; automated scores remain separate from human review.
 
+### Import job requirements — استيراد متطلبات الوظيفة
+
+In **Add job → Import job requirements**, paste one job description/table or upload PDF, DOCX, PNG, JPEG, UTF-8 TXT, CSV or TSV. Excel cells can be pasted directly; native XLS/XLSX upload is not supported. Supported tables use label/value rows or a recognized header row followed by one job row. Multi-job header tables are rejected. Use headings such as Education, Certifications, Experience and Technical Skills, or their Arabic equivalents.
+
+Select **Read and preview fields**, review the source and extracted values, then **Apply to job form**. Detected fields and the criteria list are replaced; undetected fields remain unchanged. Complete missing department/location and check all values before saving. Criteria initially use manual review and Important priority; explicitly set Mandatory conditions and matching rules. No certification equivalence, mandatory priority, or domain experience is inferred. The original wording is retained in the description. Parsing uses local heading rules, so unfamiliar layouts and OCR errors need manual correction.
+
+Uploads are read in memory (20 MB limit, 100,000 extracted characters); preview does not create a job or call AI services. Scanned PDF/images reuse local Arabic+English OCR and its existing limits. Mixed PDFs may still need manual checking. Requires `manage_jobs`. Actual image OCR accuracy and browser layout still require testing in the deployment environment.
+
+بصفحة **إضافة وظيفة ← استيراد متطلبات الوظيفة** الصق النص أو الجدول، أو ارفع ملفاً مدعوماً، ثم اختر **قراءة ومعاينة الحقول ← تعبئة نموذج الوظيفة**. راجع الحقول وحدد الشروط الإلزامية وقواعد المطابقة ثم احفظ. جداول Excel تُنسخ مباشرة أو تُصدّر CSV. الصور تحتاج إعداد OCR الموضح أدناه. المعالجة محلية ولا تحتاج مفتاح AI.
+
 ### Project readiness, primary candidates and backups
 
 From **Evidence review → Staffing assignment**, select **Primary** or **Backup** before approving. Existing approvals default to Primary. Both types require reviewed mandatory evidence and cannot duplicate a verified identity in the same project. Primary assignments are limited to the required headcount; backups do not count toward readiness and are not automatically promoted. Change the assignment explicitly when a primary seat becomes available.
