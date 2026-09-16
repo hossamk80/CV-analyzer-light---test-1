@@ -1,4 +1,12 @@
 export const en = {
+  suggestTitle: 'Proposed matching rules',
+  suggestHelp: 'Select each proposal you approve. Unselected criteria remain manual and Important. You can edit all criteria after applying. Selecting a manual proposal confirms its priority only; it does not enable automatic matching.',
+  suggestLocal: 'Proposed local matching',
+  suggestConfirm: 'Approve this proposal when applying',
+  suggestExact: 'Uses the stated credential, term or total duration only. No equivalent credentials are added. A term match establishes mention, not proficiency.',
+  suggestScoped: 'A duration was found, but domain, location or other constraints need manual evidence review. Total CV experience will not satisfy this condition automatically.',
+  suggestAmbiguous: 'The credential or condition is not specific enough for a safe automatic rule. Specify the exact credential or edit the rule after applying.',
+  suggestDegree: 'Keep manual review to verify both degree level and specialization. One matching word must not satisfy both conditions.',
   jobImportTitle: 'Import job requirements',
   jobImportHelp: 'Paste one job description or a table, or upload PDF, DOCX, PNG, JPEG, TXT, CSV or TSV (20 MB maximum). Processing is local. For Excel, copy the cells or export CSV. Scans require Arabic and English OCR packages.',
   jobImportText: 'Text or pasted table',

@@ -1,4 +1,5 @@
 import type { ScreeningRequirement } from './requirementRules.js';
+import {suggestImportRule,type ImportSuggestion} from './importSuggestions.js';
 
 const labels: Record<string,string[]> = {
   title:['job title','position','المسمى الوظيفي','المسمى','الوظيفة'],
@@ -16,6 +17,7 @@ export interface JobImportDraft {
   checklist:ScreeningRequirement[];
   sourceText:string;
   unclassified:string[];
+  suggestions:ImportSuggestion[];
 }
 const clean=(s:string)=>s.trim().replace(/^[|•*\-]\s*/u,'').replace(/^[\d٠-٩]+[.)]\s*/u,'').replace(/[\s:：|]+$/u,'').trim();
 const keyFor=(s:string)=>Object.entries(labels).find(([,names])=>names.includes(clean(s).toLowerCase()))?.[0];
@@ -57,7 +59,7 @@ export function parseJobRequirements(text:string):JobImportDraft {
     else if(!buckets.title&&line.length<180){buckets.title=[line];}
     else unclassified.push(line);
   }
-  const fields:Record<string,string|number>={jobDescription:sourceText};const checklist:ScreeningRequirement[]=[];
+  const fields:Record<string,string|number>={jobDescription:sourceText};const checklist:ScreeningRequirement[]=[];const suggestions:ImportSuggestion[]=[];
   for(const [key,lines] of Object.entries(buckets)){
     const meaningful=lines.filter(s=>! /^(candidates must hold the following certifications|proficiency in managing, operating, and working with)[:：]?$/i.test(s));
     if(key==='experience'){
@@ -66,7 +68,13 @@ export function parseJobRequirements(text:string):JobImportDraft {
       if(n&&Number(n[1])<=60)fields.experience=Number(n[1]);else unclassified.push(...meaningful);
     }else if(meaningful.length) fields[key]=meaningful.join(key==='technicalSkills'?', ':'; ');
     if(['degree','requiredCerts','experience','technicalSkills'].includes(key))for(const requirement of meaningful){
-      if(requirement.length<=4000&&checklist.length<200)checklist.push({id:`import-${checklist.length+1}`,requirement,importance:'Important',ruleType:'manual'});
+      if(requirement.length<=4000&&checklist.length<200){
+        const id=`import-${checklist.length+1}`;
+        checklist.push({id,requirement,importance:'Important',ruleType:'manual'});
+        const category=({degree:'degree',requiredCerts:'certificate',experience:'years',technicalSkills:'term'} as const)[key]!;
+        const mandatory=/\bmust\b|إلزامي|يجب|يشترط/i.test(requirement)||(key==='requiredCerts'&&lines.some(s=>/^candidates must hold the following certifications[:：]?$/i.test(s)));
+        suggestions.push(suggestImportRule(requirement,category,id,mandatory));
+      }
     }
   }
   // Degree specialization is extracted only from an explicit separator, never inferred from a title.
@@ -74,5 +82,5 @@ export function parseJobRequirements(text:string):JobImportDraft {
     const match=fields.degree.match(/^(.*?(?:degree|بكالوريوس|ماجستير|دكتوراه))\s+(?:in|في)\s+(.+?)[.]?$/i);
     if(match){fields.degree=match[1];fields.specialization=match[2];}
   }
-  return {fields,checklist,sourceText,unclassified};
+  return {fields,checklist,sourceText,unclassified,suggestions};
 }
