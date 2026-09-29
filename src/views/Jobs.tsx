@@ -1,4 +1,6 @@
 import WorkflowFields, { type Workflow } from '../components/WorkflowFields.js';
+import JobImport from '../components/JobImport.js';
+import type { JobImportDraft } from '../utils/jobImport.js';
 import RequirementRuleFields from '../components/RequirementRuleFields.js';
 import { validRequirements, type ScreeningRequirement } from '../utils/requirementRules.js';
 import React, { useState } from 'react';
@@ -47,6 +49,13 @@ export const Jobs: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const applyImport=(draft:JobImportDraft)=>{
+    const setters:Record<string,(value:string)=>void>={title:setTitle,department:setDepartment,location:setLocation,degree:setDegree,specialization:setSpecialization,technicalSkills:setTechnicalSkills,requiredCerts:setRequiredCerts,nationality:setNationality,languages:setLanguages,jobDescription:setJobDescription,coreResponsibilities:setCoreResponsibilities,additionalRequirements:setAdditionalRequirements};
+    for(const [key,value] of Object.entries(draft.fields))if(setters[key])setters[key](String(value));
+    if(typeof draft.fields.experience==='number')setExperience(draft.fields.experience);
+    setChecklist(draft.checklist.map(r=>({...r,importance:(r.importance||'Important') as ChecklistItem['importance']})));
+  };
 
   const handleAddChecklistItem = () => {
     setChecklist([
@@ -149,6 +158,7 @@ export const Jobs: React.FC = () => {
       </button>
 
       <WorkflowFields value={workflow} onChange={setWorkflow}/>
+      <JobImport onApply={applyImport}/>
       {error && (
         <div
           className="text-xs font-medium"

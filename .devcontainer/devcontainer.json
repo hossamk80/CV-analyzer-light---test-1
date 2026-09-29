@@ -1,7 +1,7 @@
 {
   "name": "Smart Recruitment Suite (CV Analyzer)",
   "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
-  "postCreateCommand": "npm install && cp -n .env.example .env.local || true",
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-ara tesseract-ocr-eng poppler-utils && npm install && cp -n .env.example .env.local",
   "forwardPorts": [3000],
   "portsAttributes": {
     "3000": {

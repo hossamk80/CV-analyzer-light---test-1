@@ -86,6 +86,25 @@ export const candidates = sqliteTable('candidates', {
   createdAt: text('created_at').notNull().default(''),
 });
 
+export const profileIdentityGroups = sqliteTable('profile_identity_groups', {
+  profileId: integer('profile_id').primaryKey().references(() => candidateProfiles.id, { onDelete: 'cascade' }),
+  groupKey: text('group_key').notNull(),
+});
+
+export const evidenceReviews = sqliteTable('evidence_reviews', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  candidateId: integer('candidate_id').notNull().references(() => candidates.id, { onDelete: 'cascade' }),
+  requirementId: text('requirement_id').notNull(), revision: text('revision').notNull(),
+  status: text('status').notNull(), evidence: text('evidence').notNull(), note: text('note').notNull(),
+  page: integer('page'), reviewer: text('reviewer').notNull(), reviewedAt: text('reviewed_at').notNull(),
+});
+export const staffingApprovals = sqliteTable('staffing_approvals', {
+  assignmentType: text('assignment_type').notNull().default('primary'),
+  candidateId: integer('candidate_id').primaryKey().references(() => candidates.id, { onDelete: 'cascade' }),
+  projectKey: text('project_key').notNull(), identityKey: text('identity_key').notNull(),
+  revision: text('revision').notNull(), reviewer: text('reviewer').notNull(), approvedAt: text('approved_at').notNull(),
+});
+
 export const aiProviders = sqliteTable('ai_providers', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   providerName: text('provider_name').notNull(), // 'Google Gemini' | 'OpenAI' | 'Anthropic' | etc.
