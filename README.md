@@ -14,7 +14,13 @@ Arabic-first · Fully bilingual (AR / EN, RTL / LTR) · Self-hosted · Zero mand
 
 ### Latest development: evidence review, staffing coverage, local OCR and unified profiles
 
-Branch: `feature/evidence-project-coverage` (PR #4). These features are in the development branch until merged.
+PR #4 was merged into `main` on 2026-09-29. All features below are included in that baseline. Acceptance-test improvements continue on `test/local-acceptance`.
+
+### Acceptance checks
+
+Run `npm run test:acceptance` for an isolated, synthetic workflow using actual DOCX uploads in Arabic and English: import job requirements, apply rule proposals, analyse CVs locally, review evidence, block staffing when mandatory evidence is missing, export bilingual HTML, detect stale requirements and re-analyse. The script copies the production build to a temporary directory and keeps its database/uploads there; it never adds test candidates to your working database. No AI key is required. `jszip` is a development dependency for the generated DOCX fixtures.
+
+See [ACCEPTANCE_AR.md](ACCEPTANCE_AR.md) for the results and remaining manual checks. Automated API acceptance is not browser acceptance or a measurement of real CV accuracy. Arabic OCR language support is missing in the current test environment; image recognition and PDF print layout remain unverified.
 
 1. Edit an existing job from the dashboard to configure structured matching rules and accepted alternatives.
 2. Open a candidate report → **Evidence review**. Record status, original evidence, reviewer note and optionally a manually verified page number for each condition.
