@@ -98,6 +98,26 @@ function sentencesOf(text: string): string[] {
     .filter(s => s.length > 0);
 }
 
+/** Credential evidence comes from explicit statements or a dedicated certificate section. */
+function certificateEvidence(text: string): string[] {
+  let inSection = false;
+  const evidence: string[] = [];
+  for (const raw of text.split(/\n/)) {
+    const line = raw.trim();
+    if (/^(?:certifications?|certificates?|credentials?|الشهادات(?: المهنية)?)[\s:：]*$/i.test(line)) {
+      inSection = true;
+      continue;
+    }
+    if (/^(?:skills|technical skills|experience|work experience|employment|education|training|projects|references|social network account|summary|languages|المهارات|الخبرات|الخبرة|التعليم|التدريب|المشاريع|اللغات)(?:\s*[:：]|\s*$)/i.test(line)) inSection = false;
+    if (line && (inSection || /certif|credential|شهاد|معتمد/i.test(line))) evidence.push(line);
+  }
+  return evidence;
+}
+
+function matchedCertificates(text: string, terms: string[]): string[] {
+  return terms.filter(term => certificateEvidence(text).some(line => matchTerms(line, [term]).length > 0));
+}
+
 export function extractEmail(text: string): string {
   const m = (text || '').match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
   return m ? m[0] : '';
@@ -179,7 +199,7 @@ function employmentText(text: string): string {
 
 const DEGREE_PATTERNS: { key: string; re: RegExp }[] = [
   { key: 'phd', re: /\b(ph\.?d|doctorate|doctoral)\b|دكتوراه/i },
-  { key: 'master', re: /\b(master'?s?|m\.?sc|m\.?s\.?|mba|m\.?eng)\b|ماجستير/i },
+  { key: 'master', re: /\b(master(?:'s|s)?(?=\s+(?:degree|of|in)\b)|m\.?sc|mba|m\.?eng)\b|\bm\.?s\.?(?=\s+(?:in|of)\b)|ماجستير/i },
   { key: 'bachelor', re: /\b(bachelor'?s?|b\.?sc|b\.?s\.?|b\.?eng|b\.?a\.?|licence)\b|بكالوريوس|ليسانس/i },
   { key: 'diploma', re: /\b(diploma|associate degree)\b|دبلوم/i }
 ];
@@ -208,10 +228,10 @@ export function extractName(text: string): string {
   const lines = (text || '').split(/\n+/).map(l => l.trim()).filter(Boolean).slice(0, 8);
   for (const line of lines) {
     if (line.length > 45 || line.length < 4) continue;
-    if (/\d|@|https?:|www\.|:/i.test(line)) continue;
+    if (/\d|@|https?:|www\.|:|[,،/]|\s[–—]\s/i.test(line)) continue;
     const words = line.split(/\s+/);
     if (words.length < 2 || words.length > 5) continue;
-    if (/curriculum|vitae|resume|السيرة|السيره الذاتيه|السيرة الذاتية/i.test(line)) continue;
+    if (/curriculum|vitae|resume|contact information|personal information|professional summary|السيرة|السيره الذاتيه|السيرة الذاتية|معلومات الاتصال|المعلومات الشخصية/i.test(line)) continue;
     return line;
   }
   return '';
@@ -251,7 +271,7 @@ export function evaluateChecklist(cvText: string, checklist: JobData['checklist'
       const terms = item.acceptedTerms || [];
       let source = sentences;
       // A credential must appear as an education/credential statement, not a job requirement.
-      if (item.ruleType === 'certificate') source = sentences.filter(s => /certif|credential|شهاد|معتمد/i.test(s));
+      if (item.ruleType === 'certificate') source = certificateEvidence(cvText);
       if (item.ruleType === 'degree') source = sentences.filter(s => DEGREE_PATTERNS.some(p => p.re.test(s)));
       const evidence = source.find(s => matchTerms(s, terms).length > 0) || '';
       let status = evidence ? 'met' : 'unknown';
@@ -318,7 +338,7 @@ export function analyzeLocally(
   const declaredLangs = (job.languages || '').split(/[,،;/]| و /).map(s => s.trim()).filter(Boolean);
 
   const foundSkills = matchTerms(cvText, declaredSkills);
-  const foundCerts = matchTerms(cvText, declaredCerts);
+  const foundCerts = matchedCertificates(cvText, declaredCerts);
   const foundSoft = matchTerms(cvText, declaredSoft);
   const foundLangs = matchTerms(cvText, declaredLangs);
 
@@ -344,8 +364,12 @@ export function analyzeLocally(
   // Experience score — candidate years against the job's minimum.
   const totalYears = extractTotalYears(cvText);
   const requiredYears = typeof job.experience === 'number' ? job.experience : 0;
+  // A scoped requirement cannot earn experience points from unrelated total years.
+  const scopedExperience = checklist.some(item => item.ruleType !== 'years'
+    && /years?|سنوات|سنة|عام/i.test(item.requirement)
+    && /experience|خبر/i.test(item.requirement));
   let experience: number;
-  if (totalYears === null) {
+  if (totalYears === null || scopedExperience) {
     experience = 0;
   } else if (requiredYears <= 0) {
     experience = totalYears > 0 ? 100 : 0;
@@ -434,7 +458,7 @@ export function extractLocalFacts(cvText: string, job: JobData) {
     contact_phone: extractPhone(cvText),
     total_experience_years: extractTotalYears(cvText),
     matched_skills: matchTerms(cvText, [...(job.skills || []), ...(job.technicalSkills || [])]),
-    matched_certifications: matchTerms(
+    matched_certifications: matchedCertificates(
       cvText,
       (job.requiredCerts || '').split(/[,،;]/).map(s => s.trim()).filter(Boolean)
     )

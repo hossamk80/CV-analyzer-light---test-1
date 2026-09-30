@@ -14,13 +14,13 @@ Arabic-first · Fully bilingual (AR / EN, RTL / LTR) · Self-hosted · Zero mand
 
 ### Latest development: evidence review, staffing coverage, local OCR and unified profiles
 
-PR #4 was merged into `main` on 2026-09-29. All features below are included in that baseline. Acceptance-test improvements continue on `test/local-acceptance`.
+PR #4 was merged into `main` on 2026-09-29. All features below are included in that baseline. PR #5 added isolated acceptance tests and is also merged into `main`. Real-source regression fixes are developed on `fix/real-cv-acceptance`.
 
 ### Acceptance checks
 
 Run `npm run test:acceptance` for an isolated, synthetic workflow using actual DOCX uploads in Arabic and English: import job requirements, apply rule proposals, analyse CVs locally, review evidence, block staffing when mandatory evidence is missing, export bilingual HTML, detect stale requirements and re-analyse. The script copies the production build to a temporary directory and keeps its database/uploads there; it never adds test candidates to your working database. No AI key is required. `jszip` is a development dependency for the generated DOCX fixtures.
 
-See [ACCEPTANCE_AR.md](ACCEPTANCE_AR.md) for the results and remaining manual checks. Automated API acceptance is not browser acceptance or a measurement of real CV accuracy. Arabic OCR language support is missing in the current test environment; image recognition and PDF print layout remain unverified.
+See [ACCEPTANCE_AR.md](ACCEPTANCE_AR.md) for the results and remaining manual checks. Three private source samples (two CVs and one partial experience profile) were additionally exercised on 2026-09-30. This small sample is not a general accuracy benchmark or browser acceptance. Regression fixtures are synthetic; personal CVs are not stored in this repository. Arabic OCR language support is missing in the current test environment; image recognition and PDF print layout remain unverified.
 
 1. Edit an existing job from the dashboard to configure structured matching rules and accepted alternatives.
 2. Open a candidate report → **Evidence review**. Record status, original evidence, reviewer note and optionally a manually verified page number for each condition.
